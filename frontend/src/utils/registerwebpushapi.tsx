@@ -7,7 +7,7 @@ export default async function registerWebPushAPI() {
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
-          "BEluYbX8KJf1Zx1h3QZ6Jt6v9K5j5Z5J5Z5J5Z5J5Z5J5Z5J5Z5J5Z5J5Z5J5Z5J5Z5J5Z5J5Z5J5Z5J5Z5J5Z5J" // Replace with your VAPID public key
+          "BGfcgEChdEI-iDX_RwDlob6AVdLxnGIxsd6iERT9PxFm-P8RGwQFDbQnt7-z0mN0wZfVF6m3w5JYuihH_2pG5qQ" // Replace with your VAPID public key
         ),
       });
       console.log("Push Subscription:", JSON.stringify(subscription));

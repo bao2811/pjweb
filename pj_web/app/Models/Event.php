@@ -17,6 +17,10 @@ class Post extends Model
     protected $fillable = [
         'title',
         'content',
+        'image',
+        'address',
+        'start_time',
+        'end_time',
         'author_id',
     ];
 }
