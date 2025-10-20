@@ -13,6 +13,8 @@ import {
   FaAddressCard,
   FaImage,
 } from "react-icons/fa";
+import { useRouter } from 'next/navigation';  // nếu đang dùng app/ (Next.js 13+)
+
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -28,6 +30,7 @@ export default function RegisterPage() {
     imageUrl: "",
     agreeTerms: false,
   });
+  const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -40,7 +43,75 @@ export default function RegisterPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle registration logic here
-    console.log("Registration data:", formData);
+      const {
+        fullName,
+        email,
+        password,
+        confirmPassword,
+        address,
+        phoneNumber,
+        cccd,
+        imageUrl,
+        agreeTerms,
+      } = formData;
+
+      if (
+        !fullName ||
+        !email ||
+        !password ||
+        !confirmPassword ||
+        !address ||
+        !phoneNumber ||
+        !cccd ||
+        !agreeTerms
+      ) {
+        alert("Vui lòng điền đầy đủ thông tin!");
+        return;
+      }
+
+      // // kiểm tra email hợp lệ
+      // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // if (!emailRegex.test(email)) {
+      //   alert("Địa chỉ email không hợp lệ!");
+      //   return;
+      // }
+
+      // // kiểm tra mật khẩu
+      // if (password.length < 6) {
+      //   alert("Mật khẩu phải có ít nhất 6 ký tự!");
+      //   return;
+      // }
+
+      // // kiểm tra khớp mật khẩu
+      // if (password !== confirmPassword) {
+      //   alert("Mật khẩu xác nhận không khớp!");
+      //   return;
+      // }
+
+      // // kiểm tra số điện thoại (10 số)
+      // const phoneRegex = /^0\d{9}$/;
+      // if (!phoneRegex.test(phoneNumber)) {
+      //   alert("Số điện thoại không hợp lệ!");
+      //   return;
+      // }
+
+      // // kiểm tra CCCD (12 số)
+      // const cccdRegex = /^\d{12}$/;
+      // if (!cccdRegex.test(cccd)) {
+      //   alert("Số CCCD không hợp lệ!");
+      //   return;
+      // }
+
+      // // kiểm tra đã upload ảnh
+      // if (!imageUrl) {
+      //   alert("Vui lòng chọn ảnh đại diện!");
+      //   return;
+      // }
+
+      // ✅ nếu tất cả hợp lệ
+      console.log("Registration data:", formData);
+      alert("Đăng ký thành công!");
+      router.push("/home/login");
   };
 
   return (
@@ -297,7 +368,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Submit Button */}
-            <div>
+            <div> 
               <button
                 type="submit"
                 className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-lg font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 transform hover:scale-105 shadow-lg"
