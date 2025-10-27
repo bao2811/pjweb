@@ -20,5 +20,10 @@ class Post extends Model
         'author_id',
         'image', 
         'published_at',
+        'like',
+        'comment',
+        'user_id',
+        'event_id',
+        'status',
     ];
 }

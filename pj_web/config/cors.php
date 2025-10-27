@@ -6,7 +6,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3000', 'http://noteapp.com'],
+    'allowed_origins' => ['http://localhost:3000', 'http://tinhnguyen.com'],
 
     'allowed_origins_patterns' => [],
 

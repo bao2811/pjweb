@@ -1,7 +1,11 @@
-export default function DashboardPage() {
+import React from "react";
+import DashBoard from "@/components/dashboard";
+
+export default function AdminDashboardPage() {
   return (
     <div>
-      <h1>Admin Dashboard</h1>
+      <DashBoard />
+      {/* Admin dashboard content goes here */}
     </div>
   );
 }

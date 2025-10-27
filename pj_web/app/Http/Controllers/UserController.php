@@ -1,34 +1,69 @@
 <?php
 
+namespace App\Http\Controllers;
+
+use App\Service\UserService;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+
 class UserController extends Controller
 {
-    public function index()
-    {
-        return response()->json([
-            'users' => [
-                ['id' => 1, 'name' => 'Alice'],
-                ['id' => 2, 'name' => 'Bob'],
-            ],
-        ]);
-    }
 
-    public function login(Request $request)
-    {
-        $credentials = $request->only('email', 'password');
+   protected $userService;
+   
+   public function __construct(UserService $userService){
+      $this->userService = $userService;
+   }
 
-        if (Auth::attempt($credentials)) {
-            // Đăng nhập thành công → Laravel tự tạo session
-            $user = Auth::user();
+   function getUser(Request $request)
+   {
 
-            // Bạn có thể lưu thêm thông tin vào session
-            session(['login_time' => now()]);
+        $user = $request->user();
+        
+       return response()->json($request->user());
+   }
 
-            return response()->json([
-                'message' => 'Đăng nhập thành công!',
-                'user' => $user,
-            ]);
-        }
+   public function getUserDetails(Request $request)
+   {
+      $userId = $request->session()->get('user_id');
+      $id = $request->param('id');
+      $user = $this->userService->getUserById($id);
+      return response()->json($user);
+   }
 
-        return response()->json(['message' => 'Sai tài khoản hoặc mật khẩu!'], 401);
-    }
+   public function updateUserProfile(Request $request)
+   {
+      try{
+         $request->validate([
+             'name' => 'sometimes|string|max:255',
+             'email' => 'sometimes|email|max:255',
+             'password' => 'sometimes|string|min:6',
+         ]);
+         
+         $userId = $request->session()->get('user_id');
+         $data = $request->only(['name', 'email', 'password']);
+         $updatedUser = $this->userService->updateUser($userId, $data);
+         return response()->json($updatedUser);
+      } catch (\Illuminate\Validation\ValidationException $e) {
+         return response()->json([
+             'error' => 'Validation error',
+             'messages' => $e->errors()
+         ], 422);
+      }
+      
+   }
+
+   public function createUser(Request $request)
+   { 
+      try{
+         $data = $request->only(['name', 'email', 'password']);
+         $newUser = $this->userService->createUser($data);
+         return response()->json($newUser, 201);
+      } catch (\Exception $e) {
+         return response()->json([
+             'error' => 'something wrong',
+             'message' => $e->getMessage()
+         ], 500);
+      }
+   }
 }

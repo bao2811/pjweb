@@ -11,7 +11,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(UserRepo::class, function ($app) {
+            return new UserRepo();
+        });
+        $this->app->singleton(UserService::class, function ($app) {
+            return new UserService($app->make(UserRepo::class));
+        });
     }
 
     /**

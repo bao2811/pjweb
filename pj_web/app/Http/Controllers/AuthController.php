@@ -26,12 +26,16 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        $result = $this->userService->getUserByEmail($request->email);
-        $user = $result['data'];
+        // $result = $this->userService->getUserByEmail($request->email);
+        // $user = $result['data'];
 
-        if (!$result['success']) {
-            return response()->json(['error' => $result['error']], 401);
-        }
+        // if (!$user || !Hash::check($request->password, $user->password)) {
+        //     throw ValidationException::withMessages([
+        //         'email' => ['The provided credentials are incorrect.'],
+        //     ]);
+        // }
+        
+        $credentials = $request->only('email', 'password');
 
         if (Auth::attempt($credentials)) {
             // Đăng nhập thành công → Laravel tự tạo session
@@ -46,18 +50,15 @@ class AuthController extends Controller
             ]);
         }
 
+        return response()->json(['error' => 'Email hoặc mật khẩu không đúng'], 401);
+
     }
 
 
     public function register(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
         $user = $request->only(['name', 'email', 'password']);
+        $user['role'] = 'user';
 
         $this->userService->createUser($user);
 
@@ -73,7 +74,6 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-
         Auth::logout();
         session()->flush();
         return response()->json(['message' => 'Logged out successfully']);

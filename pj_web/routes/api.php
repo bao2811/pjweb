@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/users', [UserController::class, 'index']);
-Route::post('/login', [ApiAuthController::class, 'login']);
-Route::get('/profile', [ApiAuthController::class, 'profile'])->middleware('auth:api');
+Route::get('/users', [UserController::class, 'index'])->middleware('auth:api');
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/logout', [AuthController::class, 'logout']);
+
+
