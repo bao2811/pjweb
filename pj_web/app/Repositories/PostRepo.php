@@ -45,4 +45,20 @@ class PostRepo
         return $post->delete();
     }
 
+    public function searchPost($query)
+    {
+        return Post::where('title', 'LIKE', "%$query%")
+                    ->orWhere('content', 'LIKE', "%$query%")
+                    ->get();
+    }
+
+    public function updateAmountLikes($eventId, $status)
+    {
+        $posts = Post::where('event_id', $eventId)->get();
+        foreach ($posts as $post) {
+            $post->like = $post->like + ($status == 1 ? 1 : -1);
+            $post->save();
+        }
+    }
+
 }

@@ -78,7 +78,7 @@ class PostService
     public function deletePost($id)
     {
         try {
-            $result =  $this->postRepo->delete($id);
+            $result =  $this->postRepo->deletePostById($id);
             return [
                 'success' => $result,
                 'message' => $result ? 'Post deleted successfully' : 'Post not found'
@@ -89,10 +89,10 @@ class PostService
         }
     }
 
-    public function searchPosts()
+    public function searchPosts($query)
     {
         try {
-            return $this->postRepo->findByEventId($eventId);
+            return $this->postRepo->searchPost($query);
         } catch (Exception $e) {
             // Handle exception
             return [];

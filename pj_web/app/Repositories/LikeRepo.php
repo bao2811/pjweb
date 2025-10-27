@@ -38,7 +38,6 @@ class LikeRepo
 
     public function updateLike(Like $like) : Like
     {   
-        $like->status = !$like->status;
         return $like->save() ? $like : null;
     }
 

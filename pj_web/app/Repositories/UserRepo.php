@@ -60,4 +60,13 @@ class UserRepo
         $user->save();
         return $user;
     }
+
+    public function deleteUserById($id) : bool
+    {
+        $user = $this->getUserById($id);
+        if (!$user) {
+            throw new Exception('User not found');
+        }
+        return $user->delete();
+    }
 }

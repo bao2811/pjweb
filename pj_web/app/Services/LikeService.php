@@ -5,25 +5,51 @@ namespace App\Services;
 use App\Repositories\LikeRepo; 
 use Exception;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use App\Services\PostService;
 
 class LikeService
 {
     protected $likeRepo;
+    protected $postService;
 
-    public function __construct(LikeRepo $likeRepo)
+    public function __construct(LikeRepo $likeRepo, PostService $postService)
     {
         $this->likeRepo = $likeRepo;
+        $this->postService = $postService;
     }
 
     public function likePost($userId, $postId)
     {
         try {
-            $like = $this->likeRepo->getLikeByUserAndPost($userId, $postId);
-            if ($like) {
-                $this-> likeRepo->updateLike($like);
-                return $like;
+            DB::beginTransaction();
+
+            try {
+                $like = $this->likeRepo->getLikeByUserAndPost($userId, $postId);
+
+                if ($like) {
+                    $like->status = !$like->status;
+                    $this->likeRepo->updateLike($like);
+                }
+                else {
+                    $like = $this->likeRepo->createLike([
+                        'user_id' => $userId,
+                        'post_id' => $postId,
+                        'status' => 1
+                    ]);
+                }
+
+                $post = $this->postService->getPostById($postId, $like->status);
+                if (!$post) {
+                    throw new Exception('Post not found');
+                }
+
+                $post->like_count += 1;
+                $post->save();
+            } catch (Exception $e) {
+                DB::rollBack();
+                throw $e;
             }
-            return $this->likeRepo->create(['user_id' => $userId, 'post_id' => $postId, 'status' => 1]);
         } catch (Exception $e) {
             Log::error('Error liking post: ' . $e->getMessage());
             return null;

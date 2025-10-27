@@ -22,5 +22,6 @@ class Post extends Model
         'start_time',
         'end_time',
         'author_id',
+        'status',
     ];
 }

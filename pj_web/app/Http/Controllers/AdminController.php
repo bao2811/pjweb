@@ -11,17 +11,15 @@ use Carbon\Carbon;
 
 class AdminController {
 
-    protected $userService;
-    protected $eventService;
+    protected $adminService;
 
-    public function __construct(UserService $userService, EventService $eventService){
-        $this->userService = $userService;
-        $this->eventService = $eventService;
+    public function __construct(AdminService $adminService){
+        $this->adminService = $adminService;
     }
 
     public function getAllUsers() {
         try{
-            $listUser = $this->userService->getAllUsers();
+            $listUser = $this->adminService->getAllUsers();
             return response()->json($listUser, 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -31,9 +29,9 @@ class AdminController {
         }
     }
 
-    public function getAllEvent() {
+    public function getAllEvents() {
         try{
-            $listEvent = $this->eventService->getAllEvent();
+            $listEvent = $this->adminService->getAllEvents();
             return response()->json($listEvent, 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -45,7 +43,7 @@ class AdminController {
 
     public function banUser($id) {
         try {
-        $res = $this->userService->banUser($id);
+        $res = $this->adminService->banUser($id);
             return response()->json([
                 'message' => 'complete ban'
             ], 200);
@@ -60,7 +58,7 @@ class AdminController {
     
     public function unbanUser($id) {
         try {
-        $res = $this->userService->unbanUser($id);
+        $res = $this->adminService->unbanUser($id);
             return response()->json([
                 'message' => 'complete unban'
             ], 200);
@@ -75,7 +73,7 @@ class AdminController {
 
     public function deleteEvent($id) {
         try {
-        $res = $this->eventService->deleteEvent($id);
+        $res = $this->adminService->deleteEvent($id);
             return response()->json([
                 'message' => 'complete delete event'
             ], 200);
@@ -90,7 +88,7 @@ class AdminController {
 
     public function acceptEvent($id) {
         try {
-        $res = $this->eventService->acceptEvent($id);
+        $res = $this->adminService->acceptEvent($id);
             return response()->json([
                 'message' => 'complete accept event'
             ], 200);
@@ -105,7 +103,7 @@ class AdminController {
 
     public function rejectEvent($id) {
         try {
-        $res = $this->eventService->rejectEvent($id);
+        $res = $this->adminService->rejectEvent($id);
             return response()->json([
                 'message' => 'complete reject event'
             ], 200);
@@ -126,7 +124,7 @@ class AdminController {
                 'email' => 'required|email|max:255',
             ]);
             $data['role'] = 'manager';
-            $user = $this->userService->createUser($data);
+            $user = $this->adminService->createUser($data);
             return response()->json([
                 'message' => 'complete create manager event',
                 'user' => $user
