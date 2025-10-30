@@ -1,13 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    domains: ['images.unsplash.com'],
+  },
   compilerOptions: {
-    // ...existing code...
     baseUrl: ".",
     paths: {
       "@/*": ["./src/*/*"],
     },
-    // ...existing code...
   },
 };
 

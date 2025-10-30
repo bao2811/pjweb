@@ -18,6 +18,7 @@ import {
   FaCog,
   FaBell,
   FaSearch,
+  FaThumbsUp,
   FaPaperclip,
   FaGift,
   FaVideo,
@@ -51,6 +52,10 @@ interface Comment {
   content: string;
   timestamp: string;
   author: User;
+  likes: number;
+  isLiked: boolean;
+  replies: Comment[];
+  parentId?: number;
 }
 
 interface Event {
@@ -313,7 +318,10 @@ const mockPostsByEvent: Record<string, Post[]> = {
             name: "Nguyễn Văn An",
             avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
             role: "user"
-          }
+          },
+          likes: 2,
+          isLiked: false,
+          replies: []
         }
       ]
     }
@@ -411,7 +419,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
   const [newPost, setNewPost] = useState("");
   const [postImages, setPostImages] = useState<string[]>([]);
   const [showComments, setShowComments] = useState<Record<number, boolean>>({});
-  const [newComment, setNewComment] = useState<Record<number, string>>({});
+  const [newComment, setNewComment] = useState<Record<string, string>>({});
   
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -483,26 +491,96 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     alert("Đã chia sẻ bài viết!");
   };
 
-  const handleComment = (postId: number) => {
+  const handleComment = (postId: number, parentCommentId?: number) => {
     const comment = newComment[postId];
     if (!comment?.trim()) return;
 
+    const newCommentObj: Comment = {
+      id: Date.now(),
+      content: comment,
+      timestamp: new Date().toLocaleString(),
+      author: currentUser,
+      likes: 0,
+      isLiked: false,
+      replies: [],
+      parentId: parentCommentId
+    };
+
     setPosts(posts.map(post => {
       if (post.id === postId) {
-        return {
-          ...post,
-          comments: [...post.comments, {
-            id: post.comments.length + 1,
-            content: comment,
-            timestamp: new Date().toLocaleString(),
-            author: currentUser
-          }]
-        };
+        if (parentCommentId) {
+          // Adding reply to a comment
+          const updatedComments = post.comments.map(c => {
+            if (c.id === parentCommentId) {
+              return {
+                ...c,
+                replies: [...c.replies, newCommentObj]
+              };
+            }
+            return c;
+          });
+          return {
+            ...post,
+            comments: updatedComments
+          };
+        } else {
+          // Adding new top-level comment
+          return {
+            ...post,
+            comments: [...post.comments, newCommentObj]
+          };
+        }
       }
       return post;
     }));
 
     setNewComment({ ...newComment, [postId]: "" });
+  };
+
+  const handleLikeComment = (postId: number, commentId: number, isReply: boolean = false, parentCommentId?: number) => {
+    setPosts(posts.map(post => {
+      if (post.id === postId) {
+        let updatedComments;
+        if (isReply && parentCommentId) {
+          // Handling reply likes
+          updatedComments = post.comments.map(c => {
+            if (c.id === parentCommentId) {
+              return {
+                ...c,
+                replies: c.replies.map(r => {
+                  if (r.id === commentId) {
+                    return {
+                      ...r,
+                      isLiked: !r.isLiked,
+                      likes: r.isLiked ? r.likes - 1 : r.likes + 1
+                    };
+                  }
+                  return r;
+                })
+              };
+            }
+            return c;
+          });
+        } else {
+          // Handling top-level comment likes
+          updatedComments = post.comments.map(c => {
+            if (c.id === commentId) {
+              return {
+                ...c,
+                isLiked: !c.isLiked,
+                likes: c.isLiked ? c.likes - 1 : c.likes + 1
+              };
+            }
+            return c;
+          });
+        }
+        return {
+          ...post,
+          comments: updatedComments
+        };
+      }
+      return post;
+    }));
   };
 
   const handleSendMessage = () => {
@@ -566,9 +644,11 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
             placeholder="Chia sẻ cập nhật về sự kiện..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                      focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+                      resize-none text-gray-800 placeholder-gray-500"
             rows={3}
-          />
+          />  
           <div className="flex justify-between items-center mt-4">
             <div className="flex items-center space-x-2">
               <button className="p-2 text-gray-500 hover:text-blue-500 rounded-lg hover:bg-blue-50">
@@ -593,7 +673,213 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           {posts.map((post) => (
             <div key={post.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               {/* Post Header */}
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <Image 
+                      src={post.author.avatar} 
+                      alt={post.author.name}
+                      width={40}
+                      height={40}
+                      className="rounded-full"
+                    />
+                    <div>
+                      <h3 className="font-medium text-gray-900">{post.author.name}</h3>
+                      <p className="text-sm text-gray-500">{post.timestamp}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-gray-800">{post.content}</p>
+                
+                {post.images && post.images.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {post.images.map((image, index) => (
+                      <Image
+                        key={index}
+                        src={image}
+                        alt={`Post image ${index + 1}`}
+                        width={400}
+                        height={300}
+                        className="rounded-lg"
+                      />
+                    ))}
+                  </div>
+                )}
+                
+                <div className="flex items-center space-x-6 text-sm">
+                  <button
+                    onClick={() => handleLike(post.id)}
+                    className={`flex items-center space-x-2 ${
+                      post.isLiked ? 'text-blue-600' : 'text-gray-600'
+                    } hover:text-blue-600`}
+                  >
+                    <FaThumbsUp className="w-5 h-5" />
+                    <span>{post.likes} Thích</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowComments({...showComments, [post.id]: !showComments[post.id]})}
+                    className="flex items-center space-x-2 text-gray-600 hover:text-blue-600"
+                  >
+                    <FaComment className="w-5 h-5" />
+                    <span>{post.comments.length} Bình luận</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => handleShare(post.id)}
+                    className="flex items-center space-x-2 text-gray-600 hover:text-blue-600"
+                  >
+                    <FaShare className="w-5 h-5" />
+                    <span>{post.shares} Chia sẻ</span>
+                  </button>
+                </div>
+
+                {/* Comments Section */}
+                {showComments[post.id] && (
+                  <div className="mt-4 space-y-4">
+                    <div className="flex space-x-2">
+                      <Image
+                        src={currentUser.avatar}
+                        alt={currentUser.name}
+                        width={32}
+                        height={32}
+                        className="rounded-full"
+                      />
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={newComment[post.id] || ''}
+                          onChange={(e) => setNewComment({...newComment, [post.id]: e.target.value})}
+                          placeholder="Viết bình luận..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-full 
+                                   focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+                                   text-gray-800 placeholder-gray-500"
+                        />
+                        <button
+                          onClick={() => handleComment(post.id)}
+                          className="mt-2 px-4 py-1 bg-blue-600 text-white rounded-full text-sm hover:bg-blue-700"
+                        >
+                          Gửi
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Comment List */}
+                    <div className="space-y-4">
+                      {post.comments.map((comment) => (
+                        <div key={comment.id} className="flex space-x-2">
+                          <Image
+                            src={comment.author.avatar}
+                            alt={comment.author.name}
+                            width={32}
+                            height={32}
+                            className="rounded-full"
+                          />
+                          <div className="flex-1">
+                            <div className="bg-gray-50 rounded-lg p-3">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-gray-900">{comment.author.name}</h4>
+                                <span className="text-xs text-gray-500">{comment.timestamp}</span>
+                              </div>
+                              <p className="text-gray-800 mt-1">{comment.content}</p>
+                            </div>
+                            
+                            <div className="flex items-center space-x-4 mt-2 text-sm">
+                              <button
+                                onClick={() => handleLikeComment(post.id, comment.id)}
+                                className={`${comment.isLiked ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600`}
+                              >
+                                {comment.likes} Thích
+                              </button>
+                              <button
+                                onClick={() => setNewComment({
+                                  ...newComment,
+                                  [`${post.id}-${comment.id}`]: ''
+                                })}
+                                className="text-gray-500 hover:text-blue-600"
+                              >
+                                Trả lời
+                              </button>
+                            </div>
+
+                            {/* Reply Input */}
+                            {newComment[`${post.id}-${comment.id}`] !== undefined && (
+                              <div className="flex space-x-2 mt-2">
+                                <Image
+                                  src={currentUser.avatar}
+                                  alt={currentUser.name}
+                                  width={24}
+                                  height={24}
+                                  className="rounded-full"
+                                />
+                                <div className="flex-1">
+                                  <input
+                                    type="text"
+                                    value={newComment[`${post.id}-${comment.id}`]}
+                                    onChange={(e) => setNewComment({
+                                      ...newComment,
+                                      [`${post.id}-${comment.id}`]: e.target.value
+                                    })}
+                                    placeholder="Viết trả lời..."
+                                    className="w-full px-3 py-1 border border-gray-300 rounded-full 
+                                             focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+                                             text-sm text-gray-800 placeholder-gray-500"
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      handleComment(post.id, comment.id);
+                                      const { [`${post.id}-${comment.id}`]: _, ...rest } = newComment;
+                                      setNewComment(rest);
+                                    }}
+                                    className="mt-1 px-3 py-1 bg-blue-600 text-white rounded-full text-xs hover:bg-blue-700"
+                                  >
+                                    Gửi
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Replies */}
+                            {comment.replies && comment.replies.length > 0 && (
+                              <div className="ml-8 space-y-3 mt-3">
+                                {comment.replies.map((reply) => (
+                                  <div key={reply.id} className="flex space-x-2">
+                                    <Image
+                                      src={reply.author.avatar}
+                                      alt={reply.author.name}
+                                      width={24}
+                                      height={24}
+                                      className="rounded-full"
+                                    />
+                                    <div className="flex-1">
+                                      <div className="bg-gray-50 rounded-lg p-2">
+                                        <div className="flex items-center justify-between">
+                                          <h4 className="font-medium text-gray-900 text-sm">{reply.author.name}</h4>
+                                          <span className="text-xs text-gray-500">{reply.timestamp}</span>
+                                        </div>
+                                        <p className="text-gray-800 text-sm mt-1">{reply.content}</p>
+                                      </div>
+                                      
+                                      <div className="flex items-center space-x-4 mt-1 text-xs">
+                                        <button
+                                          onClick={() => handleLikeComment(post.id, reply.id, true, comment.id)}
+                                          className={`${reply.isLiked ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600`}
+                                        >
+                                          {reply.likes} Thích
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center">
                   <Image
                     src={post.author.avatar}

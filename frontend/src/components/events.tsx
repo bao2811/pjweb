@@ -26,9 +26,12 @@ import {
   FaTimesCircle,
 } from "react-icons/fa";
 
+import { useRouter } from "next/navigation";  
+
 // Types
 interface Event {
   id: number;
+  eventId: string;
   title: string;
   description: string;
   image: string;
@@ -88,6 +91,7 @@ const currentUser: User = {
 const mockEvents: Event[] = [
   {
     id: 1,
+    eventId: "evt_001",
     title: "Trồng cây xanh - Vì môi trường sạch",
     description:
       "Cùng nhau trồng cây tại công viên để tạo ra không gian xanh, sạch cho cộng đồng. Hoạt động bao gồm trồng cây, tưới nước và chăm sóc cây con.",
@@ -116,6 +120,7 @@ const mockEvents: Event[] = [
   },
   {
     id: 2,
+    eventId: "evt_002",
     title: "Dạy học miễn phí cho trẻ em vùng cao",
     description:
       "Chương trình giáo dục tình nguyện dành cho trẻ em ở vùng núi cao. Chúng ta sẽ dạy các môn cơ bản và tặng sách vở, dụng cụ học tập.",
@@ -144,6 +149,7 @@ const mockEvents: Event[] = [
   },
   {
     id: 3,
+    eventId: "evt_003",
     title: "Nấu cơm từ thiện cuối tuần",
     description:
       "Chuẩn bị và phục vụ bữa ăn miễn phí cho người vô gia cư và người nghèo trong khu vực. Mang đến sự ấm áp và tình người.",
@@ -172,6 +178,7 @@ const mockEvents: Event[] = [
   },
   {
     id: 4,
+    eventId: "evt_004",
     title: "Hiến máu tình nguyện",
     description:
       "Chương trình hiến máu nhân đạo để cứu giúp những bệnh nhân đang cần máu điều trị. Mỗi đơn vị máu có thể cứu được 3 sinh mạng.",
@@ -200,6 +207,7 @@ const mockEvents: Event[] = [
   },
   {
     id: 5,
+    eventId: "evt_005",
     title: "Dọn dẹp bãi biển Vũng Tàu",
     description:
       "Hoạt động dọn dẹp rác thải trên bãi biển để bảo vệ môi trường biển và tạo không gian sạch đẹp cho du khách.",
@@ -252,6 +260,7 @@ export default function Events() {
     category: "Môi trường",
   });
 
+  const router = useRouter();
   const categories = ["all", "Môi trường", "Giáo dục", "Xã hội", "Y tế"];
   const statuses = ["all", "upcoming", "ongoing", "completed", "cancelled"];
 
@@ -378,11 +387,11 @@ export default function Events() {
       setEventToDelete(null);
     }
   };
-
   // Show event details
   const showEventDetails = (event: Event) => {
     setSelectedEvent(event);
     setShowDetailModal(true);
+    router.push(`/user/group/${event.eventId}`);  // ✅ Đúng
   };
 
   // Handle hide/show event
@@ -408,9 +417,10 @@ export default function Events() {
 
   // Handle create new event
   const handleCreateEvent = () => {
-    const eventId = Math.max(...events.map((e) => e.id)) + 1;
+    const newId = Math.max(...events.map((e) => e.id)) + 1;
     const createdEvent: Event = {
-      id: eventId,
+      id: newId,
+      eventId: `evt_${String(newId).padStart(3, '0')}`, // Thêm eventId
       ...newEvent,
       organizer: {
         id: currentUser.id,
@@ -424,8 +434,8 @@ export default function Events() {
       likes: 0,
       status: "upcoming",
       isHidden: false,
-      approvalStatus: currentUser.role === "admin" ? "approved" : "pending",
-      createdAt: new Date().toISOString().split("T")[0],
+      approvalStatus: "pending",
+      createdAt: new Date().toISOString().split('T')[0],
     };
 
     setEvents([...events, createdEvent]);
