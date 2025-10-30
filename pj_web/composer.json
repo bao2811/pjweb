@@ -9,6 +9,7 @@
         "php": "^8.2",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
+        "laravel/ui": "^4.6",
         "minishlink/web-push": "^8.0",
         "predis/predis": "^3.2",
         "symfony/uid": "^7.3"

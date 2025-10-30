@@ -1,70 +1,44 @@
 <?php
 
-namespace App\Utils;
+namespace App\Repositories;
 
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-use Firebase\JWT\ExpiredException;
-use Firebase\JWT\SignatureInvalidException;
+use App\Models\JoinEvent;
+use Illuminate\Support\Facades\DB;
+use Exception;
 
-class JWTUtil
+class JoinEventRepo
 {
-    private static $secretKey = null;
-
-    private function __construct() {}
-
-    public static function getSecretKey()
+    public function getJoinEventById($id)
     {
-        if (!self::$secretKey) {
-            self::$secretKey = env('JWT_SECRET');
-        }
-        return self::$secretKey;
+        return JoinEvent::find($id);
     }
 
-    public static function generateToken($userId, $expiryMinutes = 60)
+    public function createJoinEvent($data) : JoinEvent
     {
-        $issuedAt = time();
-        $expiry = $issuedAt + ($expiryMinutes * 60);
-
-        $payload = [
-            'iss' => 'your-issuer',
-            'aud' => 'your-audience',
-            'iat' => $issuedAt,
-            'exp' => $expiry,
-            'sub' => $userId,
-        ];
-
-        return JWT::encode($payload, self::getSecretKey(), 'HS256');
+        return JoinEvent::create($data);
     }
 
-
-    public static function extractToken($request)
+    public function updateJoinEventById($id, $data) : JoinEvent
     {
-        $header = $request->header('Authorization');
-        if (!$header || !preg_match('/Bearer\s(\S+)/', $header, $matches)) {
-            throw new \Exception("Token not provided");
+        $joinEvent = $this->getJoinEventById($id);
+        if (!$joinEvent) {
+            throw new Exception('JoinEvent not found');
         }
-        return $matches[1];
+        $joinEvent->update($data);
+        return $joinEvent;
     }
 
-
-    public static function decodeToken($token)
+    public function all()
     {
-        return JWT::decode($token, new Key(self::getSecretKey(), 'HS256'));
+        return JoinEvent::all();
     }
 
-
-    public static function validateToken(string $token)
+    public function deleteJoinEventById($id) : bool
     {
-        try {
-            return self::decodeToken($token);
-        } catch (ExpiredException $e) {
-            throw new \Exception('Token has expired');
+        $joinEvent = $this->getJoinEventById($id);
+        if (!$joinEvent) {
+            throw new Exception('JoinEvent not found');
         }
-         catch (SignatureInvalidException $e) {
-            throw new \Exception('Invalid signature');
-        } catch (\Exception $e) {
-            throw new \Exception('Invalid token: ' . $e->getMessage());
-        }
+        return $joinEvent->delete();
     }
 }

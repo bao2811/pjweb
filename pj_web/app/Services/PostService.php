@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Service;
+namespace App\Services;
 
 use App\Repositories\PostRepo;
 use Exception;
@@ -96,6 +96,23 @@ class PostService
         } catch (Exception $e) {
             // Handle exception
             return [];
+        }
+    }
+
+    public function updateLikeOfPost($postId, $status)
+    {   
+        try {
+            $post = $this->postRepo->find($postId);
+            if (!$post) {
+                throw new Exception('Post not found');
+            }
+            $post->like_count += $status;
+            $post->save();
+
+            return $post;
+        } catch (Exception $e) {
+            // Handle exception
+            return null;
         }
     }
 

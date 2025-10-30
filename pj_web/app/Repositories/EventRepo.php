@@ -29,9 +29,13 @@ class EventRepo
         return $event->delete();
     }
 
-    public function createEvent($data) : Event
+    public function createEvent($data, $comanager = []) : Event
     {
-        return Event::create($data);
+        
+        $event = Event::create($data);
+        // Attach comanagers to the event
+        $event->comanagers()->attach($comanager);
+        return $event;
     }
 
     public function updateEventById($id, $data) : Event

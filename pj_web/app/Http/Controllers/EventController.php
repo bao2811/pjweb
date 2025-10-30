@@ -60,13 +60,15 @@ class EventController extends Controller
             'date' => 'required|date',
             'user_id' => 'required|integer|exists:users,id',
             'image' => 'nullable|image|max:2048',
+            'comanager' => 'nullable|array',
+            'comanager.*' => 'integer|exists:users,id',
         ]);
 
         $eventData = $request->only(['title', 'description', 'date', 'user_id', 'image']);
         if ($request->hasFile('image')) {
             $eventData['image'] = $request->file('image')->store('events');
         }
-        $event = $this->eventService->createEvent($eventData);
+        $event = $this->eventService->createEvent($eventData, $request->input('comanager', []));
 
         return response()->json(['event' => $event], 201);
     }

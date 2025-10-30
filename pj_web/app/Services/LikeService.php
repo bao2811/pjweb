@@ -39,13 +39,7 @@ class LikeService
                     ]);
                 }
 
-                $post = $this->postService->getPostById($postId, $like->status);
-                if (!$post) {
-                    throw new Exception('Post not found');
-                }
-
-                $post->like_count += 1;
-                $post->save();
+                $this->postService->updateLikeOfPost($postId, $like->status ? 1 : -1);
             } catch (Exception $e) {
                 DB::rollBack();
                 throw $e;
@@ -59,8 +53,14 @@ class LikeService
     public function unLikePost($userId, $postId)
     {
         try {
-            return $this->likeRepo->unLike(['user_id' => $userId, 'post_id' => $postId, 'status' => 0]);
+
+            DB::beginTransaction();
+            $result = $this->likeRepo->unLike(['user_id' => $userId, 'post_id' => $postId, 'status' => 0]);
+            $this->postService->getPostById($postId, 0);
+            DB::commit();
+            return $result;
         } catch (Exception $e) {
+            DB::rollBack();
             Log::error('Error unliking post: ' . $e->getMessage());
             return false;
         }
