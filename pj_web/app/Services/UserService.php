@@ -8,15 +8,20 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use App\Repositories\UserRepo;
 use Exception;
+use Illuminate\Support\Facades\Validator;
+use App\Exceptions\CustomException;
+use App\Repositories\JoinEventRepo;
 
 class UserService
 {
 
     protected UserRepo $userRepo;
+    protected JoinEventRepo $joinEventRepo;
 
-    public function __construct(UserRepo $userRepo)
+    public function __construct(UserRepo $userRepo, JoinEventRepo $joinEventRepo)
     {
         $this->userRepo = $userRepo;
+        $this->joinEventRepo = $joinEventRepo;
     }
 
     public function getUserByEmail($email)
@@ -144,4 +149,38 @@ class UserService
             throw new Exception('Failed to update user');
         }
     } 
+
+    public function joinEvent($userId, $eventId)
+    {
+        $result =  $this->joinEventRepo->joinEvent($userId, $eventId);
+
+        if ($result) {
+            return [
+                'success' => true,
+                'message' => 'Joined event successfully',
+                'data' => $result
+            ];
+        } else {
+            return false;
+        }
+    }
+
+    public function leaveEvent($userId, $eventId)
+    {
+        $result = $this->joinEventRepo->leaveEvent($userId, $eventId);
+
+        // kiểm tra check điều kiện để  rời và đăng ký sự kiện
+
+        if ($result) {
+            return [
+                'success' => true,
+                'message' => 'Left event successfully',
+                'data' => $result
+            ];
+        } else {
+            return false;
+        }
+    }
+
+
 }

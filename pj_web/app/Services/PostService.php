@@ -4,15 +4,22 @@ namespace App\Services;
 
 use App\Repositories\PostRepo;
 use Exception;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use App\Repositories\CommentRepo;
 
 class PostService
 {
     protected $postRepo;
+    protected $commentRepo;
 
-    public function __construct(PostRepo $postRepo)
+    public function __construct(PostRepo $postRepo, CommentRepo $commentRepo)
     {
         $this->postRepo = $postRepo;
-    }
+        $this->commentRepo = $commentRepo;
+    }       
 
     public function getPostById($id)
     {
@@ -56,7 +63,7 @@ class PostService
         }
     }
 
-    public function updatePost($id, $data)
+    public function updatePostById($id, $data)
     {
         try {
             $request->validate([
@@ -64,7 +71,7 @@ class PostService
                 'content' => 'sometimes|required|string',
                 'image' => 'sometimes|image|max:2048',
             ]);
-            $result =  $this->postRepo->update($id, $data);
+            $result =  $this->postRepo->updatePostById($id, $data);
             return [
                 'success' => $result,
                 'message' => $result ? 'Post updated successfully' : 'Post not found'
@@ -75,7 +82,7 @@ class PostService
         }
     }
 
-    public function deletePost($id)
+    public function deletePostById($id)
     {
         try {
             $result =  $this->postRepo->deletePostById($id);
@@ -116,4 +123,67 @@ class PostService
         }
     }
 
+    public function addCommentOfPost($postId, $data)
+    {
+        try {
+            $data->validate([
+                'user_id' => 'required|integer|exists:users,id',
+                'content' => 'required|string',
+            ]);
+            DB::beginTransaction();
+            $comment = $this->commentRepo->addCommentOfPost(array_merge($data, ['post_id' => $postId]));
+            $post = $this->postRepo->find($postId);
+            if (!$post) {
+                throw new Exception('Post not found');
+            }
+            $post->comment_count += 1;
+            $post->save();
+            DB::commit();
+            return $post;
+        } catch (Exception $e) {
+            DB::rollBack();
+            // Handle exception
+            return null;
+        }
+    }
+
+    public function getCommentsOfPost($postId)
+    {
+        try {
+            return $this->commentRepo->getCommentsByPostId($postId);
+        } catch (Exception $e) {
+            // Handle exception
+            return [];
+        }
+    }
+
+    public function getLikesOfPost($postId)
+    {
+        try {
+            return $this->postRepo->getLikesByPostId($postId);
+        } catch (Exception $e) {
+            // Handle exception
+            return [];
+        }
+    }
+
+    public function getPostsByUserId($userId)
+    {
+        try {
+            return $this->postRepo->getPostsByUserId($userId);
+        } catch (Exception $e) {
+            // Handle exception
+            return [];
+        }
+    }
+
+    public function getPostsByEventId($eventId)
+    {
+        try {
+            return $this->postRepo->getPostsByEventId($eventId);
+        } catch (Exception $e) {
+            // Handle exception
+            return [];
+        }
+    }
 }

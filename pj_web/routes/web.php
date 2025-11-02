@@ -1,10 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController; 
 
 Auth::routes(['verify' => true]);
 
-Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth');
+Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -25,12 +26,5 @@ Route::post('/email/verification-notification', function (Request $request) {
     return back()->with('message', 'Link xác nhận đã được gửi lại!');
 })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 
-
-
-Route::get('/me', function (Request $request) {
-    return [
-        'user' => Auth::user(),
-        'session_id' => $request->session()->getId(),
-        'session_data' => $request->session()->all(),
-    ];
-});
+Auth::routes();
+Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');

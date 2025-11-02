@@ -60,7 +60,9 @@ class AuthController extends Controller
         $user = $request->only(['name', 'email', 'password']);
         $user['role'] = 'user';
 
-        $this->userService->createUser($user);
+       $user['data'] = $this->userService->createUser($user);
+
+        // $user->sendEmailVerificationNotification();
 
         return response()->json([
             'user' => [
@@ -77,6 +79,16 @@ class AuthController extends Controller
         Auth::logout();
         session()->flush();
         return response()->json(['message' => 'Logged out successfully']);
+    }
+
+    public function resendVerificationEmail(Request $request)
+    {
+        $user = $request->user();
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified.'], 400);
+        }
+        $user->sendEmailVerificationNotification();
+        return response()->json(['message' => 'Verification email resent.']);
     }
 
 }

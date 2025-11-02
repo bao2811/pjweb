@@ -60,4 +60,9 @@ class User extends Authenticatable
     {
         $this->notify(new CustomVerifyEmail);
     }
+
+    public function resendEmailVerification()
+    {
+        $this->notify(new VerifyEmailNotification());
+    }
 }

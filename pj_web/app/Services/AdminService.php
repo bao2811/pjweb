@@ -24,6 +24,16 @@ class AdminService
         return $this->userRepo->all();
     }
 
+    public function getAllEvents()
+    {
+        return $this->eventService->getAllEvents();
+    }
+
+    public function getAllManagers()
+    {
+        return $this->userRepo->getUsersByRole('manager');
+    }
+
     public function banUser($id)
     {
         $result = $this->userRepo->banUser($id);
@@ -53,12 +63,6 @@ class AdminService
         if (!$result) {
             throw new Exception('Failed to delete user');
         }
-        return $result;
-    }
-
-    public function getAllEvents()
-    {
-        $result = $this->eventService->getAllEvents();
         return $result;
     }
 

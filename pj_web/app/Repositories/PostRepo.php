@@ -61,4 +61,15 @@ class PostRepo
         }
     }
 
+    public function getPostsByUserId($userId)
+    {
+        return Post::where('user_id', $userId)->get();
+    }
+
+
+    public function getPostsByEventId($eventId)
+    {
+        return Post::where('event_id', $eventId)->get();
+    }
+
 }

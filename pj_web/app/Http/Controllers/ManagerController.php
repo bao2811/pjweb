@@ -40,7 +40,8 @@ class ManagerController extends Controller
     public function acceptUserJoinEvent(Request $request, $id): JsonResponse
     {
         try {
-            $event = $this->userService->acceptUserJoinEvent($id);
+            $user = $request->user();
+            $event = $this->managerService->acceptUserJoinEvent($user, $id);
             return response()->json($event, Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Event not found'], Response::HTTP_NOT_FOUND);
@@ -53,7 +54,7 @@ class ManagerController extends Controller
     public function rejectUserJoinEvent(Request $request, $id): JsonResponse
     {
         try {
-            $event = $this->userService->rejectUserJoinEvent($id);
+            $event = $this->managerService->rejectUserJoinEvent($id);
             return response()->json($event, Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Event not found'], Response::HTTP_NOT_FOUND);
@@ -61,6 +62,27 @@ class ManagerController extends Controller
             Log::error('Error rejecting user join event: ' . $e->getMessage());
             return response()->json(['message' => 'Internal Server Error'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public function createEvent(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'date' => 'required|date',
+            'user_id' => 'required|integer|exists:users,id',
+            'image' => 'nullable|image|max:2048',
+            'comanager' => 'nullable|array',
+            'comanager.*' => 'integer|exists:users,id',
+        ]);
+
+        $eventData = $request->only(['title', 'description', 'date', 'user_id', 'image']);
+        if ($request->hasFile('image')) {
+            $eventData['image'] = $request->file('image')->store('events');
+        }
+        $event = $this->managerService->createEvent($eventData, $request->input('comanager', []));
+
+        return response()->json(['event' => $event], 201);
     }
 
 }

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Service\UserService;
+use App\Services\UserService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -23,15 +23,14 @@ class UserController extends Controller
        return response()->json($request->user());
    }
 
-   public function getUserDetails(Request $request)
+   public function getUserDetails(Request $request, $id)
    {
       $userId = $request->session()->get('user_id');
-      $id = $request->param('id');
       $user = $this->userService->getUserById($id);
       return response()->json($user);
    }
 
-   public function updateUserProfile(Request $request)
+   public function updateUserProfile(Request $request, $id)
    {
       try{
          $request->validate([
@@ -66,4 +65,25 @@ class UserController extends Controller
          ], 500);
       }
    }
+
+     public function joinEvent(Request $request, $eventId)
+    {
+        $user = $request->user();
+        $data = $this->userService->joinEvent($user->id, $eventId);
+        if(!$data){
+            return response()->json(['error' => 'Event not found'], 404);
+        }
+        return response()->json(['message' => 'Joined event successfully']);
+    }
+
+    public function leaveEvent(Request $request, $eventId)
+    {
+        $user = $request->user();
+        $data = $this->userService->leaveEvent($user->id, $eventId);
+        if(!$data){
+            return response()->json(['error' => 'Event not found'], 404);
+        }
+        return response()->json(['message' => 'Left event successfully']);
+    }
+   
 }

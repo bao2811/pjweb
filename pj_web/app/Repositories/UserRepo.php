@@ -26,7 +26,12 @@ class UserRepo
 
     public function getAllUsers()
     {
-        return User::all();
+        return User::where('role', 'user')->get();
+    }
+
+    public function getUsersByRole($role)
+    {
+        return User::where('role', $role)->get();
     }
 
     public function updateUserById($id, $data) : User

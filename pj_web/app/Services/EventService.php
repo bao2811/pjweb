@@ -31,6 +31,7 @@ class EventService
             DB::beginTransaction();
             $event = $this->eventRepo->createEvent($data);
             $this->eventManagementRepo->addComanagerByEventId($event->id, $comanager);
+            // tạo kênh sự kiện nữa
             DB::commit();
     return $event;
         } catch (Exception $e) {
