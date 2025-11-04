@@ -118,5 +118,71 @@ class PostController extends Controller
         }
     }
 
+    public function updateLikeOfPost(Request $request, $postId): JsonResponse
+    {
+        $status = $request->input('status'); // 1 for like, 0 for unlike
 
+        try {
+            $this->postService->updateLikeOfPost($postId, $status);
+            return response()->json(['message' => 'Post like updated successfully'], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function addCommentOfPost(Request $request, $postId): JsonResponse
+    {
+        $commentData = $request->only(['user_id', 'content']);
+
+        try {
+            $comment = $this->postService->addCommentOfPost($postId, $commentData);
+            return response()->json(['comment' => $comment], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getPostsByEventId(Request $request, $eventId): JsonResponse
+    {
+        try {
+            $posts = $this->postService->getPostsByEventId($eventId);
+            return response()->json(['posts' => $posts], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getPostsByUserId(Request $request, $userId): JsonResponse
+    {
+        try {
+            $posts = $this->postService->getPostsByUserId($userId);
+            return response()->json(['posts' => $posts], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function getCommentsOfPost(Request $request, $postId): JsonResponse
+    {
+        try {
+            $comments = $this->postService->getCommentsOfPost($postId);
+            return response()->json(['comments' => $comments], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

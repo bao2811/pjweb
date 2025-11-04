@@ -1,21 +1,17 @@
 <?php
 
-namespace App\Routes;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AdminController;
+use App\Http\Middleware\JwtMiddleware;
 
-use App\Controllers\AdminController;
-use App\Middleware\AdminMiddleware;
-use App\Middleware\AuthMiddleware;
-use App\Middleware\CsrfMiddleware;
-use App\Middleware\LoggingMiddleware;
-use App\Middleware\RoleMiddleware;
-use App\Middleware\ValidationMiddleware;
-use Framework\Routing\Route;
-
-Route::group('/admin', function () {
-
-    Route::get('/getAllUsers', [AdminController::class, 'getAllUser'])
-        ->middleware([AuthMiddleware::class, AdminMiddleware::class, CsrfMiddleware::class, ValidationMiddleware::class]);
-
-    Route::get('/getAllEvents', [AdminController::class, 'getAllEvents'])
-        ->middleware([AuthMiddleware::class, AdminMiddleware::class, RoleMiddleware::class . ':superadmin', CsrfMiddleware::class]);
+Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+    Route::get('/banUser', [AdminController::class, 'banUser']);
+    Route::get('/unbanUser', [AdminController::class, 'unbanUser']);
+    Route::get('/deleteEvent/{id}', [AdminController::class, 'deleteEvent']);
+    Route::delete('acceptEvent/{id}', [AdminController::class, 'acceptEvent']);
+    Route::delete('rejectEvent/{id}', [AdminController::class, 'rejectEvent']);
+    Route::get('/createManager', [AdminController::class, 'createMangerEvent']);
+    Route::get('/getAllUsers', [AdminController::class, 'getAllUsers']);
+    Route::get('/getAllEvents', [AdminController::class, 'getAllEvents']);
+    Route::get('/getAllManagers', [AdminController::class, 'getAllManagers']);
 });

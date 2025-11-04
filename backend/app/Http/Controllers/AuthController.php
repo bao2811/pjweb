@@ -96,4 +96,14 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out successfully']);
     }
 
+    public function resendVerificationEmail(Request $request)
+    {
+        $user = $request->user();
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified.'], 400);
+        }
+        $user->sendEmailVerificationNotification();
+        return response()->json(['message' => 'Verification email resent.']);
+    }
+
 }

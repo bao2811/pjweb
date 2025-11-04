@@ -41,6 +41,18 @@ class AdminController {
         }
     }
 
+    public function getAllManagers() {
+        try{
+            $listManager = $this->adminService->getAllManagers();
+            return response()->json($listManager, 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'=>'error server',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function banUser($id) {
         try {
         $res = $this->adminService->banUser($id);
