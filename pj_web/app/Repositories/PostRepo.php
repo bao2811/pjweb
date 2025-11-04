@@ -30,7 +30,30 @@ class PostRepo
 
     public function all()
     {
-        return Post::all();
+
+        $posts = DB::table('posts')
+        ->join('users', 'posts.author_id', '=', 'users.id')
+        ->where('posts.status', 'active')
+        ->select(
+            'posts.*',
+            'users.name as name',
+            'users.image as avatar',
+            'users.role as role',
+        )
+        ->get();
+
+        // $posts = Post::with('author')
+        //              ->where('status', 'active')
+        //              ->get();
+
+        // foreach ($posts as $post) {
+        //     $authorName = $post->author ? $post->author->name : 'No Author';
+        //     echo "Post: {$post->title}, Author: {$authorName} <br>";
+        // }
+
+        return $posts;
+
+
     }
 
     public function deletePostById($id) : bool

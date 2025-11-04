@@ -27,7 +27,7 @@ class User extends Authenticatable
         'phone',
         'address',
         'role',
-        'avatar',      
+        'image',
         'status',
         'addressCard',  
         'created_at'
@@ -42,6 +42,12 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class, 'author_id'); // nếu cột khóa ngoại là author_id
+    }
+
 
     /**
      * Get the attributes that should be cast.

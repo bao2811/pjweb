@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WebPushApi;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 use Illuminate\Http\Request;
 
-class EventController extends Controller
+class JoinEventController extends Controller
 {
     protected $eventService;
     public function sendEventNotification(Request $request)

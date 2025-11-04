@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Repositories\UserRepo;
 use App\Repositories\EventRepo;
-use App\Managements\EventManagementRepo;
+use App\Repositories\EventManagementRepo;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;

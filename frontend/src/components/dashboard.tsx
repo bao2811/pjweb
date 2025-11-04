@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   FaHeart,
@@ -16,92 +16,109 @@ import {
 } from "react-icons/fa";
 
 // Mock data for volunteer events
-const mockPosts = [
-  {
-    id: 1,
-    author: {
-      name: "Nguyễn Văn An",
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-      role: "Tình nguyện viên",
-    },
-    timestamp: "2 giờ trước",
-    content:
-      "🌱 Cùng nhau trồng cây xanh tại Công viên Tao Đàn! Hãy tham gia với chúng mình để góp phần làm xanh thành phố. Mỗi cái cây nhỏ hôm nay sẽ là tấm bóng mát cho tương lai! 🌳",
-    event: {
-      title: "Trồng cây xanh - Vì môi trường sạch",
-      date: "15/10/2025",
-      time: "7:00 - 11:00",
-      location: "Công viên Tao Đàn, Q.1",
-      participants: 45,
-      maxParticipants: 100,
-    },
-    image:
-      "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop",
-    likes: 128,
-    comments: 23,
-    shares: 12,
-    isLiked: false,
-  },
-  {
-    id: 2,
-    author: {
-      name: "Trần Thị Bình",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
-      role: "Trưởng nhóm",
-    },
-    timestamp: "5 giờ trước",
-    content:
-      "📚 Chương trình dạy học miễn phí cho trẻ em vùng cao đang cần thêm tình nguyện viên! Nếu bạn có kiến thức và tình yêu với trẻ em, hãy tham gia cùng chúng mình nhé! ❤️",
-    event: {
-      title: "Dạy học cho trẻ em vùng cao",
-      date: "20-22/10/2025",
-      time: "Cả ngày",
-      location: "Sapa, Lào Cai",
-      participants: 12,
-      maxParticipants: 20,
-    },
-    image:
-      "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop",
-    likes: 89,
-    comments: 15,
-    shares: 8,
-    isLiked: true,
-  },
-  {
-    id: 3,
-    author: {
-      name: "Lê Minh Châu",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      role: "Tình nguyện viên",
-    },
-    timestamp: "1 ngày trước",
-    content:
-      "🍲 Nấu cơm từ thiện cho người vô gia cư! Cùng nhau mang đến những bữa ăn ấm áp và tình người đến với những hoàn cảnh khó khăn trong thành phố. Mọi người hãy tham gia nhé! 🤝",
-    event: {
-      title: "Nấu cơm từ thiện cuối tuần",
-      date: "14/10/2025",
-      time: "16:00 - 20:00",
-      location: "Chùa Vĩnh Nghiêm, Q.3",
-      participants: 67,
-      maxParticipants: 80,
-    },
-    image:
-      "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&h=400&fit=crop",
-    likes: 156,
-    comments: 31,
-    shares: 19,
-    isLiked: false,
-  },
-];
+// const mockPosts = [
+//   {
+//     id: 1,
+//     author: {
+//       name: "Nguyễn Văn An",
+//       avatar:
+//         "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+//       role: "Tình nguyện viên",
+//     },
+//     timestamp: "2 giờ trước",
+//     content:
+//       "🌱 Cùng nhau trồng cây xanh tại Công viên Tao Đàn! Hãy tham gia với chúng mình để góp phần làm xanh thành phố. Mỗi cái cây nhỏ hôm nay sẽ là tấm bóng mát cho tương lai! 🌳",
+//     event: {
+//       title: "Trồng cây xanh - Vì môi trường sạch",
+//       date: "15/10/2025",
+//       time: "7:00 - 11:00",
+//       location: "Công viên Tao Đàn, Q.1",
+//       participants: 45,
+//       maxParticipants: 100,
+//     },
+//     image:
+//       "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop",
+//     likes: 128,
+//     comments: 23,
+//     shares: 12,
+//     isLiked: false,
+//   },
+//   {
+//     id: 2,
+//     author: {
+//       name: "Trần Thị Bình",
+//       avatar:
+//         "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
+//       role: "Trưởng nhóm",
+//     },
+//     timestamp: "5 giờ trước",
+//     content:
+//       "📚 Chương trình dạy học miễn phí cho trẻ em vùng cao đang cần thêm tình nguyện viên! Nếu bạn có kiến thức và tình yêu với trẻ em, hãy tham gia cùng chúng mình nhé! ❤️",
+//     event: {
+//       title: "Dạy học cho trẻ em vùng cao",
+//       date: "20-22/10/2025",
+//       time: "Cả ngày",
+//       location: "Sapa, Lào Cai",
+//       participants: 12,
+//       maxParticipants: 20,
+//     },
+//     image:
+//       "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop",
+//     likes: 89,
+//     comments: 15,
+//     shares: 8,
+//     isLiked: true,
+//   },
+//   {
+//     id: 3,
+//     author: {
+//       name: "Lê Minh Châu",
+//       avatar:
+//         "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+//       role: "Tình nguyện viên",
+//     },
+//     timestamp: "1 ngày trước",
+//     content:
+//       "🍲 Nấu cơm từ thiện cho người vô gia cư! Cùng nhau mang đến những bữa ăn ấm áp và tình người đến với những hoàn cảnh khó khăn trong thành phố. Mọi người hãy tham gia nhé! 🤝",
+//     event: {
+//       title: "Nấu cơm từ thiện cuối tuần",
+//       date: "14/10/2025",
+//       time: "16:00 - 20:00",
+//       location: "Chùa Vĩnh Nghiêm, Q.3",
+//       participants: 67,
+//       maxParticipants: 80,
+//     },
+//     image:
+//       "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&h=400&fit=crop",
+//     likes: 156,
+//     comments: 31,
+//     shares: 19,
+//     isLiked: false,
+//   },
+// ];
 
 export default function Dashboard() {
-  const [posts, setPosts] = useState(mockPosts);
+  const [posts, setPosts] = useState<any[]>([]);
   const [commentInputs, setCommentInputs] = useState<{ [key: number]: string }>(
     {}
   );
+
+  const [loading, setLoading] = useState(false);
+
+  async function fetchPosts() {
+    const res = await fetch("http://localhost:8000/api/posts/getAllPosts");
+    const data = await res.json();
+    if (data.posts) {
+      setPosts(data.posts);
+      console.log(data.posts);
+    }
+    setLoading(false);
+  }
+
+  // if (loading === false && posts.length === 0) {
+  //   setLoading(true);
+  //   fetchPosts();
+  // }
 
   const handleLike = (postId: number) => {
     setPosts(
@@ -132,6 +149,10 @@ export default function Dashboard() {
   const formatTime = (timestamp: string) => {
     return timestamp;
   };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
 
   return (
     <div className="min-h-screen ">
@@ -192,19 +213,17 @@ export default function Dashboard() {
               <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <Image
-                    src={post.author.avatar}
-                    alt={post.author.name}
+                    src={post.image}
+                    alt={post.name}
                     width={50}
                     height={50}
                     className="rounded-full"
                     unoptimized
                   />
                   <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {post.author.name}
-                    </h3>
+                    <h3 className="font-semibold text-gray-900">{post.name}</h3>
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <span>{post.author.role}</span>
+                      <span>{post.role}</span>
                       <span>•</span>
                       <span>{formatTime(post.timestamp)}</span>
                     </div>
@@ -225,7 +244,7 @@ export default function Dashboard() {
                 <div className="relative h-48">
                   <Image
                     src={post.image}
-                    alt={post.event.title}
+                    alt={post.title}
                     fill
                     className="object-cover"
                     unoptimized
@@ -234,28 +253,32 @@ export default function Dashboard() {
                 </div>
                 <div className="p-4">
                   <h4 className="font-bold text-lg text-gray-900 mb-2">
-                    {post.event.title}
+                    {post.title}
                   </h4>
                   <div className="space-y-2 text-sm text-gray-600">
                     <div className="flex items-center space-x-2">
                       <FaCalendarAlt className="text-blue-500" />
                       <span>
-                        {post.event.date} • {post.event.time}
+                        {post.start_time} • {post.end_time}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <FaMapMarkerAlt className="text-red-500" />
-                      <span>{post.event.location}</span>
+                      <span>{post.address}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <FaUsers className="text-green-500" />
-                      <span>
-                        {post.event.participants}/{post.event.maxParticipants}{" "}
-                        người tham gia
-                      </span>
+                      {post.role === "manager" ? (
+                        <span>
+                          {post.participants}/{post.maxParticipants} người tham
+                          gia
+                        </span>
+                      ) : (
+                        <span></span>
+                      )}
                     </div>
                   </div>
-                  <div className="mt-3">
+                  {/* <div className="mt-3">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
@@ -268,7 +291,7 @@ export default function Dashboard() {
                         }}
                       ></div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 

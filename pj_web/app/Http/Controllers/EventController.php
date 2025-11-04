@@ -1,9 +1,14 @@
 <?php
 
+namespace App\Http\Controllers;
+
 use App\Helpers\WebPushApi;
 
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
+use Illuminate\Http\Request;
+use App\Services\EventService;
+
 
 class EventController extends Controller
 {
