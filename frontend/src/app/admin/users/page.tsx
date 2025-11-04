@@ -1,711 +1,517 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import {
   FaUsers,
-  FaUserPlus,
-  FaUserMinus,
-  FaUserTimes,
-  FaUserCheck,
-  FaCrown,
-  FaShieldAlt,
-  FaUser,
   FaSearch,
   FaFilter,
-  FaEdit,
-  FaBan,
-  FaUndo,
+  FaLock,
+  FaUnlock,
   FaEye,
+  FaUserShield,
+  FaUserTie,
+  FaUser,
   FaCalendarAlt,
-  FaChartLine,
+  FaEnvelope,
+  FaPhone,
+  FaMapMarkerAlt,
   FaTimes,
-  FaCheck,
-  FaExclamationTriangle,
-  FaUserCog,
-  FaSortAmountDown,
-  FaSortAmountUp,
+  FaCheckCircle,
+  FaBan,
+  FaHistory,
+  FaLeaf,
+  FaGraduationCap,
+  FaHeart,
+  FaHandsHelping,
 } from "react-icons/fa";
 
-// Types
-interface Member {
+interface User {
   id: number;
   name: string;
   email: string;
+  phone: string;
   avatar: string;
-  role: "user" | "manager" | "admin";
-  status: "active" | "banned" | "suspended";
-  joinedAt: string;
-  lastLogin: string;
+  role: "admin" | "manager" | "volunteer";
+  status: "active" | "locked";
+  joinedDate: string;
+  lastActive: string;
   eventsJoined: number;
   eventsCreated: number;
-  totalContributions: number;
   location: string;
-  phoneNumber?: string;
-  isOnline: boolean;
+  bio: string;
+  events: UserEvent[];
 }
 
-interface Stats {
-  totalMembers: number;
-  newMembersThisMonth: number;
-  activeMembersToday: number;
-  bannedMembers: number;
-  adminCount: number;
-  managerCount: number;
-  userCount: number;
+interface UserEvent {
+  id: number;
+  title: string;
+  category: "environment" | "education" | "health" | "community";
+  date: string;
+  status: "completed" | "upcoming" | "ongoing";
+  role: string;
 }
 
-// Mock current user (admin/manager)
-const currentUser = {
-  id: 1,
-  name: "Admin User",
-  role: "admin" as const, // Thay đổi thành "manager" để test quyền manager
-};
-
-// Mock members data
-const mockMembers: Member[] = [
+const mockUsers: User[] = [
   {
     id: 1,
     name: "Nguyễn Văn An",
-    email: "nguyen.van.an@email.com",
+    email: "nguyenvanan@gmail.com",
+    phone: "0901234567",
     avatar:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100",
     role: "admin",
     status: "active",
-    joinedAt: "2024-01-15",
-    lastLogin: "2025-10-09T08:30:00Z",
-    eventsJoined: 25,
-    eventsCreated: 8,
-    totalContributions: 120,
-    location: "TP.HCM",
-    phoneNumber: "0901234567",
-    isOnline: true,
+    joinedDate: "2024-01-15",
+    lastActive: "2 giờ trước",
+    eventsJoined: 45,
+    eventsCreated: 12,
+    location: "TP. Hồ Chí Minh",
+    bio: "Quản trị viên hệ thống, đam mê hoạt động tình nguyện và phát triển cộng đồng.",
+    events: [
+      {
+        id: 1,
+        title: "Dọn rác bãi biển Vũng Tàu",
+        category: "environment",
+        date: "2025-10-25",
+        status: "upcoming",
+        role: "Người tổ chức",
+      },
+      {
+        id: 2,
+        title: "Trồng cây xanh - Công viên Tao Đàn",
+        category: "environment",
+        date: "2025-10-22",
+        status: "ongoing",
+        role: "Tình nguyện viên",
+      },
+      {
+        id: 3,
+        title: "Hiến máu nhân đạo",
+        category: "health",
+        date: "2025-09-15",
+        status: "completed",
+        role: "Nhóm trưởng",
+      },
+    ],
   },
   {
     id: 2,
     name: "Trần Thị Bình",
-    email: "tran.thi.binh@email.com",
+    email: "tranbinhtv@gmail.com",
+    phone: "0902345678",
     avatar:
-      "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
+      "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=100",
     role: "manager",
     status: "active",
-    joinedAt: "2024-03-20",
-    lastLogin: "2025-10-09T07:15:00Z",
-    eventsJoined: 18,
-    eventsCreated: 12,
-    totalContributions: 95,
+    joinedDate: "2024-02-20",
+    lastActive: "1 ngày trước",
+    eventsJoined: 38,
+    eventsCreated: 8,
     location: "Hà Nội",
-    phoneNumber: "0987654321",
-    isOnline: true,
+    bio: "Quản lý sự kiện với kinh nghiệm 3 năm trong lĩnh vực tình nguyện.",
+    events: [
+      {
+        id: 4,
+        title: "Dạy học miễn phí cho trẻ em",
+        category: "education",
+        date: "2025-10-28",
+        status: "upcoming",
+        role: "Người tổ chức",
+      },
+      {
+        id: 5,
+        title: "Phát quà cho người vô gia cư",
+        category: "community",
+        date: "2025-09-10",
+        status: "completed",
+        role: "Tình nguyện viên",
+      },
+    ],
   },
   {
     id: 3,
     name: "Lê Minh Châu",
-    email: "le.minh.chau@email.com",
+    email: "leminhchau@gmail.com",
+    phone: "0903456789",
     avatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-    role: "manager",
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100",
+    role: "volunteer",
     status: "active",
-    joinedAt: "2024-05-10",
-    lastLogin: "2025-10-08T22:45:00Z",
-    eventsJoined: 22,
-    eventsCreated: 15,
-    totalContributions: 88,
+    joinedDate: "2024-03-10",
+    lastActive: "3 giờ trước",
+    eventsJoined: 23,
+    eventsCreated: 0,
     location: "Đà Nẵng",
-    phoneNumber: "0912345678",
-    isOnline: false,
+    bio: "Tình nguyện viên nhiệt tình, yêu thích hoạt động bảo vệ môi trường.",
+    events: [
+      {
+        id: 6,
+        title: "Dọn rác bãi biển Vũng Tàu",
+        category: "environment",
+        date: "2025-10-25",
+        status: "upcoming",
+        role: "Tình nguyện viên",
+      },
+    ],
   },
   {
     id: 4,
     name: "Phạm Văn Dũng",
-    email: "pham.van.dung@email.com",
+    email: "phamvandung@gmail.com",
+    phone: "0904567890",
     avatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-    role: "user",
-    status: "active",
-    joinedAt: "2025-09-15",
-    lastLogin: "2025-10-09T06:20:00Z",
-    eventsJoined: 8,
-    eventsCreated: 0,
-    totalContributions: 32,
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100",
+    role: "manager",
+    status: "locked",
+    joinedDate: "2024-01-25",
+    lastActive: "1 tuần trước",
+    eventsJoined: 15,
+    eventsCreated: 3,
     location: "Cần Thơ",
-    phoneNumber: "0934567890",
-    isOnline: true,
-  },
-  {
-    id: 5,
-    name: "Hoàng Thị Em",
-    email: "hoang.thi.em@email.com",
-    avatar:
-      "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=150&h=150&fit=crop&crop=face",
-    role: "user",
-    status: "banned",
-    joinedAt: "2024-08-22",
-    lastLogin: "2025-10-05T14:30:00Z",
-    eventsJoined: 5,
-    eventsCreated: 0,
-    totalContributions: 15,
-    location: "Hải Phòng",
-    phoneNumber: "0945678901",
-    isOnline: false,
-  },
-  {
-    id: 6,
-    name: "Vũ Quang Hải",
-    email: "vu.quang.hai@email.com",
-    avatar:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
-    role: "user",
-    status: "active",
-    joinedAt: "2025-10-01",
-    lastLogin: "2025-10-09T09:10:00Z",
-    eventsJoined: 2,
-    eventsCreated: 0,
-    totalContributions: 8,
-    location: "Vũng Tàu",
-    isOnline: true,
-  },
-  {
-    id: 7,
-    name: "Đỗ Thị Giang",
-    email: "do.thi.giang@email.com",
-    avatar:
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face",
-    role: "user",
-    status: "suspended",
-    joinedAt: "2024-12-10",
-    lastLogin: "2025-10-07T16:20:00Z",
-    eventsJoined: 12,
-    eventsCreated: 1,
-    totalContributions: 45,
-    location: "Nha Trang",
-    phoneNumber: "0956789012",
-    isOnline: false,
+    bio: "Quản lý sự kiện tại khu vực miền Tây.",
+    events: [],
   },
 ];
 
-// Mock stats
-const mockStats: Stats = {
-  totalMembers: 847,
-  newMembersThisMonth: 23,
-  activeMembersToday: 156,
-  bannedMembers: 5,
-  adminCount: 3,
-  managerCount: 12,
-  userCount: 832,
-};
-
-export default function MembersPage() {
-  const [members, setMembers] = useState<Member[]>(mockMembers);
-  const [filteredMembers, setFilteredMembers] = useState<Member[]>(mockMembers);
-  const [stats, setStats] = useState<Stats>(mockStats);
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showBanModal, setShowBanModal] = useState(false);
-  const [memberToAction, setMemberToAction] = useState<Member | null>(null);
+export default function AdminUsersPage() {
+  const [users, setUsers] = useState<User[]>(mockUsers);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRole, setSelectedRole] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [sortBy, setSortBy] = useState<
-    "name" | "joinedAt" | "lastLogin" | "contributions"
-  >("joinedAt");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [filterRole, setFilterRole] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
-  const roles = ["all", "admin", "manager", "user"];
-  const statuses = ["all", "active", "banned", "suspended"];
+  const filteredUsers = users.filter((user) => {
+    const matchSearch =
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchRole = filterRole === "all" || user.role === filterRole;
+    const matchStatus = filterStatus === "all" || user.status === filterStatus;
+    return matchSearch && matchRole && matchStatus;
+  });
 
-  // Filter and sort members
-  useEffect(() => {
-    let filtered = members;
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (member) =>
-          member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          member.location.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Role filter
-    if (selectedRole !== "all") {
-      filtered = filtered.filter((member) => member.role === selectedRole);
-    }
-
-    // Status filter
-    if (selectedStatus !== "all") {
-      filtered = filtered.filter((member) => member.status === selectedStatus);
-    }
-
-    // Sort
-    filtered.sort((a, b) => {
-      let valueA: any, valueB: any;
-
-      switch (sortBy) {
-        case "name":
-          valueA = a.name.toLowerCase();
-          valueB = b.name.toLowerCase();
-          break;
-        case "joinedAt":
-          valueA = new Date(a.joinedAt);
-          valueB = new Date(b.joinedAt);
-          break;
-        case "lastLogin":
-          valueA = new Date(a.lastLogin);
-          valueB = new Date(b.lastLogin);
-          break;
-        case "contributions":
-          valueA = a.totalContributions;
-          valueB = b.totalContributions;
-          break;
-        default:
-          valueA = a.joinedAt;
-          valueB = b.joinedAt;
-      }
-
-      if (sortOrder === "asc") {
-        return valueA > valueB ? 1 : -1;
-      } else {
-        return valueA < valueB ? 1 : -1;
-      }
-    });
-
-    setFilteredMembers(filtered);
-  }, [members, searchTerm, selectedRole, selectedStatus, sortBy, sortOrder]);
-
-  // Permission checks
-  const canEditMember = (member: Member) => {
-    if (currentUser.role === "admin") return true;
-    if (currentUser.role === "manager" && member.role === "user") return true;
-    return false;
-  };
-
-  const canBanMember = (member: Member) => {
-    if (currentUser.role === "admin") return true;
-    if (currentUser.role === "manager" && member.role === "user") return true;
-    return false;
-  };
-
-  const canChangeRole = (member: Member) => {
-    if (currentUser.role === "admin") return true;
-    return false;
-  };
-
-  // Handlers
-  const handleViewMember = (member: Member) => {
-    setSelectedMember(member);
-    setShowDetailModal(true);
-  };
-
-  const handleEditMember = (member: Member) => {
-    setSelectedMember(member);
-    setShowEditModal(true);
-  };
-
-  const handleBanMember = (member: Member) => {
-    setMemberToAction(member);
-    setShowBanModal(true);
-  };
-
-  const confirmBanAction = (action: "ban" | "unban" | "suspend") => {
-    if (memberToAction) {
-      setMembers(
-        members.map((member) =>
-          member.id === memberToAction.id
-            ? {
-                ...member,
-                status:
-                  action === "ban"
-                    ? "banned"
-                    : action === "unban"
-                    ? "active"
-                    : "suspended",
-              }
-            : member
-        )
-      );
-
-      // Update stats
-      setStats((prev) => ({
-        ...prev,
-        bannedMembers:
-          action === "ban" ? prev.bannedMembers + 1 : prev.bannedMembers - 1,
-      }));
-
-      setShowBanModal(false);
-      setMemberToAction(null);
-    }
-  };
-
-  const handleRoleChange = (
-    memberId: number,
-    newRole: "user" | "manager" | "admin"
-  ) => {
-    setMembers(
-      members.map((member) =>
-        member.id === memberId ? { ...member, role: newRole } : member
+  const handleToggleLock = (userId: number) => {
+    setUsers(
+      users.map((user) =>
+        user.id === userId
+          ? { ...user, status: user.status === "active" ? "locked" : "active" }
+          : user
       )
     );
   };
 
-  // Get role info
-  const getRoleInfo = (role: string) => {
-    const roleConfig = {
+  const handleViewDetails = (user: User) => {
+    setSelectedUser(user);
+    setShowDetailModal(true);
+  };
+
+  const getRoleBadge = (role: string) => {
+    const badges = {
       admin: {
-        icon: FaCrown,
-        color: "text-red-600",
-        bgColor: "bg-red-100",
+        bg: "bg-blue-100",
+        text: "text-blue-700",
+        icon: FaUserShield,
         label: "Admin",
       },
       manager: {
-        icon: FaShieldAlt,
-        color: "text-blue-600",
-        bgColor: "bg-blue-100",
-        label: "Manager",
+        bg: "bg-green-100",
+        text: "text-green-700",
+        icon: FaUserTie,
+        label: "Quản lý",
       },
-      user: {
+      volunteer: {
+        bg: "bg-teal-100",
+        text: "text-teal-700",
         icon: FaUser,
-        color: "text-gray-600",
-        bgColor: "bg-gray-100",
-        label: "User",
+        label: "Tình nguyện viên",
       },
     };
-    return roleConfig[role as keyof typeof roleConfig];
+    return badges[role as keyof typeof badges];
   };
 
-  // Get status info
-  const getStatusInfo = (status: string) => {
-    const statusConfig = {
-      active: {
+  const stats = {
+    total: users.length,
+    active: users.filter((u) => u.status === "active").length,
+    locked: users.filter((u) => u.status === "locked").length,
+    admins: users.filter((u) => u.role === "admin").length,
+    managers: users.filter((u) => u.role === "manager").length,
+    volunteers: users.filter((u) => u.role === "volunteer").length,
+  };
+
+  // Category helpers
+  const getCategoryLabel = (category: string) => {
+    const labels = {
+      environment: "Môi trường",
+      education: "Giáo dục",
+      health: "Sức khỏe",
+      community: "Cộng đồng",
+    };
+    return labels[category as keyof typeof labels] || category;
+  };
+
+  const getCategoryIcon = (category: string) => {
+    const icons = {
+      environment: {
+        icon: FaLeaf,
         color: "text-green-600",
-        bgColor: "bg-green-100",
-        label: "Hoạt động",
+        bg: "bg-green-100",
       },
-      banned: { color: "text-red-600", bgColor: "bg-red-100", label: "Bị cấm" },
-      suspended: {
-        color: "text-yellow-600",
-        bgColor: "bg-yellow-100",
-        label: "Tạm khóa",
+      education: {
+        icon: FaGraduationCap,
+        color: "text-blue-600",
+        bg: "bg-blue-100",
+      },
+      health: { icon: FaHeart, color: "text-red-600", bg: "bg-red-100" },
+      community: {
+        icon: FaHandsHelping,
+        color: "text-purple-600",
+        bg: "bg-purple-100",
       },
     };
-    return statusConfig[status as keyof typeof statusConfig];
+    return icons[category as keyof typeof icons] || icons.community;
   };
 
-  // Format time
-  const formatRelativeTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-    );
-
-    if (diffInHours < 1) return "Vừa xong";
-    if (diffInHours < 24) return `${diffInHours} giờ trước`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 30) return `${diffInDays} ngày trước`;
-    const diffInMonths = Math.floor(diffInDays / 30);
-    return `${diffInMonths} tháng trước`;
+  const getStatusLabel = (status: string) => {
+    const labels = {
+      upcoming: "Sắp diễn ra",
+      ongoing: "Đang diễn ra",
+      completed: "Đã hoàn thành",
+    };
+    return labels[status as keyof typeof labels] || status;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="bg-white border-b border-blue-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Quản lý thành viên
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent flex items-center">
+                <FaUsers className="mr-3 text-blue-600" />
+                Quản lý người dùng
               </h1>
-              <p className="text-gray-600 mt-1">
-                Quản lý và theo dõi hoạt động của thành viên
+              <p className="text-blue-700 mt-2">
+                Quản lý tài khoản và phân quyền người dùng
               </p>
             </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mt-6">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-100 text-sm">Tổng thành viên</p>
-                  <p className="text-2xl font-bold">{stats.totalMembers}</p>
-                </div>
-                <FaUsers className="text-blue-200 text-2xl" />
-              </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Tổng người dùng</p>
+              <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
             </div>
-
-            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-100 text-sm">Mới tháng này</p>
-                  <p className="text-2xl font-bold">
-                    {stats.newMembersThisMonth}
-                  </p>
-                </div>
-                <FaUserPlus className="text-green-200 text-2xl" />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-100 text-sm">Hoạt động hôm nay</p>
-                  <p className="text-2xl font-bold">
-                    {stats.activeMembersToday}
-                  </p>
-                </div>
-                <FaChartLine className="text-purple-200 text-2xl" />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-red-100 text-sm">Bị cấm</p>
-                  <p className="text-2xl font-bold">{stats.bannedMembers}</p>
-                </div>
-                <FaBan className="text-red-200 text-2xl" />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-yellow-100 text-sm">Admin</p>
-                  <p className="text-2xl font-bold">{stats.adminCount}</p>
-                </div>
-                <FaCrown className="text-yellow-200 text-2xl" />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-indigo-100 text-sm">Manager</p>
-                  <p className="text-2xl font-bold">{stats.managerCount}</p>
-                </div>
-                <FaShieldAlt className="text-indigo-200 text-2xl" />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-gray-500 to-gray-600 rounded-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-100 text-sm">User</p>
-                  <p className="text-2xl font-bold">{stats.userCount}</p>
-                </div>
-                <FaUser className="text-gray-200 text-2xl" />
-              </div>
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mt-6">
-            {/* Search */}
-            <div className="relative flex-1">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo tên, email, địa điểm..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Role Filter */}
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {roles.map((role) => (
-                <option key={role} value={role}>
-                  {role === "all"
-                    ? "Tất cả vai trò"
-                    : role === "admin"
-                    ? "Admin"
-                    : role === "manager"
-                    ? "Manager"
-                    : "User"}
-                </option>
-              ))}
-            </select>
-
-            {/* Status Filter */}
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {statuses.map((status) => (
-                <option key={status} value={status}>
-                  {status === "all"
-                    ? "Tất cả trạng thái"
-                    : status === "active"
-                    ? "Hoạt động"
-                    : status === "banned"
-                    ? "Bị cấm"
-                    : "Tạm khóa"}
-                </option>
-              ))}
-            </select>
-
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="joinedAt">Ngày tham gia</option>
-              <option value="lastLogin">Lần cuối online</option>
-              <option value="name">Tên</option>
-              <option value="contributions">Đóng góp</option>
-            </select>
-
-            <button
-              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition duration-200"
-            >
-              {sortOrder === "asc" ? <FaSortAmountUp /> : <FaSortAmountDown />}
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Members Table */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          <div className="bg-white rounded-xl p-4 border-l-4 border-blue-500 shadow-sm hover:shadow-md transition duration-200">
+            <p className="text-sm text-gray-600">Tổng số</p>
+            <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm hover:shadow-md transition duration-200">
+            <p className="text-sm text-gray-600">Đang hoạt động</p>
+            <p className="text-2xl font-bold text-green-700">{stats.active}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm hover:shadow-md transition duration-200">
+            <p className="text-sm text-gray-600">Đã khóa</p>
+            <p className="text-2xl font-bold text-red-600">{stats.locked}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 border-l-4 border-blue-600 shadow-sm hover:shadow-md transition duration-200">
+            <p className="text-sm text-gray-600">Admin</p>
+            <p className="text-2xl font-bold text-blue-700">{stats.admins}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 border-l-4 border-green-600 shadow-sm hover:shadow-md transition duration-200">
+            <p className="text-sm text-gray-600">Quản lý</p>
+            <p className="text-2xl font-bold text-green-700">
+              {stats.managers}
+            </p>
+          </div>
+          <div className="bg-white rounded-xl p-4 border-l-4 border-teal-500 shadow-sm hover:shadow-md transition duration-200">
+            <p className="text-sm text-gray-600">Tình nguyện</p>
+            <p className="text-2xl font-bold text-teal-600">
+              {stats.volunteers}
+            </p>
+          </div>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="bg-white rounded-xl shadow-sm border border-blue-100 p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-400" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo tên hoặc email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="relative">
+              <FaFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-green-400" />
+              <select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none cursor-pointer"
+              >
+                <option value="all">Tất cả vai trò</option>
+                <option value="admin">Admin</option>
+                <option value="manager">Quản lý</option>
+                <option value="volunteer">Tình nguyện viên</option>
+              </select>
+            </div>
+            <div className="relative">
+              <FaFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-400" />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer"
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="active">Đang hoạt động</option>
+                <option value="locked">Đã khóa</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Users Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gradient-to-r from-blue-50 to-green-50 border-b border-blue-100">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Thành viên
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">
+                    Người dùng
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">
                     Vai trò
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">
                     Trạng thái
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">
                     Hoạt động
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tham gia
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">
+                    Sự kiện
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-blue-900">
                     Thao tác
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredMembers.map((member) => {
-                  const roleInfo = getRoleInfo(member.role);
-                  const statusInfo = getStatusInfo(member.status);
-                  const RoleIcon = roleInfo.icon;
-
+              <tbody className="divide-y divide-blue-50">
+                {filteredUsers.map((user) => {
+                  const roleBadge = getRoleBadge(user.role);
+                  const RoleIcon = roleBadge.icon;
                   return (
-                    <tr key={member.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="relative">
-                            <Image
-                              src={member.avatar}
-                              alt={member.name}
-                              width={40}
-                              height={40}
-                              className="rounded-full"
-                              unoptimized
-                            />
-                            {member.isOnline && (
-                              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                    <tr
+                      key={user.id}
+                      className="hover:bg-blue-50/50 transition duration-150"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-3">
+                          <Image
+                            src={user.avatar}
+                            alt={user.name}
+                            width={48}
+                            height={48}
+                            className="rounded-full ring-2 ring-blue-100"
+                            unoptimized
+                          />
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {user.name}
+                            </p>
+                            <p className="text-sm text-gray-500 flex items-center">
+                              <FaEnvelope className="mr-1 text-blue-400" />
+                              {user.email}
+                            </p>
+                            <p className="text-sm text-gray-500 flex items-center">
+                              <FaPhone className="mr-1 text-green-400" />
+                              {user.phone}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${roleBadge.bg} ${roleBadge.text}`}
+                        >
+                          <RoleIcon className="mr-2" />
+                          {roleBadge.label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {user.status === "active" ? (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+                            <FaCheckCircle className="mr-2" />
+                            Hoạt động
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">
+                            <FaBan className="mr-2" />
+                            Đã khóa
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm">
+                          <p className="text-gray-900 font-medium flex items-center">
+                            <FaHistory className="mr-1 text-blue-400" />
+                            {user.lastActive}
+                          </p>
+                          <p className="text-gray-500">
+                            Tham gia:{" "}
+                            {new Date(user.joinedDate).toLocaleDateString(
+                              "vi-VN"
                             )}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {member.name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {member.email}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              {member.location}
-                            </div>
-                          </div>
+                          </p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${roleInfo.bgColor} ${roleInfo.color}`}
-                        >
-                          <RoleIcon className="mr-1" />
-                          {roleInfo.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.bgColor} ${statusInfo.color}`}
-                        >
-                          {statusInfo.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div>Sự kiện: {member.eventsJoined}</div>
-                        <div className="text-xs text-gray-500">
-                          Đóng góp: {member.totalContributions}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          Online: {formatRelativeTime(member.lastLogin)}
+                      <td className="px-6 py-4">
+                        <div className="text-sm">
+                          <p className="text-blue-700 font-semibold">
+                            {user.eventsJoined} tham gia
+                          </p>
+                          {user.eventsCreated > 0 && (
+                            <p className="text-green-700">
+                              {user.eventsCreated} tạo
+                            </p>
+                          )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(member.joinedAt).toLocaleDateString("vi-VN")}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center space-x-2">
                           <button
-                            onClick={() => handleViewMember(member)}
-                            className="text-blue-600 hover:text-blue-900 p-1"
+                            onClick={() => handleViewDetails(user)}
+                            className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition duration-200"
                             title="Xem chi tiết"
                           >
                             <FaEye />
                           </button>
-
-                          {canEditMember(member) && (
-                            <button
-                              onClick={() => handleEditMember(member)}
-                              className="text-green-600 hover:text-green-900 p-1"
-                              title="Chỉnh sửa"
-                            >
-                              <FaEdit />
-                            </button>
-                          )}
-
-                          {canBanMember(member) &&
-                            member.status === "active" && (
-                              <button
-                                onClick={() => handleBanMember(member)}
-                                className="text-red-600 hover:text-red-900 p-1"
-                                title="Cấm"
-                              >
-                                <FaBan />
-                              </button>
+                          <button
+                            onClick={() => handleToggleLock(user.id)}
+                            className={`p-2 rounded-lg transition duration-200 ${
+                              user.status === "active"
+                                ? "bg-red-100 hover:bg-red-200 text-red-700"
+                                : "bg-green-100 hover:bg-green-200 text-green-700"
+                            }`}
+                            title={
+                              user.status === "active"
+                                ? "Khóa tài khoản"
+                                : "Mở khóa tài khoản"
+                            }
+                          >
+                            {user.status === "active" ? (
+                              <FaLock />
+                            ) : (
+                              <FaUnlock />
                             )}
-
-                          {canBanMember(member) &&
-                            member.status !== "active" && (
-                              <button
-                                onClick={() => handleBanMember(member)}
-                                className="text-green-600 hover:text-green-900 p-1"
-                                title="Bỏ cấm"
-                              >
-                                <FaUndo />
-                              </button>
-                            )}
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -714,255 +520,253 @@ export default function MembersPage() {
               </tbody>
             </table>
           </div>
-
-          {filteredMembers.length === 0 && (
+          {filteredUsers.length === 0 && (
             <div className="text-center py-12">
-              <FaUsers className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
-                Không tìm thấy thành viên
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Hãy thử thay đổi bộ lọc hoặc tìm kiếm khác.
-              </p>
+              <FaUsers className="mx-auto text-6xl text-gray-300 mb-4" />
+              <p className="text-gray-500">Không tìm thấy người dùng nào</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Member Detail Modal */}
-      {showDetailModal && selectedMember && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Chi tiết thành viên
+      {/* Detail Modal */}
+      {showDetailModal && selectedUser && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-green-500 text-white p-6 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">
+                  Thông tin chi tiết người dùng
                 </h2>
                 <button
                   onClick={() => setShowDetailModal(false)}
-                  className="text-gray-400 hover:text-gray-600 p-2"
+                  className="p-2 hover:bg-white/20 rounded-lg transition duration-200"
                 >
                   <FaTimes />
                 </button>
               </div>
+            </div>
 
-              <div className="space-y-6">
-                {/* Basic Info */}
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
-                    <Image
-                      src={selectedMember.avatar}
-                      alt={selectedMember.name}
-                      width={80}
-                      height={80}
-                      className="rounded-full"
-                      unoptimized
-                    />
-                    {selectedMember.isOnline && (
-                      <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-green-500 border-4 border-white rounded-full"></div>
+            {/* Modal Body */}
+            <div className="p-6">
+              {/* User Avatar and Name */}
+              <div className="flex items-center space-x-4 mb-6 pb-6 border-b border-gray-200">
+                <Image
+                  src={selectedUser.avatar}
+                  alt={selectedUser.name}
+                  width={100}
+                  height={100}
+                  className="rounded-full ring-4 ring-blue-100"
+                  unoptimized
+                />
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    {selectedUser.name}
+                  </h3>
+                  <div className="flex items-center space-x-2 mt-2">
+                    {(() => {
+                      const badge = getRoleBadge(selectedUser.role);
+                      const Icon = badge.icon;
+                      return (
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${badge.bg} ${badge.text}`}
+                        >
+                          <Icon className="mr-2" />
+                          {badge.label}
+                        </span>
+                      );
+                    })()}
+                    {selectedUser.status === "active" ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+                        <FaCheckCircle className="mr-2" />
+                        Hoạt động
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">
+                        <FaBan className="mr-2" />
+                        Đã khóa
+                      </span>
                     )}
                   </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      {selectedMember.name}
-                    </h3>
-                    <p className="text-gray-600">{selectedMember.email}</p>
-                    <div className="flex items-center space-x-2 mt-2">
-                      {(() => {
-                        const roleInfo = getRoleInfo(selectedMember.role);
-                        const statusInfo = getStatusInfo(selectedMember.status);
-                        const RoleIcon = roleInfo.icon;
-                        return (
-                          <>
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${roleInfo.bgColor} ${roleInfo.color}`}
-                            >
-                              <RoleIcon className="mr-1" />
-                              {roleInfo.label}
-                            </span>
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.bgColor} ${statusInfo.color}`}
-                            >
-                              {statusInfo.label}
-                            </span>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
                 </div>
+              </div>
 
-                {/* Contact Info */}
+              {/* User Info Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-blue-600 mb-1 flex items-center">
+                    <FaEnvelope className="mr-2" />
+                    Email
+                  </p>
+                  <p className="font-semibold text-gray-900">
+                    {selectedUser.email}
+                  </p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="text-sm text-green-600 mb-1 flex items-center">
+                    <FaPhone className="mr-2" />
+                    Số điện thoại
+                  </p>
+                  <p className="font-semibold text-gray-900">
+                    {selectedUser.phone}
+                  </p>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-blue-600 mb-1 flex items-center">
+                    <FaMapMarkerAlt className="mr-2" />
+                    Địa điểm
+                  </p>
+                  <p className="font-semibold text-gray-900">
+                    {selectedUser.location}
+                  </p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="text-sm text-green-600 mb-1 flex items-center">
+                    <FaCalendarAlt className="mr-2" />
+                    Ngày tham gia
+                  </p>
+                  <p className="font-semibold text-gray-900">
+                    {new Date(selectedUser.joinedDate).toLocaleDateString(
+                      "vi-VN"
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Activity Stats */}
+              <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-6 mb-6">
+                <h4 className="font-bold text-gray-900 mb-4">
+                  Thống kê hoạt động
+                </h4>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Địa điểm
-                    </label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {selectedMember.location}
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-blue-700">
+                      {selectedUser.eventsJoined}
                     </p>
+                    <p className="text-sm text-gray-600">Sự kiện tham gia</p>
                   </div>
-                  {selectedMember.phoneNumber && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Số điện thoại
-                      </label>
-                      <p className="mt-1 text-sm text-gray-900">
-                        {selectedMember.phoneNumber}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Activity Stats */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-3">
-                    Thống kê hoạt động
-                  </h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {selectedMember.eventsJoined}
-                      </div>
-                      <div className="text-sm text-blue-600">
-                        Sự kiện tham gia
-                      </div>
-                    </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">
-                        {selectedMember.eventsCreated}
-                      </div>
-                      <div className="text-sm text-green-600">Sự kiện tạo</div>
-                    </div>
-                    <div className="text-center p-4 bg-purple-50 rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600">
-                        {selectedMember.totalContributions}
-                      </div>
-                      <div className="text-sm text-purple-600">
-                        Tổng đóng góp
-                      </div>
-                    </div>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-green-700">
+                      {selectedUser.eventsCreated}
+                    </p>
+                    <p className="text-sm text-gray-600">Sự kiện tạo</p>
                   </div>
                 </div>
+              </div>
 
-                {/* Timeline */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-3">
-                    Thời gian
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <FaCalendarAlt className="text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-600">
-                        Tham gia:{" "}
-                        {new Date(selectedMember.joinedAt).toLocaleDateString(
-                          "vi-VN"
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <FaUser className="text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-600">
-                        Lần cuối online:{" "}
-                        {formatRelativeTime(selectedMember.lastLogin)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              {/* Bio */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h4 className="font-bold text-gray-900 mb-2">Giới thiệu</h4>
+                <p className="text-gray-700">{selectedUser.bio}</p>
+              </div>
 
-                {/* Admin Actions */}
-                {(canEditMember(selectedMember) ||
-                  canBanMember(selectedMember)) && (
-                  <div className="pt-4 border-t border-gray-200">
-                    <h4 className="text-lg font-medium text-gray-900 mb-3">
-                      Hành động
-                    </h4>
-                    <div className="flex space-x-3">
-                      {canChangeRole(selectedMember) && (
-                        <select
-                          value={selectedMember.role}
-                          onChange={(e) =>
-                            handleRoleChange(
-                              selectedMember.id,
-                              e.target.value as any
-                            )
-                          }
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              {/* Events List */}
+              <div className="mb-6">
+                <h4 className="font-bold text-gray-900 mb-4 flex items-center">
+                  <FaCalendarAlt className="mr-2 text-blue-600" />
+                  Sự kiện đã tham gia ({selectedUser.events.length})
+                </h4>
+                {selectedUser.events.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedUser.events.map((event) => {
+                      const categoryConfig = getCategoryIcon(event.category);
+                      const CategoryIcon = categoryConfig.icon;
+                      return (
+                        <div
+                          key={event.id}
+                          className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 border border-blue-100 hover:shadow-md transition duration-200"
                         >
-                          <option value="user">User</option>
-                          <option value="manager">Manager</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      )}
-
-                      {canBanMember(selectedMember) && (
-                        <button
-                          onClick={() => handleBanMember(selectedMember)}
-                          className={`px-4 py-2 rounded-lg font-medium transition duration-200 ${
-                            selectedMember.status === "active"
-                              ? "bg-red-500 hover:bg-red-600 text-white"
-                              : "bg-green-500 hover:bg-green-600 text-white"
-                          }`}
-                        >
-                          {selectedMember.status === "active"
-                            ? "Cấm thành viên"
-                            : "Bỏ cấm"}
-                        </button>
-                      )}
-                    </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h5 className="font-semibold text-gray-900 mb-2">
+                                {event.title}
+                              </h5>
+                              <div className="flex items-center space-x-3 text-sm">
+                                <span
+                                  className={`inline-flex items-center px-2 py-1 rounded-full ${categoryConfig.bg} ${categoryConfig.color}`}
+                                >
+                                  <CategoryIcon className="mr-1" />
+                                  {getCategoryLabel(event.category)}
+                                </span>
+                                <span className="text-gray-600">
+                                  📅{" "}
+                                  {new Date(event.date).toLocaleDateString(
+                                    "vi-VN"
+                                  )}
+                                </span>
+                                <span className="font-medium text-blue-700">
+                                  {event.role}
+                                </span>
+                              </div>
+                            </div>
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                event.status === "completed"
+                                  ? "bg-gray-100 text-gray-700"
+                                  : event.status === "ongoing"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-blue-100 text-blue-700"
+                              }`}
+                            >
+                              {getStatusLabel(event.status)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <FaCalendarAlt className="mx-auto text-4xl text-gray-300 mb-2" />
+                    <p className="text-gray-500">Chưa tham gia sự kiện nào</p>
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Ban/Unban Confirmation Modal */}
-      {showBanModal && memberToAction && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center mb-4">
-              <FaExclamationTriangle className="text-yellow-500 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Xác nhận hành động
-              </h3>
+              {/* Last Active */}
+              <div className="bg-blue-50 rounded-lg p-4">
+                <p className="text-sm text-blue-600 mb-1 flex items-center">
+                  <FaHistory className="mr-2" />
+                  Hoạt động gần nhất
+                </p>
+                <p className="font-semibold text-gray-900">
+                  {selectedUser.lastActive}
+                </p>
+              </div>
             </div>
-            <p className="text-gray-600 mb-6">
-              Bạn muốn thực hiện hành động gì với thành viên "
-              {memberToAction.name}"?
-            </p>
-            <div className="flex justify-end space-x-3">
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 p-6 flex justify-end space-x-3">
               <button
-                onClick={() => setShowBanModal(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition duration-200"
+                onClick={() => setShowDetailModal(false)}
+                className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition duration-200"
               >
-                Hủy
+                Đóng
               </button>
-              {memberToAction.status === "active" && (
-                <>
-                  <button
-                    onClick={() => confirmBanAction("suspend")}
-                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition duration-200"
-                  >
-                    Tạm khóa
-                  </button>
-                  <button
-                    onClick={() => confirmBanAction("ban")}
-                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200"
-                  >
-                    Cấm vĩnh viễn
-                  </button>
-                </>
-              )}
-              {memberToAction.status !== "active" && (
-                <button
-                  onClick={() => confirmBanAction("unban")}
-                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition duration-200"
-                >
-                  Bỏ cấm
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  handleToggleLock(selectedUser.id);
+                  setShowDetailModal(false);
+                }}
+                className={`px-6 py-2 rounded-lg font-medium transition duration-200 flex items-center space-x-2 ${
+                  selectedUser.status === "active"
+                    ? "bg-red-500 hover:bg-red-600 text-white"
+                    : "bg-green-500 hover:bg-green-600 text-white"
+                }`}
+              >
+                {selectedUser.status === "active" ? (
+                  <>
+                    <FaLock />
+                    <span>Khóa tài khoản</span>
+                  </>
+                ) : (
+                  <>
+                    <FaUnlock />
+                    <span>Mở khóa</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
