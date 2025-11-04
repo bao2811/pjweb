@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Repositories\EventRepo;
 
-class JoinEventService {
+class ManagerService {
     protected $joinEventRepo;
     protected $eventRepo;
 
