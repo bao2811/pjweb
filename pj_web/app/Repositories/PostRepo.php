@@ -31,16 +31,16 @@ class PostRepo
     public function all()
     {
 
-        $posts = DB::table('posts')
-        ->join('users', 'posts.author_id', '=', 'users.id')
-        ->where('posts.status', 'active')
-        ->select(
-            'posts.*',
-            'users.name as name',
-            'users.image as avatar',
-            'users.role as role',
-        )
-        ->get();
+        // $posts = DB::table('posts')
+        // ->join('users', 'posts.author_id', '=', 'users.id')
+        // ->where('posts.status', 'active')
+        // ->select(
+        //     'posts.*',
+        //     'users.name as name',
+        //     'users.image as avatar',
+        //     'users.role as role',
+        // )
+        // ->get();
 
         // $posts = Post::with('author')
         //              ->where('status', 'active')
@@ -50,6 +50,33 @@ class PostRepo
         //     $authorName = $post->author ? $post->author->name : 'No Author';
         //     echo "Post: {$post->title}, Author: {$authorName} <br>";
         // }
+
+        // $posts = DB::table('posts')
+        // ->join('users', 'posts.author_id', '=', 'users.id')
+        // ->where('posts.status', 'active')
+        // ->select(
+        //     'posts.*',
+        //     'users.name as name',
+        //     'users.image as avatar',
+        //     'users.role as role',
+        // )
+        // ->get();
+
+        $posts = DB::table('posts')
+        ->join('users', 'posts.author_id', '=', 'users.id')
+        ->leftJoin('likes', function($join) use ($currentUserId) {
+            $join->on('posts.id', '=', 'likes.post_id')
+                ->where('likes.user_id', '=', $currentUserId);
+        })
+        ->where('posts.status', 'active')
+        ->select(
+            'posts.*',
+            'users.name as author_name',
+            'users.image as author_avatar',
+            'users.role as author_role',
+            DB::raw('CASE WHEN likes.id IS NULL THEN 0 ELSE 1 END as liked')
+        )
+        ->get();
 
         return $posts;
 
