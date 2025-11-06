@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use App\Utils\JWTUtil;
 use App\Services\UserService;
 
 class AuthController extends Controller
@@ -25,33 +24,28 @@ class AuthController extends Controller
             'email' => 'required|email',
             'password' => 'required',
         ]);
-
-        // $result = $this->userService->getUserByEmail($request->email);
-        // $user = $result['data'];
-
-        // if (!$user || !Hash::check($request->password, $user->password)) {
-        //     throw ValidationException::withMessages([
-        //         'email' => ['The provided credentials are incorrect.'],
-        //     ]);
-        // }
         
-        $credentials = $request->only('email', 'password');
+        // Tìm user theo email
+        $user = User::where('email', $request->email)->first();
 
-        if (Auth::attempt($credentials)) {
-            // Đăng nhập thành công → Laravel tự tạo session
-            $user = Auth::user();
-
-            // Bạn có thể lưu thêm thông tin vào session
-            session(['login_time' => now()]);
-
-            return response()->json([
-                'message' => 'Đăng nhập thành công!',
-                'user' => $user,
-            ]);
+        // Kiểm tra user tồn tại và password đúng
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json(['error' => 'Email hoặc mật khẩu không đúng'], 401);
         }
 
-        return response()->json(['error' => 'Email hoặc mật khẩu không đúng'], 401);
+        // Tạo Sanctum token
+        $token = $user->createToken('auth-token')->plainTextToken;
 
+        return response()->json([
+            'message' => 'Đăng nhập thành công!',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+            'token' => $token,
+        ]);
     }
 
 
@@ -62,9 +56,13 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:500',
+            'addressCard' => 'nullable|string|max:12',
+            'avatar' => 'nullable|string|max:500', // URL hoặc base64
         ]);
 
-        $userData = $request->only(['name', 'email', 'password']);
+        $userData = $request->only(['name', 'email', 'password', 'phone', 'address', 'addressCard', 'avatar']);
         $userData['role'] = 'user';
 
         // Gọi service và nhận kết quả
@@ -91,8 +89,9 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        Auth::logout();
-        session()->flush();
+        // Xóa token hiện tại
+        $request->user()->currentAccessToken()->delete();
+        
         return response()->json(['message' => 'Logged out successfully']);
     }
 

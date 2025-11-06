@@ -237,8 +237,8 @@ const mockEvents: Event[] = [
 ];
 
 export default function Events() {
-  const [events, setEvents] = useState<Event[]>(mockEvents);
-  const [filteredEvents, setFilteredEvents] = useState<Event[]>(mockEvents);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -249,6 +249,7 @@ export default function Events() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [showHidden, setShowHidden] = useState(false);
   const [showPendingApproval, setShowPendingApproval] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
     description: "",
@@ -263,6 +264,62 @@ export default function Events() {
   const router = useRouter();
   const categories = ["all", "Môi trường", "Giáo dục", "Xã hội", "Y tế"];
   const statuses = ["all", "upcoming", "ongoing", "completed", "cancelled"];
+
+  // Fetch events from backend
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setIsLoading(true);
+  // Use env-injected base URL if present, otherwise default to same-origin "/api"
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+        const response = await fetch(`${API_URL}/events/getAllEvents`, {
+          headers: { 'Accept': 'application/json' }
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.events) {
+          // Transform backend data to frontend format
+          const transformedEvents: Event[] = data.events.map((event: any) => ({
+            id: event.id,
+            eventId: event.id.toString(),
+            title: event.title,
+            description: event.content || '',
+            image: event.image || 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop',
+            date: event.start_time?.split(' ')[0] || '',
+            time: event.start_time && event.end_time 
+              ? `${event.start_time.split(' ')[1]?.substring(0,5)} - ${event.end_time.split(' ')[1]?.substring(0,5)}`
+              : 'Cả ngày',
+            location: event.address || 'Chưa xác định',
+            maxParticipants: 100,
+            currentParticipants: 0,
+            category: 'Môi trường',
+            organizer: {
+              id: event.author_id || 1,
+              name: 'Organizer',
+              avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face',
+              role: 'manager',
+            },
+            participants: [],
+            isLiked: false,
+            likes: 0,
+            status: event.status || 'upcoming',
+            isHidden: false,
+            approvalStatus: 'approved',
+            createdAt: event.created_at?.split(' ')[0] || '',
+          }));
+          setEvents(transformedEvents);
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        // Fallback to mock data if API fails
+        setEvents(mockEvents);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
 
   // Filter events
   useEffect(() => {
@@ -416,40 +473,93 @@ export default function Events() {
   };
 
   // Handle create new event
-  const handleCreateEvent = () => {
-    const newId = Math.max(...events.map((e) => e.id)) + 1;
-    const createdEvent: Event = {
-      id: newId,
-      eventId: `evt_${String(newId).padStart(3, '0')}`, // Thêm eventId
-      ...newEvent,
-      organizer: {
-        id: currentUser.id,
-        name: currentUser.name,
-        avatar: currentUser.avatar,
-        role: currentUser.role,
-      },
-      participants: [],
-      currentParticipants: 0,
-      isLiked: false,
-      likes: 0,
-      status: "upcoming",
-      isHidden: false,
-      approvalStatus: "pending",
-      createdAt: new Date().toISOString().split('T')[0],
-    };
+  const handleCreateEvent = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Vui lòng đăng nhập để tạo sự kiện');
+        return;
+      }
 
-    setEvents([...events, createdEvent]);
-    setShowCreateModal(false);
-    setNewEvent({
-      title: "",
-      description: "",
-      image: "",
-      date: "",
-      time: "",
-      location: "",
-      maxParticipants: 10,
-      category: "Môi trường",
-    });
+      // Chuyển đổi date + time thành datetime cho backend
+      const startDateTime = newEvent.date && newEvent.time 
+        ? `${newEvent.date} ${newEvent.time.split(' - ')[0]}:00`
+        : undefined;
+      const endDateTime = newEvent.date && newEvent.time
+        ? `${newEvent.date} ${newEvent.time.split(' - ')[1] || '23:59'}:00`
+        : undefined;
+
+  // Use env-injected base URL if present, otherwise default to same-origin "/api"
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+      const response = await fetch(`${API_URL}/manager/createEvent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: newEvent.title,
+          content: newEvent.description,
+          address: newEvent.location,
+          start_time: startDateTime,
+          end_time: endDateTime,
+          image: newEvent.image,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Tạo sự kiện thất bại');
+      }
+
+      // Thêm event mới vào danh sách
+      const createdEvent: Event = {
+        id: data.event.id,
+        eventId: data.event.id.toString(),
+        title: data.event.title,
+        description: data.event.content || '',
+        image: data.event.image || '',
+        date: data.event.start_time?.split(' ')[0] || '',
+        time: newEvent.time,
+        location: data.event.address,
+        maxParticipants: newEvent.maxParticipants,
+        currentParticipants: 0,
+        category: newEvent.category,
+        organizer: {
+          id: currentUser.id,
+          name: currentUser.name,
+          avatar: currentUser.avatar,
+          role: currentUser.role,
+        },
+        participants: [],
+        isLiked: false,
+        likes: 0,
+        status: data.event.status || "upcoming",
+        isHidden: false,
+        approvalStatus: "approved",
+        createdAt: new Date().toISOString().split('T')[0],
+      };
+
+      setEvents([...events, createdEvent]);
+      setShowCreateModal(false);
+      setNewEvent({
+        title: "",
+        description: "",
+        image: "",
+        date: "",
+        time: "",
+        location: "",
+        maxParticipants: 10,
+        category: "Môi trường",
+      });
+      
+      alert('Tạo sự kiện thành công!');
+    } catch (error: any) {
+      alert(error.message || 'Đã xảy ra lỗi khi tạo sự kiện');
+      console.error('Create event error:', error);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -507,17 +617,17 @@ export default function Events() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">      
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
                 Sự kiện tình nguyện
               </h1>
-              <p className="text-gray-600 mt-1">
-                Khám phá và tham gia các hoạt động ý nghĩa
+              <p className="text-gray-600 mt-2 text-lg">
+                Khám phá và tham gia các hoạt động ý nghĩa 🌱
               </p>
             </div>
 
@@ -627,7 +737,12 @@ export default function Events() {
 
       {/* Events Grid */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {filteredEvents.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-gray-600">Đang tải sự kiện...</p>
+          </div>
+        ) : filteredEvents.length === 0 ? (
           <div className="text-center py-12">
             <FaCalendarAlt className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">
@@ -642,22 +757,23 @@ export default function Events() {
             {filteredEvents.map((event) => (
               <div
                 key={event.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition duration-200"
+                className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
               >
                 {/* Event Image */}
-                <div className="relative h-48">
+                <div className="relative h-56 group">
                   <Image
                     src={event.image}
                     alt={event.title}
                     fill
-                    className="object-cover"
+                    className="object-cover group-hover:scale-110 transition-transform duration-300"
                     unoptimized
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                   <div className="absolute top-4 left-4">
                     {getStatusBadge(event.status)}
                   </div>
                   <div className="absolute top-4 right-4">
-                    <span className="bg-white bg-opacity-90 px-2 py-1 rounded-full text-xs font-medium text-gray-700">
+                    <span className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-semibold text-gray-700 shadow-md">
                       {event.category}
                     </span>
                   </div>

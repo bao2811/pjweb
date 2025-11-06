@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  # Laravel backend
+  # Laravel backend (PHP-FPM)
   backend:
     build: ../backend
     container_name: laravel_app
@@ -9,27 +9,39 @@ services:
       - ../backend:/var/www/html
     expose:
       - 9000
+    depends_on:
+      - postgres
 
   # Next.js frontend
   frontend:
     build: ../frontend
     container_name: nextjs_app
-    ports:
-      - "3000:3000"
+    expose:
+      - 3000
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost/api
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ../frontend:/app   # mount folder local vào container
+      - /app/node_modules  # giữ node_modules riêng container
+    command: npm run dev
+    depends_on:
+      - backend
 
-  # Nginx reverse proxy
+  # Nginx gateway duy nhất
   nginx:
     image: nginx:latest
-    container_name: nginx_proxy
+    container_name: nginx_gateway
     ports:
       - "80:80"
     volumes:
+      - ../backend:/var/www/html
       - ../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - frontend
       - backend
+
+  # Database PostgreSQL
   postgres:
     image: postgres:15
     container_name: pjweb_postgres
@@ -39,9 +51,10 @@ services:
       - POSTGRES_PASSWORD=secretpassword
     volumes:
       - pgdata:/var/lib/postgresql/data
-    # Nếu không muốn mở port ra host, bỏ dòng ports
     ports:
       - "5432:5432"
+
+  # pgAdmin (giao diện web quản lý DB)
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin
@@ -58,5 +71,3 @@ services:
 volumes:
   pgdata:
   pgadmin_data:
-
-   

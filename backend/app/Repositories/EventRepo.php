@@ -2,8 +2,7 @@
 
 namespace App\Repositories;
 
-use App\Repositories\UserRepo;
-use App\Repositories\EventRepo;
+use App\Models\Event;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;

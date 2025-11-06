@@ -4,16 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-class Post extends Model
+
+class Event extends Model
 {
-    /** @use HasFactory<\Database\Factories\PostFactory> */
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'title',
         'content',
@@ -24,4 +19,10 @@ class Post extends Model
         'author_id',
         'status',
     ];
+
+    // Quan hệ: Event thuộc về 1 User (author)
+    public function author()
+    {
+        return $this->belongsTo(User::class, 'author_id');
+    }
 }

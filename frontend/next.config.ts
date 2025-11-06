@@ -2,13 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    domains: ['images.unsplash.com'],
+    domains: ['images.unsplash.com','i.pravatar.cc'],
   },
-  compilerOptions: {
-    baseUrl: ".",
-    paths: {
-      "@/*": ["./src/*/*"],
-    },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost/api/:path*', // Proxy to backend via Nginx
+      },
+    ];
   },
 };
 

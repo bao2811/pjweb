@@ -22,6 +22,15 @@ class EventService
         return $this->eventRepo->getAllEvents();
     }
 
+    public function createEvent($data, $userId)
+    {
+        // Thêm author_id và status mặc định
+        $data['author_id'] = $userId;
+        $data['status'] = 'upcoming'; // Sự kiện sắp diễn ra
+
+        return $this->eventRepo->createEvent($data);
+    }
+
     public function deleteEvent($id)
     {
         $result = $this->eventRepo->deleteEventById($id);

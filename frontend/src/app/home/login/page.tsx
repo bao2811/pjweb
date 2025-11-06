@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaHeart } from "react-icons/fa";
+import axios from  "axios";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -19,11 +20,71 @@ export default function LoginPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log("Login data:", formData);
-  };
+    setError("");
+    setIsLoading(true);
+
+    try {
+    // Prefer env at build-time, but default to relative "/api" so browser hits the same host/nginx
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+    console.log('🔍 API_URL:', API_URL); // Debug
+    console.log('📤 Sending login request...', { email: formData.email }); // Debug
+
+    // 🧠 Dùng axios thay cho fetch
+    const response = await axios.post(
+      `${API_URL}/login`,
+      {
+        email: formData.email,
+        password: formData.password,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      }
+    );
+
+    // axios tự động parse JSON → response.data là object
+    const data = response.data;
+    console.log('📥 Response data:', data); // Debug
+
+    // ✅ Lưu token và user info
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    console.log('✅ Login success! Role:', data.user.role); // Debug
+
+    // 🔄 Redirect theo role
+    if (data.user.role === 'manager') {
+      console.log('🔄 Redirecting to /manager/events...');
+      window.location.href = '/manager/events';
+    } else if (data.user.role === 'admin') {
+      console.log('🔄 Redirecting to /admin/dashboard...');
+      window.location.href = '/admin/dashboard';
+    } else {
+      console.log('🔄 Redirecting to /user/dashboard...');
+      window.location.href = '/user/dashboard';
+    }
+
+  } catch (err: any) {
+    // axios ném lỗi khác fetch một chút
+    console.error('❌ Login error:', err); // Debug
+
+    // Nếu backend trả về lỗi JSON, ta lấy message trong err.response.data
+    const errorMessage =
+      err.response?.data?.message ||
+      err.message ||
+      'Đã xảy ra lỗi khi đăng nhập';
+
+    setError(errorMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div
@@ -51,6 +112,11 @@ export default function LoginPage() {
 
         {/* Form */}
         <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-2xl p-8">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Email */}
             <div>
@@ -142,9 +208,10 @@ export default function LoginPage() {
             <div>
               <button
                 type="submit"
-                className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-lg font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 transform hover:scale-105 shadow-lg"
+                disabled={isLoading}
+                className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-lg font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                Đăng nhập
+                {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </button>
             </div>
 

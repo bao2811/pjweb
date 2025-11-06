@@ -1,14 +1,16 @@
-# Stage 1: Build Next.js
-FROM node:18-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-# Stage 2: Run Next.js server
+# Development mode - Fast hot reload
 FROM node:18-alpine
 WORKDIR /app
-COPY --from=build /app ./
+
+# Copy package files
+COPY package*.json ./
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Expose port
 EXPOSE 3000
-CMD ["npm", "start"]
+
+# Run in development mode for hot reload
+CMD ["npm", "run", "dev"]

@@ -1,7 +1,9 @@
 <?php
 
-use App\Helpers\WebPushApi;
+namespace App\Http\Controllers;
 
+use App\Services\EventService;
+use App\Helpers\WebPushApi;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 
@@ -56,19 +58,28 @@ class EventController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'date' => 'required|date',
-            'user_id' => 'required|integer|exists:users,id',
-            'image' => 'nullable|image|max:2048',
+            'content' => 'nullable|string',
+            'image' => 'nullable|string|max:255',
+            'address' => 'required|string|max:255',
+            'start_time' => 'nullable|date',
+            'end_time' => 'nullable|date',
         ]);
 
-        $eventData = $request->only(['title', 'description', 'date', 'user_id', 'image']);
-        if ($request->hasFile('image')) {
-            $eventData['image'] = $request->file('image')->store('events');
+        // Lấy user_id từ user đã đăng nhập
+        $userId = auth()->id();
+        
+        // Kiểm tra user có role manager không
+        if (auth()->user()->role !== 'manager') {
+            return response()->json(['error' => 'Only managers can create events'], 403);
         }
-        $event = $this->eventService->createEvent($eventData);
 
-        return response()->json(['event' => $event], 201);
+        $eventData = $request->only(['title', 'content', 'image', 'address', 'start_time', 'end_time']);
+        $event = $this->eventService->createEvent($eventData, $userId);
+
+        return response()->json([
+            'message' => 'Event created successfully',
+            'event' => $event
+        ], 201);
     }
 
     public function updateEvent(Request $request, $id)

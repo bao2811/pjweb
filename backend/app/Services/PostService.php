@@ -1,9 +1,13 @@
 <?php
 
-namespace App\Service;
+namespace App\Services;
 
 use App\Repositories\PostRepo;
 use Exception;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+
+
 
 class PostService
 {

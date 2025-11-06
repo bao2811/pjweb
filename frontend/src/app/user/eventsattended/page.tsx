@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import Navbar from "@/components/navbar";
 import {
   FaCalendarAlt,
   FaMapMarkerAlt,
@@ -16,6 +17,15 @@ import {
   FaSearch,
   FaUserFriends,
 } from "react-icons/fa";
+
+// Mock current user
+const mockCurrentUser = {
+  name: "Nguyễn Văn An",
+  email: "user@example.com",
+  avatar: "https://i.pravatar.cc/150?img=12",
+  role: "user" as const,
+  points: 1250,
+};
 
 // Types
 interface Participant {
@@ -327,16 +337,16 @@ export default function EventsAttendedPage() {
   const tabCounts = getTabCounts();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Sự kiện của tôi
-              </h1>
-              <p className="text-gray-600 mt-1">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">      
+      {/* Page Header */}
+        <div className="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Sự kiện của tôi
+                </h1>
+                <p className="text-gray-600 mt-2 text-lg">
                 Quản lý các sự kiện bạn đã đăng ký tham gia
               </p>
             </div>
