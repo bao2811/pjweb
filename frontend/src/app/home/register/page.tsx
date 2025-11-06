@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import axios from "axios";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FaUser,
   FaEnvelope,
@@ -14,34 +16,259 @@ import {
   FaImage,
 } from "react-icons/fa";
 
+interface FormErrors {
+  username?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  address?: string;
+  phone?: string;
+  address_card?: string;
+  image?: string;
+  agreeTerms?: string;
+}
+
+interface TouchedFields {
+  [key: string]: boolean;
+}
+
 export default function RegisterPage() {
+  const route = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
     address: "",
-    phoneNumber: "",
-    cccd: "",
-    imageUrl: "",
+    phone: "",
+    address_card: "",
+    image: "",
     agreeTerms: false,
   });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<TouchedFields>({});
+
+  // Validation functions
+  const validateUsername = (username: string): string | undefined => {
+    if (!username.trim()) return "Vui lòng nhập tên đăng nhập";
+    if (username.trim().length < 2)
+      return "Tên đăng nhập phải có ít nhất 2 ký tự";
+    if (!/^[a-zA-Z0-9_]+$/.test(username))
+      return "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới";
+    return undefined;
+  };
+
+  const validateEmail = (email: string): string | undefined => {
+    if (!email.trim()) return "Vui lòng nhập email";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return "Email không hợp lệ";
+    return undefined;
+  };
+
+  const validatePassword = (password: string): string | undefined => {
+    if (!password) return "Vui lòng nhập mật khẩu";
+    if (password.length < 8) return "Mật khẩu phải có ít nhất 8 ký tự";
+    if (!/(?=.*[a-z])/.test(password))
+      return "Mật khẩu phải có ít nhất 1 chữ thường";
+    if (!/(?=.*[A-Z])/.test(password))
+      return "Mật khẩu phải có ít nhất 1 chữ hoa";
+    if (!/(?=.*\d)/.test(password)) return "Mật khẩu phải có ít nhất 1 chữ số";
+    return undefined;
+  };
+
+  const validateConfirmPassword = (
+    confirmPassword: string,
+    password: string
+  ): string | undefined => {
+    if (!confirmPassword) return "Vui lòng xác nhận mật khẩu";
+    if (confirmPassword !== password) return "Mật khẩu xác nhận không khớp";
+    return undefined;
+  };
+
+  const validateAddress = (address: string): string | undefined => {
+    if (!address.trim()) return "Vui lòng nhập địa chỉ";
+    if (address.trim().length < 5) return "Địa chỉ phải có ít nhất 5 ký tự";
+    return undefined;
+  };
+
+  const validatePhone = (phone: string): string | undefined => {
+    if (!phone.trim()) return "Vui lòng nhập số điện thoại";
+    const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
+    if (!phoneRegex.test(phone))
+      return "Số điện thoại không hợp lệ (phải bắt đầu bằng 03, 05, 07, 08, 09 và có 10 chữ số)";
+    return undefined;
+  };
+
+  const validateAddressCard = (address_card: string): string | undefined => {
+    if (!address_card.trim()) return "Vui lòng nhập số CMND/address_card";
+    if (!/^\d{12}$/.test(address_card))
+      return "address_card phải có đúng 12 chữ số";
+    return undefined;
+  };
+
+  const validateImage = (image: string): string | undefined => {
+    if (!image.trim()) return "Vui lòng chọn ảnh đại diện";
+    return undefined;
+  };
+
+  const validateField = (name: string, value: any): string | undefined => {
+    switch (name) {
+      case "username":
+        return validateUsername(value);
+      case "email":
+        return validateEmail(value);
+      case "password":
+        return validatePassword(value);
+      case "confirmPassword":
+        return validateConfirmPassword(value, formData.password);
+      case "address":
+        return validateAddress(value);
+      case "phone":
+        return validatePhone(value);
+      case "address_card":
+        return validateAddressCard(value);
+      case "image":
+        return validateImage(value);
+      case "agreeTerms":
+        return value ? undefined : "Bạn phải đồng ý với điều khoản để tiếp tục";
+      default:
+        return undefined;
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    const newValue = type === "checkbox" ? checked : value;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: newValue,
+    }));
+
+    // Real-time validation for touched fields
+    if (touched[name]) {
+      const error = validateField(name, newValue);
+      setErrors((prev) => ({
+        ...prev,
+        [name]: error,
+      }));
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    const fieldValue = type === "checkbox" ? checked : value;
+
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+
+    const error = validateField(name, fieldValue);
+    setErrors((prev) => ({
+      ...prev,
+      [name]: error,
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle registration logic here
-    console.log("Registration data:", formData);
+  const validate = (): boolean => {
+    // mark all fields as touched
+    const newTouched: TouchedFields = {};
+    Object.keys(formData).forEach((key) => {
+      newTouched[key] = true;
+    });
+    setTouched(newTouched);
+
+    // collect errors
+    const newErrors: FormErrors = {};
+    Object.keys(formData).forEach((key) => {
+      // @ts-ignore - dynamic key access for validation
+      const error = validateField(key, (formData as any)[key]);
+      if (error) {
+        newErrors[key as keyof FormErrors] = error;
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    try {
+      const res = await axios.post(
+        "http://localhost:8000/api/register",
+        formData
+      );
+      console.log(res);
+      if (res?.status === 201) {
+        // clear the form to initial values
+        setFormData({
+          username: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          address: "",
+          phone: "",
+          address_card: "",
+          image: "",
+          agreeTerms: false,
+        });
+        // navigate to login (use the hook instance defined above)
+        route.push("/home/login");
+      }
+    } catch (error) {
+      console.error("Registration failed", error);
+    }
+  };
+
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+
+  //   // Đánh dấu các field touched
+  //   const allTouched: TouchedFields = {};
+  //   Object.keys(formData).forEach((key) => {
+  //     allTouched[key] = true;
+  //   });
+  //   setTouched(allTouched);
+
+  //   // Validate
+  //   const newErrors: FormErrors = {};
+  //   Object.entries(formData).forEach(([key, value]) => {
+  //     const error = validateField(key, value);
+  //     if (error) newErrors[key as keyof FormErrors] = error;
+  //   });
+  //   setErrors(newErrors);
+
+  //   // Submit nếu không có lỗi
+  //   if (Object.keys(newErrors).length === 0) {
+  //     try {
+  //       const response = await fetch("http://localhost:8000/api/register", {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         credentials: "include", // ⚠️ quan trọng
+  //         body: JSON.stringify(formData),
+  //       });
+
+  //       if (!response.ok) {
+  //         console.error("Response status:", response.status);
+  //         throw new Error(`Network response was not ok (${response.status})`);
+  //       }
+
+  //       const data = await response.json();
+  //       console.log("✅ Success:", data);
+  //       // route.push("/home/login");
+  //     } catch (error) {
+  //       console.error("❌ Error:", error);
+  //     }
+  //   }
+  // };
 
   return (
     <div
@@ -72,24 +299,31 @@ export default function RegisterPage() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Full Name */}
             <div>
-              <label htmlFor="fullName" className="sr-only">
-                Họ và tên
+              <label htmlFor="username" className="sr-only">
+                Tên đăng nhập
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FaUser className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="fullName"
-                  name="fullName"
+                  id="username"
+                  name="username"
                   type="text"
-                  required
-                  className="appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 border ${
+                    errors.username && touched.username
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
                   placeholder="Họ và tên"
-                  value={formData.fullName}
+                  value={formData.username}
                   onChange={handleInputChange}
+                  onBlur={handleBlur}
                 />
               </div>
+              {errors.username && touched.username && (
+                <p className="mt-2 text-sm text-red-600">{errors.username}</p>
+              )}
             </div>
 
             {/* Email */}
@@ -105,13 +339,20 @@ export default function RegisterPage() {
                   id="email"
                   name="email"
                   type="email"
-                  required
-                  className="appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 border ${
+                    errors.email && touched.email
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
                   placeholder="Địa chỉ email"
                   value={formData.email}
                   onChange={handleInputChange}
+                  onBlur={handleBlur}
                 />
               </div>
+              {errors.email && touched.email && (
+                <p className="mt-2 text-sm text-red-600">{errors.email}</p>
+              )}
             </div>
 
             {/* Password */}
@@ -127,11 +368,15 @@ export default function RegisterPage() {
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
-                  required
-                  className="appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                    errors.password && touched.password
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
                   placeholder="Mật khẩu"
                   value={formData.password}
                   onChange={handleInputChange}
+                  onBlur={handleBlur}
                 />
                 <button
                   type="button"
@@ -145,6 +390,9 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
+              {errors.password && touched.password && (
+                <p className="mt-2 text-sm text-red-600">{errors.password}</p>
+              )}
             </div>
 
             {/* Confirm Password */}
@@ -160,11 +408,15 @@ export default function RegisterPage() {
                   id="confirmPassword"
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  required
-                  className="appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                    errors.confirmPassword && touched.confirmPassword
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
                   placeholder="Xác nhận mật khẩu"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
+                  onBlur={handleBlur}
                 />
                 <button
                   type="button"
@@ -178,6 +430,11 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
+              {errors.confirmPassword && touched.confirmPassword && (
+                <p className="mt-2 text-sm text-red-600">
+                  {errors.confirmPassword}
+                </p>
+              )}
             </div>
 
             <div>
@@ -192,17 +449,24 @@ export default function RegisterPage() {
                   id="address"
                   name="address"
                   type="text"
-                  required
-                  className="appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                    errors.address && touched.address
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
                   placeholder="Địa chỉ"
                   value={formData.address}
                   onChange={handleInputChange}
+                  onBlur={handleBlur}
                 />
               </div>
+              {errors.address && touched.address && (
+                <p className="mt-2 text-sm text-red-600">{errors.address}</p>
+              )}
             </div>
 
             <div>
-              <label htmlFor="phoneNumber" className="sr-only">
+              <label htmlFor="phone" className="sr-only">
                 Số điện thoại
               </label>
               <div className="relative">
@@ -210,40 +474,56 @@ export default function RegisterPage() {
                   <FaPhoneSquareAlt className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="phoneNumber"
-                  name="phoneNumber"
+                  id="phone"
+                  name="phone"
                   type="text"
-                  required
-                  className="appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                    errors.phone && touched.phone
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
                   placeholder="Số điện thoại"
-                  value={formData.phoneNumber}
+                  value={formData.phone}
                   onChange={handleInputChange}
+                  onBlur={handleBlur}
                 />
               </div>
+              {errors.phone && touched.phone && (
+                <p className="mt-2 text-sm text-red-600">{errors.phone}</p>
+              )}
             </div>
 
             <div>
-              <label htmlFor="cccd" className="sr-only">
-                CCCD
+              <label htmlFor="address_card" className="sr-only">
+                address_card
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FaAddressCard className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="cccd"
-                  name="cccd"
+                  id="address_card"
+                  name="address_card"
                   type="text"
-                  required
-                  className="appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
-                  placeholder="CCCD"
-                  value={formData.cccd}
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                    errors.address_card && touched.address_card
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
+                  placeholder="address_card"
+                  value={formData.address_card}
                   onChange={handleInputChange}
+                  onBlur={handleBlur}
                 />
               </div>
+              {errors.address_card && touched.address_card && (
+                <p className="mt-2 text-sm text-red-600">
+                  {errors.address_card}
+                </p>
+              )}
             </div>
 
-            <div>
+            {/* <div>
               <label htmlFor="imageUrl" className="sr-only">
                 Ảnh đại diện
               </label>
@@ -255,45 +535,88 @@ export default function RegisterPage() {
                   id="imageUrl"
                   name="imageUrl"
                   type="file"
-                  required
-                  className="appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                    errors.imageUrl && touched.imageUrl
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
                   placeholder="Ảnh đại diện"
                   value={formData.imageUrl}
                   onChange={handleInputChange}
+                  onBlur={handleBlur}
                 />
               </div>
+              {errors.imageUrl && touched.imageUrl && (
+                <p className="mt-2 text-sm text-red-600">{errors.imageUrl}</p>
+              )}
+            </div> */}
+
+            <div>
+              <label htmlFor="image" className="sr-only">
+                Ảnh đại diện
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaImage className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="image"
+                  name="image"
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                    errors.image && touched.image
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
+                  placeholder="Ảnh đại diện"
+                  value={formData.image}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                />
+              </div>
+              {errors.image && touched.image && (
+                <p className="mt-2 text-sm text-red-600">{errors.image}</p>
+              )}
             </div>
 
             {/* Terms Agreement */}
-            <div className="flex items-center">
-              <input
-                id="agreeTerms"
-                name="agreeTerms"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                checked={formData.agreeTerms}
-                onChange={handleInputChange}
-                required
-              />
-              <label
-                htmlFor="agreeTerms"
-                className="ml-2 block text-sm text-gray-700"
-              >
-                Tôi đồng ý với{" "}
-                <a
-                  href="#"
-                  className="text-blue-600 hover:text-blue-500 font-medium"
+            <div>
+              <div className="flex items-center">
+                <input
+                  id="agreeTerms"
+                  name="agreeTerms"
+                  type="checkbox"
+                  className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ${
+                    errors.agreeTerms && touched.agreeTerms
+                      ? "border-red-500"
+                      : ""
+                  }`}
+                  checked={formData.agreeTerms}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                />
+                <label
+                  htmlFor="agreeTerms"
+                  className="ml-2 block text-sm text-gray-700"
                 >
-                  Điều khoản sử dụng
-                </a>{" "}
-                và{" "}
-                <a
-                  href="#"
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                >
-                  Chính sách bảo mật
-                </a>
-              </label>
+                  Tôi đồng ý với{" "}
+                  <a
+                    href="#"
+                    className="text-blue-600 hover:text-blue-500 font-medium"
+                  >
+                    Điều khoản sử dụng
+                  </a>{" "}
+                  và{" "}
+                  <a
+                    href="#"
+                    className="text-blue-600 hover:text-blue-500 font-medium"
+                  >
+                    Chính sách bảo mật
+                  </a>
+                </label>
+              </div>
+              {errors.agreeTerms && touched.agreeTerms && (
+                <p className="mt-2 text-sm text-red-600">{errors.agreeTerms}</p>
+              )}
             </div>
 
             {/* Submit Button */}

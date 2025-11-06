@@ -1,14 +1,51 @@
 "use client";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useUser } from "./User";
 import { IoIosNotifications } from "react-icons/io";
+import { FaUserCircle, FaChevronDown } from "react-icons/fa";
+import { RiSettings4Fill, RiLogoutBoxLine } from "react-icons/ri";
+import { MdDashboard } from "react-icons/md";
 
 export default function NavbarAdmin() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useUser();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
+  const handleLogout = () => {
+    // Clear authentication tokens
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    // Redirect to login
+    router.push("/login");
+  };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
 
   return (
     <div className="sticky top-0 text-black w-full z-10 bg-blue-400 shadow-md flex">
@@ -46,21 +83,108 @@ export default function NavbarAdmin() {
         </Link>
       </div>
 
-      <div className="relative ml-70 mr-10 flex items-center space-x-4">
-        <IoIosNotifications className="text-2xl text-white h-7 w-7" />
-        <span className="absolute top-0 right-0 text-white bg-red-500 rounded-full px-1 text-sm">
-          3
-        </span>
+      <div className="relative ml-auto mr-10 flex items-center space-x-6">
+        {/* Notifications Icon */}
+        <Link href="/admin/notifications" className="relative">
+          <IoIosNotifications className="text-white h-8 w-8 hover:text-gray-200 transition-colors cursor-pointer" />
+          <span className="absolute -top-1 -right-1 text-white bg-red-500 rounded-full px-1.5 py-0.5 text-xs font-bold">
+            3
+          </span>
+        </Link>
+
+        {/* Profile Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={toggleDropdown}
+            className="flex items-center space-x-2 hover:bg-blue-500 px-3 py-2 rounded-lg transition-colors"
+          >
+            {user?.avatar ? (
+              <Image
+                src={user.avatar}
+                alt="Profile"
+                width={40}
+                height={40}
+                className="rounded-full border-2 border-white object-cover"
+              />
+            ) : (
+              <FaUserCircle className="text-white h-10 w-10" />
+            )}
+            <span className="text-white font-medium hidden md:block">
+              {user?.name || "Admin"}
+            </span>
+            <FaChevronDown
+              className={`text-white transition-transform ${
+                isDropdownOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {/* Dropdown Menu */}
+          {isDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-2 z-50 border border-gray-200">
+              {/* User Info */}
+              <div className="px-4 py-3 border-b border-gray-200">
+                <p className="text-sm font-semibold text-gray-900">
+                  {user?.name || "Admin User"}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.email || "admin@example.com"}
+                </p>
+              </div>
+
+              {/* Menu Items */}
+              <div className="py-1">
+                <Link
+                  href="/admin/profile"
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <FaUserCircle className="mr-3 h-5 w-5 text-gray-400" />
+                  Hồ sơ của tôi
+                </Link>
+
+                <Link
+                  href="/admin/dashboard"
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <MdDashboard className="mr-3 h-5 w-5 text-gray-400" />
+                  Dashboard
+                </Link>
+
+                <Link
+                  href="/admin/settings"
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <RiSettings4Fill className="mr-3 h-5 w-5 text-gray-400" />
+                  Cài đặt
+                </Link>
+
+                <Link
+                  href="/admin/notifications-settings"
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <IoIosNotifications className="mr-3 h-5 w-5 text-gray-400" />
+                  Cài đặt thông báo
+                </Link>
+              </div>
+
+              {/* Logout */}
+              <div className="border-t border-gray-200 py-1">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <RiLogoutBoxLine className="mr-3 h-5 w-5" />
+                  Đăng xuất
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-      {/* <div>
-        <Image
-          src={user?.avatar || "/default-avatar.png"}
-          alt="User Avatar"
-          width={50}
-          height={50}
-          onClick={() => {}}
-        />
-      </div> */}
     </div>
   );
 }

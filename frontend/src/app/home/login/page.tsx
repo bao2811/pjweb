@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaHeart } from "react-icons/fa";
 
 export default function LoginPage() {
+  const route = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -21,8 +23,23 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log("Login data:", formData);
+    const res = fetch("http://localhost:8000/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        route.push(`/${data.user.role}/dashboard`);
+        console.log("Success:", data);
+        // Handle successful login (e.g., redirect to dashboard)
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        // Handle login error (e.g., show error message)
+      });
   };
 
   return (

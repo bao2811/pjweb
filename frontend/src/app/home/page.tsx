@@ -4,7 +4,7 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero Section */}
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 py-20 text-[#595d7d]">
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 pt-20 pb-5 text-[#595d7d]">
         <div className=" bg-opacity-60 p-8 rounded-2xl max-w-5xl mx-auto shadow-2xl">
           {/* Main Title */}
           <h1 className=" text-4xl md:text-5xl font-bold text-center mb-8 leading-tight">
@@ -102,6 +102,102 @@ export default function HomePage() {
                 Tham gia ngay hôm nay
               </button>
             </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Sponsors and Partners Section */}
+      <div className="relative px-4 overflow-hidden">
+        {/* Background with gradient overlay */}
+        {/* <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage:
+              "url('https://image.slidesdocs.com/responsive-images/background/blue-white-leaf-outdoor-sunny-rural-cartoon-beautiful-powerpoint-background_9a81889e57__960_540.jpg')",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-400/30 via-green-300/20 to-white/40"></div>
+        </div> */}
+
+        {/* Content */}
+        <div className="relative max-w-4xl mx-auto">
+          {/* <div className="text-center mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-[#595d7d] mb-2 drop-shadow-sm">
+              Đơn Vị Đồng Hành
+            </h2>
+            <div className="w-16 h-0.5 bg-gradient-to-r from-blue-400 to-green-400 mx-auto"></div>
+          </div> */}
+
+          {/* Cards Container */}
+          <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
+            {/* Sponsor Card */}
+            <div className="bg-white bg-opacity-90 backdrop-blur-sm rounded-xl shadow-lg p-4 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <div className="flex flex-col items-center">
+                <div className="mb-2">
+                  <span className="inline-block px-3 py-0.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full">
+                    NHÀ TÀI TRỢ
+                  </span>
+                </div>
+
+                {/* University Logo */}
+                <div className="w-14 h-14 mb-2 relative">
+                  <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                    <Image
+                      src="/dhcn.png"
+                      alt="Trường Đại Học Công Nghệ"
+                      width={56}
+                      height={56}
+                      className="object-cover"
+                    />
+                  </div>
+                </div>
+
+                <h3 className="text-base font-bold text-gray-800 text-center mb-1 leading-tight">
+                  Trường Đại Học Công Nghệ
+                </h3>
+                <p className="text-gray-600 text-center text-xs">
+                  Đồng hành cùng hoạt động tình nguyện
+                </p>
+              </div>
+            </div>
+
+            {/* Partner Card */}
+            <div className="bg-white bg-opacity-90 backdrop-blur-sm rounded-xl shadow-lg p-4 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <div className="flex flex-col items-center">
+                <div className="mb-2">
+                  <span className="inline-block px-3 py-0.5 bg-green-50 text-green-700 text-xs font-semibold rounded-full">
+                    ĐỒNG HÀNH CÙNG
+                  </span>
+                </div>
+
+                {/* Faculty Logo */}
+                <div className="w-14 h-14 mb-2 relative">
+                  <div className="w-full h-full bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                    <Image
+                      src="/khoa.png"
+                      alt="Khoa Công Nghệ Thông Tin"
+                      width={56}
+                      height={56}
+                      className="object-cover"
+                    />
+                  </div>
+                </div>
+
+                <h3 className="text-base font-bold text-gray-800 text-center mb-1 leading-tight">
+                  Khoa Công Nghệ Thông Tin
+                </h3>
+                <p className="text-gray-600 text-center text-xs">
+                  Hỗ trợ phát triển nền tảng công nghệ
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Decorative text */}
+          <div className="mt-6 text-center">
+            <p className="text-black text-sm italic drop-shadow-sm opacity-80">
+              "Cùng nhau kiến tạo tương lai tốt đẹp hơn"
+            </p>
           </div>
         </div>
       </div>

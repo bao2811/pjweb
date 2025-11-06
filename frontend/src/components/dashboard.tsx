@@ -102,11 +102,24 @@ export default function Dashboard() {
   const [commentInputs, setCommentInputs] = useState<{ [key: number]: string }>(
     {}
   );
+  const [showComments, setShowComments] = useState<{ [key: number]: boolean }>(
+    {}
+  );
+  const [comments, setComments] = useState<{ [key: number]: any[] }>({});
+  const [loadingComments, setLoadingComments] = useState<{
+    [key: number]: boolean;
+  }>({});
 
   const [loading, setLoading] = useState(false);
 
   async function fetchPosts() {
-    const res = await fetch("http://localhost:8000/api/posts/getAllPosts");
+    const res = await fetch("http://localhost:8000/api/posts/getAllPosts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: 4 }),
+    });
     const data = await res.json();
     if (data.posts) {
       setPosts(data.posts);
@@ -120,29 +133,174 @@ export default function Dashboard() {
   //   fetchPosts();
   // }
 
-  const handleLike = (postId: number) => {
-    setPosts(
-      posts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            }
-          : post
-      )
+  const handleLike = async (postId: number) => {
+    // Optimistic update: toggle like locally
+    const previousPosts = posts;
+    const updatedPosts = posts.map((post) =>
+      post.id === postId
+        ? {
+            ...post,
+            isLiked: !post.isLiked,
+            likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+          }
+        : post
     );
+
+    setPosts(updatedPosts);
+
+    try {
+      const res = await fetch("http://localhost:8000/api/posts/likePost", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId }),
+      });
+
+      if (!res.ok) {
+        // Revert optimistic update on failure
+        console.error("Like request failed", await res.text());
+        setPosts(previousPosts);
+      } else {
+        // Optionally sync with server response (if server returns updated post)
+        try {
+          const data = await res.json();
+          if (data.post) {
+            setPosts((cur) =>
+              cur.map((p) => (p.id === data.post.id ? data.post : p))
+            );
+          }
+        } catch (err) {
+          // If parsing fails, ignore — we already applied optimistic update
+        }
+      }
+    } catch (error) {
+      console.error("Network error when liking post:", error);
+      setPosts(previousPosts);
+    }
   };
 
   const handleCommentChange = (postId: number, value: string) => {
     setCommentInputs((prev) => ({ ...prev, [postId]: value }));
   };
 
-  const handleCommentSubmit = (postId: number) => {
-    if (commentInputs[postId]?.trim()) {
-      // Handle comment submission
-      console.log(`Comment for post ${postId}:`, commentInputs[postId]);
-      setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
+  const fetchCommentsForPost = async (postId: number) => {
+    if (loadingComments[postId] || comments[postId]) return; // Skip if already loading or loaded
+
+    setLoadingComments((prev) => ({ ...prev, [postId]: true }));
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/posts/getCommentsOfPost/${postId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await res.json();
+      if (data.comments) {
+        setComments((prev) => ({ ...prev, [postId]: data.comments }));
+      }
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+    } finally {
+      setLoadingComments((prev) => ({ ...prev, [postId]: false }));
+    }
+  };
+
+  const handleCommentSubmit = async (postId: number) => {
+    if (!commentInputs[postId]?.trim()) return;
+
+    // Create new comment object from frontend data
+    const newComment = {
+      id: Date.now(), // Use timestamp as unique ID
+      postId: postId,
+      userId: 4, // TODO: Replace with actual logged-in user ID
+      userName: "Bạn", // TODO: Replace with actual user name from auth
+      userImage:
+        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face", // TODO: Replace with actual user avatar
+      content: commentInputs[postId].trim(),
+      created_at: new Date().toISOString(),
+    };
+
+    // Add comment to UI immediately
+    setComments((prev) => ({
+      ...prev,
+      [postId]: [...(prev[postId] || []), newComment],
+    }));
+
+    // Update comment count in post
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId ? { ...p, comments: p.comments + 1 } : p
+      )
+    );
+
+    // Store comment text for potential rollback
+    const commentText = commentInputs[postId];
+
+    // Clear input immediately
+    setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
+
+    // Send to backend in background (only for saving to database)
+    try {
+      // const res = await fetch(
+      //   "http://localhost:8000/api/posts/addCommentOfPost",
+      //   {
+      //     method: "POST",
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //     },
+      //     body: JSON.stringify({
+      //       postId: postId,
+      //       userId: 4, // TODO: Replace with actual logged-in user ID
+      //       content: commentText,
+      //     }),
+      //   }
+      // );
+
+      if (0) {
+        // Backend save failed - revert the UI changes
+        console.error("Failed to save comment to backend");
+        setComments((prev) => ({
+          ...prev,
+          [postId]: (prev[postId] || []).filter((c) => c.id !== newComment.id),
+        }));
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId ? { ...p, comments: p.comments - 1 } : p
+          )
+        );
+        // Restore input so user can try again
+        setCommentInputs((prev) => ({ ...prev, [postId]: commentText }));
+        alert("Không thể lưu bình luận. Vui lòng thử lại!");
+      }
+      // If successful, do nothing - comment already in UI
+    } catch (error) {
+      console.error("Error saving comment:", error);
+      // Network error - revert the UI changes
+      setComments((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || []).filter((c) => c.id !== newComment.id),
+      }));
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId ? { ...p, comments: p.comments - 1 } : p
+        )
+      );
+      setCommentInputs((prev) => ({ ...prev, [postId]: commentText }));
+      alert("Lỗi kết nối. Vui lòng thử lại!");
+    }
+  };
+
+  const toggleComments = (postId: number) => {
+    const willShow = !showComments[postId];
+    setShowComments((prev) => ({ ...prev, [postId]: willShow }));
+
+    // Fetch comments when opening
+    if (willShow && !comments[postId]) {
+      fetchCommentsForPost(postId);
     }
   };
 
@@ -214,7 +372,7 @@ export default function Dashboard() {
                 <div className="flex items-center space-x-3">
                   <Image
                     src={post.image}
-                    alt={post.name}
+                    alt={post.name || "Post image"}
                     width={50}
                     height={50}
                     className="rounded-full"
@@ -244,7 +402,7 @@ export default function Dashboard() {
                 <div className="relative h-48">
                   <Image
                     src={post.image}
-                    alt={post.title}
+                    alt={post.title || "Post image"}
                     fill
                     className="object-cover"
                     unoptimized
@@ -323,7 +481,14 @@ export default function Dashboard() {
                     {post.isLiked ? <FaHeart /> : <FaRegHeart />}
                     <span className="font-medium">Thích</span>
                   </button>
-                  <button className="flex items-center justify-center space-x-2 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition duration-200">
+                  <button
+                    onClick={() => toggleComments(post.id)}
+                    className={`flex items-center justify-center space-x-2 py-3 rounded-lg transition duration-200 ${
+                      showComments[post.id]
+                        ? "text-blue-500 bg-blue-50 hover:bg-blue-100"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
                     <FaComment />
                     <span className="font-medium">Bình luận</span>
                   </button>
@@ -335,43 +500,99 @@ export default function Dashboard() {
               </div>
 
               {/* Comment Section */}
-              <div className="px-4 pb-4 border-t border-gray-100">
-                <div className="flex items-center space-x-3 mt-3">
-                  <Image
-                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face"
-                    alt="Your Avatar"
-                    width={32}
-                    height={32}
-                    className="rounded-full"
-                    unoptimized
-                  />
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      placeholder="Viết bình luận..."
-                      value={commentInputs[post.id] || ""}
-                      onChange={(e) =>
-                        handleCommentChange(post.id, e.target.value)
-                      }
-                      onKeyPress={(e) =>
-                        e.key === "Enter" && handleCommentSubmit(post.id)
-                      }
-                      className="w-full bg-gray-100 rounded-full px-4 py-2 pr-20 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition duration-200"
+              {showComments[post.id] && (
+                <div className="px-4 pb-4 border-t border-gray-100">
+                  {/* Existing Comments */}
+                  {loadingComments[post.id] ? (
+                    <div className="py-4 text-center text-gray-500">
+                      <div className="animate-pulse">Đang tải bình luận...</div>
+                    </div>
+                  ) : (
+                    comments[post.id] &&
+                    comments[post.id].length > 0 && (
+                      <div className="space-y-3 mt-3 mb-4 max-h-96 overflow-y-auto">
+                        {comments[post.id].map((comment: any, idx: number) => (
+                          <div key={idx} className="flex space-x-3">
+                            <Image
+                              src={
+                                comment.userImage ||
+                                "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face"
+                              }
+                              alt={comment.userName || "User"}
+                              width={32}
+                              height={32}
+                              className="rounded-full flex-shrink-0"
+                              unoptimized
+                            />
+                            <div className="flex-1">
+                              <div className="bg-gray-100 rounded-2xl px-4 py-2">
+                                <p className="font-semibold text-sm text-gray-900">
+                                  {comment.userName || "Người dùng"}
+                                </p>
+                                <p className="text-sm text-gray-800">
+                                  {comment.content}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-4 mt-1 px-4 text-xs text-gray-500">
+                                <span>
+                                  {comment.created_at
+                                    ? new Date(
+                                        comment.created_at
+                                      ).toLocaleDateString("vi-VN")
+                                    : "Vừa xong"}
+                                </span>
+                                <button className="hover:underline font-medium">
+                                  Thích
+                                </button>
+                                <button className="hover:underline font-medium">
+                                  Trả lời
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  )}
+
+                  {/* Add Comment Input */}
+                  <div className="flex items-center space-x-3 mt-3">
+                    <Image
+                      src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face"
+                      alt="Your Avatar"
+                      width={32}
+                      height={32}
+                      className="rounded-full"
+                      unoptimized
                     />
-                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <FaSmile />
-                      </button>
-                      <button
-                        onClick={() => handleCommentSubmit(post.id)}
-                        className="text-blue-500 hover:text-blue-600"
-                      >
-                        <FaPaperPlane />
-                      </button>
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        placeholder="Viết bình luận..."
+                        value={commentInputs[post.id] || ""}
+                        onChange={(e) =>
+                          handleCommentChange(post.id, e.target.value)
+                        }
+                        onKeyPress={(e) =>
+                          e.key === "Enter" && handleCommentSubmit(post.id)
+                        }
+                        className="w-full bg-gray-100 rounded-full px-4 py-2 pr-20 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition duration-200"
+                      />
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                        <button className="text-gray-400 hover:text-gray-600">
+                          <FaSmile />
+                        </button>
+                        <button
+                          onClick={() => handleCommentSubmit(post.id)}
+                          className="text-blue-500 hover:text-blue-600"
+                        >
+                          <FaPaperPlane />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           ))}
         </div>
