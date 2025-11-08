@@ -202,7 +202,8 @@ export default function RegisterPage() {
     try {
       const res = await axios.post(
         "http://localhost:8000/api/register",
-        formData
+        formData,
+        { withCredentials: true }
       );
       console.log(res);
       if (res?.status === 201) {
@@ -315,7 +316,7 @@ export default function RegisterPage() {
                       ? "border-red-500 focus:ring-red-500"
                       : "border-gray-300 focus:ring-blue-500"
                   } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
-                  placeholder="Họ và tên"
+                  placeholder="Tên Đăng Nhập"
                   value={formData.username}
                   onChange={handleInputChange}
                   onBlur={handleBlur}

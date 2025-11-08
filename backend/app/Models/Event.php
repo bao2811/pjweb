@@ -24,4 +24,14 @@ class Event extends Model
         'author_id',
         'status',
     ];
+
+  public function joinEvents()
+    {
+        return $this->hasMany(JoinEvent::class);
+    }
+
+    public function members()
+    {
+        return $this->belongsToMany(User::class, 'joinevent', 'event_id', 'user_id');
+    }
 }

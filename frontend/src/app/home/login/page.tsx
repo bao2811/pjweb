@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaHeart } from "react-icons/fa";
+import axios from "axios";
 
 export default function LoginPage() {
   const route = useRouter();
@@ -21,17 +22,34 @@ export default function LoginPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // await axios.get("http://localhost:8000/sanctum/csrf-cookie", {
+    //   withCredentials: true,
+    // });
+
+    // const res = await axios.post("http://localhost:8000/api/login", formData, {
+    //   withCredentials: true,
+    // });
+
+    // const xsrfToken = document.cookie
+    //   .split("; ")
+    //   .find((row) => row.startsWith("XSRF-TOKEN="))
+    //   ?.split("=")[1];
+
     const res = fetch("http://localhost:8000/api/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        // "X-XSRF-TOKEN": decodeURIComponent(xsrfToken || ""),
       },
       body: JSON.stringify(formData),
+      credentials: "include",
     })
       .then((response) => response.json())
       .then((data) => {
+        localStorage.setItem("user", JSON.stringify(data.user));
         route.push(`/${data.user.role}/dashboard`);
         console.log("Success:", data);
         // Handle successful login (e.g., redirect to dashboard)

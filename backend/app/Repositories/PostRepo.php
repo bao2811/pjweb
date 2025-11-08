@@ -121,5 +121,4 @@ class PostRepo
     {
         return Post::where('event_id', $eventId)->get();
     }
-
 }

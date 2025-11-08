@@ -12,3 +12,7 @@ Broadcast::channel('event.{id}', function ($user, $id) {
 Broadcast::channel('chat-room', function ($user) {
     return true; // Cho phép tất cả người dùng tham gia kênh chat-room
 });
+
+Broadcast::channel('chat.{groupId}', function ($user, $groupId) {
+    return $user->isMemberOfGroup($groupId);
+});

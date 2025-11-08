@@ -17,7 +17,7 @@ return new class extends Migration
             $table->timestamp('start_time')->nullable();
             $table->timestamp('end_time')->nullable();
             $table->unsignedBigInteger('author_id');
-            $table->string('status')->default('upcoming'); // upcoming, ongoing, ended, cancelled
+            $table->string('status')->default('pending'); // pending, upcoming, ongoing, ended, cancelled
             $table->timestamps();
 
             // Khóa ngoại: sự kiện do user nào tạo

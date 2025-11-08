@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\UserService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -17,10 +18,8 @@ class UserController extends Controller
 
    function getUser(Request $request)
    {
-
-        $user = $request->user();
-        
-       return response()->json($request->user());
+      $user = $request-user();
+      return response()->json($user);
    }
 
    public function getUserDetails(Request $request, $id)

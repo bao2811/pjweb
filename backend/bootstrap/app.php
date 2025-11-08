@@ -53,6 +53,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'api' => [
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
                 \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+                // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class, // quan trọng
+                // \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+                // \Illuminate\Routing\Middleware\SubstituteBindings::class,
             ],
             'admin' => [
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,

@@ -72,6 +72,12 @@ class User extends Authenticatable
         return $this->hasMany(PushSubscription::class);
     }
 
+    public function channels()
+    {
+        return $this->belongsToMany(Channel::class, 'channel_user', 'user_id', 'channel_id');
+    }
+
+
 
     /**
      * Get the attributes that should be cast.
@@ -94,5 +100,21 @@ class User extends Authenticatable
     public function resendEmailVerification()
     {
         $this->notify(new VerifyEmailNotification());
+    }
+
+    public function joinEvents()
+    {
+        return $this->hasMany(JoinEvent::class);
+    }
+
+    public function joinedEvents()
+    {
+        return $this->belongsToMany(Event::class, 'joinevent', 'user_id', 'event_id');
+    }
+
+    // 🔹 Kiểm tra xem user có trong event chưa
+    public function isMemberOfEvent($eventId)
+    {
+        return $this->joinEvents()->where('event_id', $eventId)->exists();
     }
 }

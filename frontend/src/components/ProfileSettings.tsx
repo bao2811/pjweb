@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useUser } from "./User";
+import { useUser } from "../context/User";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import Image from "next/image";
 import { FaUserCircle, FaBell, FaBellSlash } from "react-icons/fa";
@@ -78,9 +78,9 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           <div className="flex items-start space-x-6 mb-6">
             {/* Avatar */}
             <div className="flex-shrink-0">
-              {user?.avatar ? (
+              {user?.image ? (
                 <Image
-                  src={user.avatar}
+                  src={user.image}
                   alt="Profile"
                   width={120}
                   height={120}
@@ -97,7 +97,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
             {/* User Info */}
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                {user?.name || "Chưa có tên"}
+                {user?.username || "Chưa có tên"}
               </h2>
 
               <div className="space-y-3">

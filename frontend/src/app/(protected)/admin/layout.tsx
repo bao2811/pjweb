@@ -1,5 +1,5 @@
 import NavbarAdmin from "@/components/NavbarAdmin";
-import { UserProvider } from "@/components/User";
+import { UserProvider } from "@/context/User";
 
 export default function AdminLayout({
   children,
@@ -8,10 +8,8 @@ export default function AdminLayout({
 }) {
   return (
     <div>
-      <UserProvider>
-        <NavbarAdmin />
-        {children}
-      </UserProvider>
+      <NavbarAdmin />
+      {children}
     </div>
   );
 }

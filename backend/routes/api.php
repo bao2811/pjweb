@@ -9,6 +9,8 @@ use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\JoinEventController;
+use App\Events\ChatMessage;
+use Illuminate\Http\Request;
 
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -26,6 +28,15 @@ Route::get('/dashboard', function () {
 // Route::post('/email/resend', [VerificationController::class, 'resend'])
 //     ->middleware('throttle:6,1')
 //     ->name('verification.resend');
+
+Route::post('/groups/{id}/message', function (Request $request, $id) {
+    $user = $request->input('user');
+    $message = $request->input('message');
+
+    broadcast(new ChatMessage($id, $user, $message));
+
+    return response()->json(['status' => 'Message sent']);
+});
 
 
 // post

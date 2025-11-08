@@ -284,6 +284,70 @@ export default function AdminEventsPage() {
     }
   };
 
+  // Accept event
+  const handleAcceptEvent = async (eventId: number) => {
+    if (!confirm("Bạn có chắc chắn muốn duyệt sự kiện này?")) return;
+
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/admin/acceptEvent/${eventId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.ok) {
+        // Update status to "upcoming" after approval
+        setEvents(
+          events.map((e) =>
+            e.id === eventId ? { ...e, status: "upcoming" as const } : e
+          )
+        );
+        setShowDetailModal(false);
+        alert("Duyệt sự kiện thành công!");
+      } else {
+        const data = await res.json();
+        alert(`Lỗi: ${data.message || "Không thể duyệt sự kiện"}`);
+      }
+    } catch (error) {
+      console.error("Error accepting event:", error);
+      alert("Có lỗi xảy ra khi duyệt sự kiện");
+    }
+  };
+
+  // Reject event
+  const handleRejectEvent = async (eventId: number) => {
+    if (!confirm("Bạn có chắc chắn muốn từ chối sự kiện này?")) return;
+
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/admin/rejectEvent/${eventId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.ok) {
+        // Remove rejected event from list or update status
+        setEvents(events.filter((e) => e.id !== eventId));
+        setShowDetailModal(false);
+        alert("Từ chối sự kiện thành công!");
+      } else {
+        const data = await res.json();
+        alert(`Lỗi: ${data.message || "Không thể từ chối sự kiện"}`);
+      }
+    } catch (error) {
+      console.error("Error rejecting event:", error);
+      alert("Có lỗi xảy ra khi từ chối sự kiện");
+    }
+  };
+
   // Category helpers
   const getCategoryLabel = (category: string) => {
     const labels = {
@@ -574,12 +638,36 @@ export default function AdminEventsPage() {
 
                   {/* Action Buttons */}
                   <div className="flex items-center space-x-2">
+                    {event.status === "pending" && (
+                      <>
+                        <button
+                          onClick={() => handleAcceptEvent(event.id)}
+                          className="flex-1 px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-1 text-sm"
+                          title="Duyệt sự kiện"
+                        >
+                          <FaCheckCircle />
+                          <span>Duyệt</span>
+                        </button>
+                        <button
+                          onClick={() => handleRejectEvent(event.id)}
+                          className="flex-1 px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-1 text-sm"
+                          title="Từ chối sự kiện"
+                        >
+                          <FaTimes />
+                          <span>Từ chối</span>
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={() => {
                         setSelectedEvent(event);
                         setShowDetailModal(true);
                       }}
-                      className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2"
+                      className={`${
+                        event.status === "pending"
+                          ? "px-3 py-2"
+                          : "flex-1 px-4 py-2"
+                      } bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2`}
                     >
                       <FaEye />
                       <span>Chi tiết</span>
@@ -768,23 +856,45 @@ export default function AdminEventsPage() {
               >
                 Đóng
               </button>
-              <button
-                onClick={() => {
-                  setShowMembersModal(true);
-                  setShowDetailModal(false);
-                }}
-                className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition duration-200 flex items-center space-x-2"
-              >
-                <FaUsers />
-                <span>Xem thành viên</span>
-              </button>
-              <button
-                onClick={() => handleDeleteEvent(selectedEvent.id)}
-                className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition duration-200 flex items-center space-x-2"
-              >
-                <FaTrash />
-                <span>Xóa sự kiện</span>
-              </button>
+              {selectedEvent.status === "pending" && (
+                <>
+                  <button
+                    onClick={() => handleRejectEvent(selectedEvent.id)}
+                    className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+                  >
+                    <FaTimes />
+                    <span>Từ chối</span>
+                  </button>
+                  <button
+                    onClick={() => handleAcceptEvent(selectedEvent.id)}
+                    className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+                  >
+                    <FaCheckCircle />
+                    <span>Duyệt sự kiện</span>
+                  </button>
+                </>
+              )}
+              {selectedEvent.status !== "pending" && (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowMembersModal(true);
+                      setShowDetailModal(false);
+                    }}
+                    className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+                  >
+                    <FaUsers />
+                    <span>Xem thành viên</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteEvent(selectedEvent.id)}
+                    className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+                  >
+                    <FaTrash />
+                    <span>Xóa sự kiện</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

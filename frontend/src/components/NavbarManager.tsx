@@ -3,7 +3,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
-import { useUser } from "./User";
+import { useUser } from "../context/User";
 import { IoIosNotifications } from "react-icons/io";
 import { FaUserCircle, FaChevronDown, FaUsers } from "react-icons/fa";
 import { RiSettings4Fill, RiLogoutBoxLine } from "react-icons/ri";
@@ -40,7 +40,7 @@ export default function NavbarManager() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     // Redirect to login
-    router.push("/login");
+    router.push("/home/login");
   };
 
   const toggleDropdown = () => {
@@ -98,9 +98,9 @@ export default function NavbarManager() {
             onClick={toggleDropdown}
             className="flex items-center space-x-2 hover:bg-blue-500 px-3 py-2 rounded-lg transition-colors"
           >
-            {user?.avatar ? (
+            {user?.image ? (
               <Image
-                src={user.avatar}
+                src={user.image}
                 alt="Profile"
                 width={40}
                 height={40}
@@ -110,7 +110,7 @@ export default function NavbarManager() {
               <FaUserCircle className="text-white h-10 w-10" />
             )}
             <span className="text-white font-medium hidden md:block">
-              {user?.name || "Manager"}
+              {user?.username || "Manager"}
             </span>
             <FaChevronDown
               className={`text-white transition-transform ${
@@ -125,7 +125,7 @@ export default function NavbarManager() {
               {/* User Info */}
               <div className="px-4 py-3 border-b border-gray-200">
                 <p className="text-sm font-semibold text-gray-900">
-                  {user?.name || "Manager"}
+                  {user?.username || "Manager"}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   {user?.email || "manager@example.com"}

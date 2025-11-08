@@ -43,11 +43,20 @@ class AuthController extends Controller
 
             // Bạn có thể lưu thêm thông tin vào session
             session(['login_time' => now()]);
-
+            $minutes = 120;
             return response()->json([
                 'message' => 'Đăng nhập thành công!',
                 'user' => $user,
-            ]);
+            ])->cookie('user', json_encode($user), 120, '/', 'localhost', false, false, 'lax');
+            // return response()->json([
+            //     'message' => 'Đăng nhập thành công!',
+            //     'user' => Auth::user(),
+            // ]);
+
+            // return response()->json($user)
+            // ->cookie('laravel_session', $sessionId, 120, '/', 'localhost', false, true, 'lax')
+            // ->cookie('user', json_encode($user), 120, '/', 'localhost', false, true, 'lax');
+
         }
 
         return response()->json(['error' => 'Email hoặc mật khẩu không đúng'], 401);

@@ -1,0 +1,17 @@
+[90m= [39m[34;4mApp\Models\User[39;24m {#6166
+    [34mid[39m: [35m5[39m,
+    [34musername[39m: "[32mbao2811[39m",
+    [34memail[39m: "[32mhoangbao28112005@gmail.com[39m",
+    [34memail_verified_at[39m: [36mnull[39m,
+    #[33mpassword[39m: "[32m$2y$12$PnRSotvVM8cZae47PFb2AuuKgG3FtlAbrs2K6ExFQy0Gs9rSZVSfC[39m",
+    #[33mremember_token[39m: [36mnull[39m,
+    [34mcreated_at[39m: "[32m2025-11-06 17:17:56[39m",
+    [34mupdated_at[39m: "[32m2025-11-06 17:17:56[39m",
+    [34mphone[39m: "[32m0354904422[39m",
+    [34maddress[39m: "[32mNghệ An[39m",
+    [34mrole[39m: "[32madmin[39m",
+    [34mimage[39m: "[32mhttps://www.google.com/url?sa=t&source=web&rct=j&url=https%3A%2F%2Fjbagy.me%2Fanh-avatar-zalo-dep%2F%3Fsrsltid%3DAfmBOopR4ZGobKk1WW9zV_9t-eduSTjZ9Q7QWkPM7qgwC-Wk33SbaJk5&ved=0CBUQjRxqFwoTCJDa4bLr3ZADFQAAAAAdAAAAABAI&opi=89978449[39m",
+    [34mstatus[39m: "[32mactive[39m",
+    [34maddress_card[39m: [36mnull[39m,
+  }
+
