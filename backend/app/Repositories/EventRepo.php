@@ -19,6 +19,14 @@ class EventRepo
         return Event::all();
     }
 
+    public function searchEvents($query)
+    {
+        return Event::where('title', 'ILIKE', "%{$query}%")
+            ->orWhere('description', 'ILIKE', "%{$query}%")
+            ->orWhere('location', 'ILIKE', "%{$query}%")
+            ->get();
+    }
+
     public function deleteEventById($id) : bool
     {
         $event = $this->getEventById($id);

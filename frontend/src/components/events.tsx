@@ -25,7 +25,7 @@ import {
   FaCheckCircle,
   FaTimesCircle,
 } from "react-icons/fa";
-
+import api from "@/utils/api";
 import { useRouter } from "next/navigation";  
 
 // Types
@@ -87,154 +87,7 @@ const currentUser: User = {
     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
 };
 
-// Mock events data
-const mockEvents: Event[] = [
-  {
-    id: 1,
-    eventId: "evt_001",
-    title: "Trồng cây xanh - Vì môi trường sạch",
-    description:
-      "Cùng nhau trồng cây tại công viên để tạo ra không gian xanh, sạch cho cộng đồng. Hoạt động bao gồm trồng cây, tưới nước và chăm sóc cây con.",
-    image:
-      "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop",
-    date: "2025-10-15",
-    time: "07:00 - 11:00",
-    location: "Công viên Tao Đàn, Quận 1, TP.HCM",
-    maxParticipants: 100,
-    currentParticipants: 45,
-    category: "Môi trường",
-    organizer: {
-      id: 2,
-      name: "Trần Thị B",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
-      role: "manager",
-    },
-    participants: [],
-    isLiked: false,
-    likes: 128,
-    status: "ongoing",
-    isHidden: false,
-    approvalStatus: "approved",
-    createdAt: "2025-10-01",
-  },
-  {
-    id: 2,
-    eventId: "evt_002",
-    title: "Dạy học miễn phí cho trẻ em vùng cao",
-    description:
-      "Chương trình giáo dục tình nguyện dành cho trẻ em ở vùng núi cao. Chúng ta sẽ dạy các môn cơ bản và tặng sách vở, dụng cụ học tập.",
-    image:
-      "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop",
-    date: "2025-10-20",
-    time: "Cả ngày (3 ngày 2 đêm)",
-    location: "Sapa, Lào Cai",
-    maxParticipants: 20,
-    currentParticipants: 12,
-    category: "Giáo dục",
-    organizer: {
-      id: 3,
-      name: "Lê Văn C",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      role: "manager",
-    },
-    participants: [],
-    isLiked: true,
-    likes: 89,
-    status: "upcoming",
-    isHidden: false,
-    approvalStatus: "approved",
-    createdAt: "2025-09-25",
-  },
-  {
-    id: 3,
-    eventId: "evt_003",
-    title: "Nấu cơm từ thiện cuối tuần",
-    description:
-      "Chuẩn bị và phục vụ bữa ăn miễn phí cho người vô gia cư và người nghèo trong khu vực. Mang đến sự ấm áp và tình người.",
-    image:
-      "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&h=400&fit=crop",
-    date: "2025-10-14",
-    time: "16:00 - 20:00",
-    location: "Chùa Vĩnh Nghiêm, Quận 3, TP.HCM",
-    maxParticipants: 80,
-    currentParticipants: 67,
-    category: "Xã hội",
-    organizer: {
-      id: 1,
-      name: "Nguyễn Văn A",
-      avatar:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
-      role: "user",
-    },
-    participants: [],
-    isLiked: false,
-    likes: 156,
-    status: "upcoming",
-    isHidden: true,
-    approvalStatus: "approved",
-    createdAt: "2025-10-02",
-  },
-  {
-    id: 4,
-    eventId: "evt_004",
-    title: "Hiến máu tình nguyện",
-    description:
-      "Chương trình hiến máu nhân đạo để cứu giúp những bệnh nhân đang cần máu điều trị. Mỗi đơn vị máu có thể cứu được 3 sinh mạng.",
-    image:
-      "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=600&h=400&fit=crop",
-    date: "2025-10-18",
-    time: "08:00 - 17:00",
-    location: "Viện Huyết học Truyền máu TP.HCM",
-    maxParticipants: 200,
-    currentParticipants: 89,
-    category: "Y tế",
-    organizer: {
-      id: 4,
-      name: "Phạm Thị D",
-      avatar:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-      role: "manager",
-    },
-    participants: [],
-    isLiked: true,
-    likes: 234,
-    status: "upcoming",
-    isHidden: false,
-    approvalStatus: "approved",
-    createdAt: "2025-09-30",
-  },
-  {
-    id: 5,
-    eventId: "evt_005",
-    title: "Dọn dẹp bãi biển Vũng Tàu",
-    description:
-      "Hoạt động dọn dẹp rác thải trên bãi biển để bảo vệ môi trường biển và tạo không gian sạch đẹp cho du khách.",
-    image:
-      "https://images.unsplash.com/photo-1583212292454-1fe6229603b7?w=600&h=400&fit=crop",
-    date: "2025-10-25",
-    time: "06:00 - 10:00",
-    location: "Bãi biển Thùy Vân, Vũng Tàu",
-    maxParticipants: 50,
-    currentParticipants: 0,
-    category: "Môi trường",
-    organizer: {
-      id: 3,
-      name: "Lê Văn C",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      role: "manager",
-    },
-    participants: [],
-    isLiked: false,
-    likes: 0,
-    status: "upcoming",
-    isHidden: false,
-    approvalStatus: "pending",
-    createdAt: "2025-10-09",
-  },
-];
+
 
 export default function Events() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -271,30 +124,27 @@ export default function Events() {
       try {
         setIsLoading(true);
   // Use env-injected base URL if present, otherwise default to same-origin "/api"
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
-        const response = await fetch(`${API_URL}/events/getAllEvents`, {
-          headers: { 'Accept': 'application/json' }
-        });
-        const data = await response.json();
-        
-        if (response.ok && data.events) {
+        const response = await api.get('events/getAllEvents');
+        const data = await response.data;
+
+        if (response.status === 200 && data.events) {
           // Transform backend data to frontend format
           const transformedEvents: Event[] = data.events.map((event: any) => ({
             id: event.id,
             eventId: event.id.toString(),
             title: event.title,
-            description: event.content || '',
+            description: event.description || '',
             image: event.image || 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop',
-            date: event.start_time?.split(' ')[0] || '',
-            time: event.start_time && event.end_time 
-              ? `${event.start_time.split(' ')[1]?.substring(0,5)} - ${event.end_time.split(' ')[1]?.substring(0,5)}`
+            date: event.start_date || '',
+            time: event.start_date && event.end_date 
+              ? `${event.start_date.split(' ')[1]?.substring(0,5) || '09:00'} - ${event.end_date.split(' ')[1]?.substring(0,5) || '17:00'}`
               : 'Cả ngày',
-            location: event.address || 'Chưa xác định',
-            maxParticipants: 100,
+            location: event.location || 'Chưa xác định',
+            maxParticipants: event.max_participants || 100,
             currentParticipants: 0,
-            category: 'Môi trường',
+            category: event.category || 'Môi trường',
             organizer: {
-              id: event.author_id || 1,
+              id: event.creator_id || 1,
               name: 'Organizer',
               avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face',
               role: 'manager',
@@ -305,14 +155,14 @@ export default function Events() {
             status: event.status || 'upcoming',
             isHidden: false,
             approvalStatus: 'approved',
-            createdAt: event.created_at?.split(' ')[0] || '',
+            createdAt: event.created_at || '',
           }));
           setEvents(transformedEvents);
         }
       } catch (error) {
         console.error('Error fetching events:', error);
         // Fallback to mock data if API fails
-        setEvents(mockEvents);
+    
       } finally {
         setIsLoading(false);
       }
@@ -446,9 +296,9 @@ export default function Events() {
   };
   // Show event details
   const showEventDetails = (event: Event) => {
-    setSelectedEvent(event);
-    setShowDetailModal(true);
-    router.push(`/user/group/${event.eventId}`);  // ✅ Đúng
+    // setSelectedEvent(event);
+    // setShowDetailModal(true);
+    window.location.href = `/user/events/${event.eventId}`;
   };
 
   // Handle hide/show event
@@ -977,7 +827,7 @@ export default function Events() {
         )}
       </div>
 
-      {/* Event Detail Modal */}
+      {/* Event Detail Modal
       {showDetailModal && selectedEvent && (
         <div className="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -1068,7 +918,7 @@ export default function Events() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Create Event Modal */}
       {showCreateModal && (

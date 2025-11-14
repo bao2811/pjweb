@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import Navbar from "@/components/navbar";
+import Navbar from "@/components/Navbar";
 import {
   FaCalendarAlt,
   FaMapMarkerAlt,

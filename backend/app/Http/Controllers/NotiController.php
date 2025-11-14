@@ -7,6 +7,8 @@ use Minishlink\WebPush\Subscription;
 use Illuminate\Support\Facades\Redis;
 use App\Models\PushSubscription;
 use Illuminate\Http\Request;
+use App\Services\NotiService;
+
 class NotiController extends Controller
 {
     public function sendNotification(Request $request)

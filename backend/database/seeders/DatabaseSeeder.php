@@ -15,13 +15,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-        $this->call(UserSeeder::class);
-
-        
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Chạy tất cả seeders theo thứ tự
+        $this->call([
+            UserSeeder::class,
+            EventSeeder::class,
+            PostSeeder::class,
         ]);
+
+        $this->command->info('✅ Đã seed tất cả dữ liệu test thành công!');
     }
 }

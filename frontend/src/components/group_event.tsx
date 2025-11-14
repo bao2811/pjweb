@@ -25,8 +25,12 @@ import {
   FaMicrophone,
   FaEdit,
   FaTrash,
+  FaCalendarAlt,
+  FaMapMarkerAlt,
+  FaComments,
+  FaClock,
 } from "react-icons/fa";
-
+import api from  "@/utils/api";
 interface User {
   id: number;
   name: string;
@@ -407,12 +411,11 @@ const mockPostsByEvent: Record<string, Post[]> = {
 };
 
 export default function Group({ eventId, role = "user" }: GroupProps) {
-  // Tìm event từ danh sách theo eventId
-  const currentEvent = mockEvents.find(e => e.eventId === eventId);
   
   // States
-  const [event, setEvent] = useState<Event | null>(currentEvent || null);
-  const [posts, setPosts] = useState<Post[]>(mockPostsByEvent[eventId] || []);
+  const [isLoading, setIsLoading] = useState(true);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [showChat, setShowChat] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(mockChatMessages[eventId] || []);
   const [newMessage, setNewMessage] = useState("");
@@ -425,20 +428,71 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
   // Effects
   useEffect(() => {
-    // Cập nhật event khi eventId thay đổi
-    const foundEvent = mockEvents.find(e => e.eventId === eventId);
-    setEvent(foundEvent || null);
-    setPosts(mockPostsByEvent[eventId] || []);
-    setMessages(mockChatMessages[eventId] || []);
-    
-    // TODO: Fetch event data from API
-    // fetch(`/api/events/${eventId}`).then(...)
+    const fetchEventDetail = async () => {
+      try {
+        setIsLoading(true);
+        console.log("Fetching event with ID:", eventId);
+        const response = await api.get(`events/getEventDetails/${eventId}`);
+        console.log("Response:", response);
+        if (response.data && response.data.event) {
+          console.log("Fetched event details:", response.data.event);
+          const eventData = response.data.event;
+          
+          // Normalize event data - add default values for missing fields
+          const normalizedEvent: Event = {
+            id: eventData.id || parseInt(eventId),
+            eventId: eventData.eventId || eventId,
+            title: eventData.title || "Sự kiện",
+            description: eventData.description || "Chưa có mô tả",
+            image: eventData.image || "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=600&h=400&fit=crop",
+            date: eventData.date || eventData.start_date || "Chưa xác định",
+            time: eventData.time || "Chưa xác định",
+            location: eventData.location || "Chưa xác định",
+            maxParticipants: eventData.maxParticipants || eventData.max_participants || 0,
+            currentParticipants: eventData.currentParticipants || eventData.current_participants || 0,
+            category: eventData.category || "Khác",
+            organizer: eventData.organizer || {
+              id: eventData.creator_id || 1,
+              name: eventData.creator?.name || "Ban tổ chức",
+              avatar: eventData.creator?.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
+              role: "manager" as const
+            },
+            status: eventData.status || "upcoming",
+            isHidden: eventData.isHidden || false,
+            approvalStatus: eventData.approvalStatus || eventData.approval_status || "approved",
+            createdAt: eventData.createdAt || eventData.created_at || new Date().toISOString()
+          };
+          
+          setEvent(normalizedEvent);
+        }
+      } catch (error: any) {
+        console.error("Error fetching event details:", error);
+        console.error("Error response:", error.response?.data);
+        console.error("Error status:", error.response?.status);
+        
+        // Fallback to mock data if API fails
+        console.log("Falling back to mock data...");
+        const mockEvent = mockEvents.find(e => e.id === parseInt(eventId));
+        if (mockEvent) {
+          console.log("Using mock event:", mockEvent);
+          setEvent(mockEvent);
+          const mockPosts = mockPostsByEvent[mockEvent.eventId];
+          if (mockPosts) {
+            setPosts(mockPosts);
+          }
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEventDetail();
   }, [eventId]);
 
-  useEffect(() => {
-    // TODO: Fetch posts
-    // fetch(`/api/events/${eventId}/posts`).then(...)
-  }, [eventId]);
+  // useEffect(() => {
+  //   // TODO: Fetch posts
+  //   // fetch(`/api/events/${eventId}/posts`).then(...)
+  // }, [eventId]);
 
   useEffect(() => {
     if (showChat && chatEndRef.current) {
@@ -603,6 +657,14 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     setNewMessage("");
   };
 
+  if (isLoading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <p className="text-gray-500">Đang tải sự kiện...</p>
+    </div>
+  );
+}
+
   // Loading state nếu không tìm thấy event
   if (!event) {
     return (
@@ -616,195 +678,383 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Main Content */}
-      <div className="flex-1 max-w-4xl mx-auto px-4 py-8">
-        {/* Event Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">{event.title}</h1>
-            <button
-              onClick={() => setShowChat(!showChat)}
-              className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg"
-            >
-              {showChat ? "Ẩn chat" : "Hiện chat"}
-            </button>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-white flex">
+      <div className="flex w-full">
+      {/* Left Sidebar - Event Info + Joined Events */}
+      <div className="hidden lg:flex lg:flex-col w-80 xl:w-96 bg-white border-r border-gray-200 h-screen overflow-hidden">
+        {/* Current Event Info - Full Display, No Scroll */}
+        <div className="flex-shrink-0 border-b border-gray-200">
+        <div className="p-6 space-y-5">
+          {/* Event Cover */}
+          <div className="relative h-56 rounded-xl overflow-hidden shadow-lg">
+            <Image
+              src={event.image || 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=300&fit=crop'}
+              alt={event.title}
+              fill
+              className="object-cover"
+              unoptimized
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+            <div className="absolute bottom-3 left-3 right-3">
+              <h2 className="text-white font-bold text-lg line-clamp-2">{event.title}</h2>
+            </div>
           </div>
-          <p className="text-gray-600 mb-4">{event.description}</p>
-          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-            <span>🗓️ {event.date} • {event.time}</span>
-            <span>📍 {event.location}</span>
-            <span>👥 {event.currentParticipants}/{event.maxParticipants} người tham gia</span>
+
+          {/* Event Details */}
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FaCalendarAlt className="text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 uppercase font-semibold">Thời gian</p>
+                <p className="text-sm font-medium text-gray-800">{event.date}</p>
+                <p className="text-xs text-gray-600">{event.time}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <FaMapMarkerAlt className="text-red-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 uppercase font-semibold">Địa điểm</p>
+                <p className="text-sm font-medium text-gray-800 line-clamp-2">{event.location}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <FaUsers className="text-green-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 uppercase font-semibold">Thành viên</p>
+                <p className="text-sm font-medium text-gray-800">
+                  {event.currentParticipants}/{event.maxParticipants} người
+                </p>
+                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${Math.min((event.currentParticipants / event.maxParticipants) * 100, 100)}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="p-4 bg-gradient-to-br from-blue-50 to-green-50 rounded-xl">
+            <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center">
+              <FaHashtag className="mr-2 text-blue-600" />
+              Mô tả sự kiện
+            </h3>
+            <p className="text-sm text-gray-600 leading-relaxed">{event.description}</p>
+          </div>
+
+          {/* Organizer */}
+          <div className="p-4 bg-white border border-gray-200 rounded-xl">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Ban tổ chức</h3>
+            <div className="flex items-center space-x-3">
+              <Image
+                src={event.organizer.avatar}
+                alt={event.organizer.name}
+                width={48}
+                height={48}
+                className="rounded-full"
+                unoptimized
+              />
+              <div>
+                <p className="font-semibold text-gray-800">{event.organizer.name}</p>
+                <p className="text-xs text-gray-500 capitalize">{event.organizer.role}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        {/* Joined Events List - Recent/Featured Only */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3 flex items-center">
+              <FaCalendarAlt className="mr-2 text-green-600" />
+              Truy cập gần đây
+            </h3>
+            <div className="space-y-1">
+              {/* Mock joined events - replace with real data */}
+              {[
+                { id: 1, title: 'Dọn rác bãi biển Vũng Tàu', image: 'https://images.unsplash.com/photo-1618477388954-7852f32655ec?w=100' },
+                { id: 2, title: 'Trồng cây xanh Hà Nội', image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=100' },
+                { id: 3, title: 'Hỗ trợ người già Neo', image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=100' },
+              ].map((evt) => (
+                <button
+                  key={evt.id}
+                  className="w-full flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-colors text-left group"
+                >
+                  <Image
+                    src={evt.image}
+                    alt={evt.title}
+                    width={36}
+                    height={36}
+                    className="rounded-lg object-cover"
+                    unoptimized
+                  />
+                  <span className="flex-1 text-xs text-gray-600 group-hover:text-gray-900 line-clamp-2">{evt.title}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content - Posts Feed */}
+      <div className="flex-1 overflow-y-auto bg-gray-50">
+        <div className="max-w-2xl lg:max-w-3xl mx-auto py-4 px-3">
+        {/* Mobile Event Header */}
+        <div className="lg:hidden bg-white rounded-xl shadow-md border border-gray-200 p-4 mb-3">
+          <div className="flex items-center space-x-4">
+            <Image
+              src={event.image || 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=100&h=100&fit=crop'}
+              alt={event.title}
+              width={60}
+              height={60}
+              className="rounded-xl object-cover"
+              unoptimized
+            />
+            <div className="flex-1">
+              <h1 className="text-xl font-bold text-gray-900 line-clamp-1">{event.title}</h1>
+              <p className="text-sm text-gray-500">{event.currentParticipants}/{event.maxParticipants} thành viên</p>
+            </div>
           </div>
         </div>
 
-        {/* Create Post */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <textarea
-            value={newPost}
-            onChange={(e) => setNewPost(e.target.value)}
-            placeholder="Chia sẻ cập nhật về sự kiện..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                      focus:ring-2 focus:ring-blue-500 focus:border-transparent 
-                      resize-none text-gray-800 placeholder-gray-500"
-            rows={3}
-          />  
-          <div className="flex justify-between items-center mt-4">
-            <div className="flex items-center space-x-2">
-              <button className="p-2 text-gray-500 hover:text-blue-500 rounded-lg hover:bg-blue-50">
+        {/* Create Post Card */}
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4 mb-3">
+          <div className="flex items-start space-x-3 mb-4">
+            <Image
+              src={currentUser.avatar}
+              alt={currentUser.name}
+              width={48}
+              height={48}
+              className="rounded-full"
+              unoptimized
+            />
+            <textarea
+              value={newPost}
+              onChange={(e) => setNewPost(e.target.value)}
+              placeholder={`${currentUser.name} ơi, bạn đang nghĩ gì về sự kiện này?`}
+              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-2xl 
+                        focus:ring-2 focus:ring-blue-400 focus:border-blue-400 
+                        resize-none text-gray-800 placeholder-gray-400 transition-all"
+              rows={3}
+            />
+          </div>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-1">
+              <button className="p-2.5 text-gray-500 hover:text-blue-600 rounded-xl hover:bg-blue-50 transition-all">
                 <FaImage className="w-5 h-5" />
               </button>
-              <button className="p-2 text-gray-500 hover:text-blue-500 rounded-lg hover:bg-blue-50">
+              <button className="p-2.5 text-gray-500 hover:text-green-600 rounded-xl hover:bg-green-50 transition-all">
                 <FaSmile className="w-5 h-5" />
+              </button>
+              <button className="p-2.5 text-gray-500 hover:text-purple-600 rounded-xl hover:bg-purple-50 transition-all">
+                <FaPaperclip className="w-5 h-5" />
+              </button>
+              <button className="p-2.5 text-gray-500 hover:text-red-600 rounded-xl hover:bg-red-50 transition-all">
+                <FaVideo className="w-5 h-5" />
               </button>
             </div>
             <button
               onClick={handlePost}
               disabled={!newPost.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl 
+                       hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed
+                       font-semibold shadow-lg transition-all transform hover:scale-105"
             >
               Đăng bài
             </button>
           </div>
         </div>
 
-        {/* Posts List */}
-        <div className="space-y-6">
+        {/* Posts Feed */}
+        <div className="space-y-3">
+          {posts.length === 0 && (
+            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-12 text-center">
+              <div className="text-gray-400 mb-4">
+                <FaComment className="text-6xl mx-auto mb-4" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">Chưa có bài viết nào</h3>
+              <p className="text-gray-500">Hãy là người đầu tiên chia sẻ về sự kiện này!</p>
+            </div>
+          )}
+          
           {posts.map((post) => (
-            <div key={post.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div key={post.id} className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden 
+                                        hover:shadow-lg hover:border-gray-300 transition-all duration-200">
               {/* Post Header */}
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <Image 
-                      src={post.author.avatar} 
-                      alt={post.author.name}
-                      width={40}
-                      height={40}
-                      className="rounded-full"
-                    />
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <Image 
+                        src={post.author.avatar} 
+                        alt={post.author.name}
+                        width={48}
+                        height={48}
+                        className="rounded-full ring-2 ring-blue-100"
+                        unoptimized
+                      />
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                    </div>
                     <div>
-                      <h3 className="font-medium text-gray-900">{post.author.name}</h3>
-                      <p className="text-sm text-gray-500">{post.timestamp}</p>
+                      <h3 className="font-semibold text-gray-900">{post.author.name}</h3>
+                      <p className="text-xs text-gray-500 flex items-center">
+                        <FaClock className="mr-1" />
+                        {post.timestamp}
+                      </p>
                     </div>
                   </div>
+                  {(role === "admin" || post.author.id === currentUser.id) && (
+                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
+                      <FaEllipsisV />
+                    </button>
+                  )}
                 </div>
                 
-                <p className="text-gray-800">{post.content}</p>
-                
-                {post.images && post.images.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {post.images.map((image, index) => (
+                <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+              </div>
+              
+              {/* Post Images */}
+              {post.images && post.images.length > 0 && (
+                <div className={`grid gap-1 ${post.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                  {post.images.map((image, index) => (
+                    <div key={index} className="relative aspect-square overflow-hidden">
                       <Image
-                        key={index}
                         src={image}
                         alt={`Post image ${index + 1}`}
-                        width={400}
-                        height={300}
-                        className="rounded-lg"
+                        fill
+                        className="object-cover hover:scale-110 transition-transform duration-300"
+                        unoptimized
                       />
-                    ))}
-                  </div>
-                )}
-                
-                <div className="flex items-center space-x-6 text-sm">
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Post Actions */}
+              <div className="px-6 py-3 bg-gradient-to-r from-green-50/70 to-blue-50/70 border-y border-green-100">
+                <div className="flex items-center justify-between text-sm">
                   <button
                     onClick={() => handleLike(post.id)}
-                    className={`flex items-center space-x-2 ${
-                      post.isLiked ? 'text-blue-600' : 'text-gray-600'
-                    } hover:text-blue-600`}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                      post.isLiked 
+                        ? 'bg-green-100 text-green-600' 
+                        : 'text-gray-600 hover:bg-green-50 hover:text-green-600'
+                    }`}
                   >
-                    <FaThumbsUp className="w-5 h-5" />
-                    <span>{post.likes} Thích</span>
+                    {post.isLiked ? <FaHeart className="w-5 h-5" /> : <FaRegHeart className="w-5 h-5" />}
+                    <span>{post.likes}</span>
                   </button>
                   
                   <button
                     onClick={() => setShowComments({...showComments, [post.id]: !showComments[post.id]})}
-                    className="flex items-center space-x-2 text-gray-600 hover:text-blue-600"
+                    className="flex items-center space-x-2 px-4 py-2 rounded-xl text-gray-600 hover:bg-blue-50 hover:text-blue-600 font-medium transition-all"
                   >
                     <FaComment className="w-5 h-5" />
-                    <span>{post.comments.length} Bình luận</span>
+                    <span>{post.comments.length}</span>
                   </button>
                   
                   <button
                     onClick={() => handleShare(post.id)}
-                    className="flex items-center space-x-2 text-gray-600 hover:text-blue-600"
+                    className="flex items-center space-x-2 px-4 py-2 rounded-xl text-gray-600 hover:bg-purple-50 hover:text-purple-600 font-medium transition-all"
                   >
                     <FaShare className="w-5 h-5" />
-                    <span>{post.shares} Chia sẻ</span>
+                    <span>{post.shares}</span>
                   </button>
                 </div>
+              </div>
 
-                {/* Comments Section */}
-                {showComments[post.id] && (
-                  <div className="mt-4 space-y-4">
-                    <div className="flex space-x-2">
-                      <Image
-                        src={currentUser.avatar}
-                        alt={currentUser.name}
-                        width={32}
-                        height={32}
-                        className="rounded-full"
+              {/* Comments Section */}
+              {showComments[post.id] && (
+                <div className="px-6 py-4 space-y-4 bg-gradient-to-br from-green-50/30 to-blue-50/30">
+                  {/* Add Comment Input */}
+                  <div className="flex space-x-3">
+                    <Image
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      width={36}
+                      height={36}
+                      className="rounded-full"
+                      unoptimized
+                    />
+                    <div className="flex-1 flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={newComment[post.id] || ''}
+                        onChange={(e) => setNewComment({...newComment, [post.id]: e.target.value})}
+                        placeholder="Viết bình luận của bạn..."
+                        className="flex-1 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-full 
+                                 focus:ring-2 focus:ring-green-400 focus:border-green-400 
+                                 text-gray-800 placeholder-gray-400 transition-all"
+                        onKeyPress={(e) => e.key === "Enter" && handleComment(post.id)}
                       />
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={newComment[post.id] || ''}
-                          onChange={(e) => setNewComment({...newComment, [post.id]: e.target.value})}
-                          placeholder="Viết bình luận..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-full 
-                                   focus:ring-2 focus:ring-blue-500 focus:border-transparent 
-                                   text-gray-800 placeholder-gray-500"
-                        />
-                        <button
-                          onClick={() => handleComment(post.id)}
-                          className="mt-2 px-4 py-1 bg-blue-600 text-white rounded-full text-sm hover:bg-blue-700"
-                        >
-                          Gửi
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleComment(post.id)}
+                        disabled={!newComment[post.id]?.trim()}
+                        className="p-2.5 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-full 
+                                 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed
+                                 transition-all transform hover:scale-110"
+                      >
+                        <FaPaperPlane className="w-4 h-4" />
+                      </button>
                     </div>
+                  </div>
 
-                    {/* Comment List */}
-                    <div className="space-y-4">
-                      {post.comments.map((comment) => (
-                        <div key={comment.id} className="flex space-x-2">
-                          <Image
-                            src={comment.author.avatar}
-                            alt={comment.author.name}
-                            width={32}
-                            height={32}
-                            className="rounded-full"
-                          />
-                          <div className="flex-1">
-                            <div className="bg-gray-50 rounded-lg p-3">
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-medium text-gray-900">{comment.author.name}</h4>
-                                <span className="text-xs text-gray-500">{comment.timestamp}</span>
-                              </div>
-                              <p className="text-gray-800 mt-1">{comment.content}</p>
+                  {/* Comments List */}
+                  <div className="space-y-4">
+                    {post.comments.map((comment) => (
+                      <div key={comment.id} className="flex space-x-3">
+                        <Image
+                          src={comment.author.avatar}
+                          alt={comment.author.name}
+                          width={36}
+                          height={36}
+                          className="rounded-full"
+                          unoptimized
+                        />
+                        <div className="flex-1">
+                          <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100">
+                            <div className="flex items-start justify-between mb-1">
+                              <h4 className="font-semibold text-gray-900 text-sm">{comment.author.name}</h4>
+                              <span className="text-xs text-gray-400">{comment.timestamp}</span>
                             </div>
-                            
-                            <div className="flex items-center space-x-4 mt-2 text-sm">
-                              <button
-                                onClick={() => handleLikeComment(post.id, comment.id)}
-                                className={`${comment.isLiked ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600`}
-                              >
-                                {comment.likes} Thích
-                              </button>
-                              <button
-                                onClick={() => setNewComment({
-                                  ...newComment,
-                                  [`${post.id}-${comment.id}`]: ''
-                                })}
-                                className="text-gray-500 hover:text-blue-600"
-                              >
-                                Trả lời
-                              </button>
-                            </div>
+                            <p className="text-gray-700 text-sm">{comment.content}</p>
+                          </div>
+                          
+                          <div className="flex items-center space-x-4 mt-2 ml-2">
+                            <button
+                              onClick={() => handleLikeComment(post.id, comment.id)}
+                              className={`text-xs font-medium flex items-center space-x-1 ${
+                                comment.isLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+                              } transition-all`}
+                            >
+                              {comment.isLiked ? <FaHeart className="w-3 h-3" /> : <FaRegHeart className="w-3 h-3" />}
+                              <span>{comment.likes > 0 && comment.likes}</span>
+                            </button>
+                            <button
+                              onClick={() => setNewComment({
+                                ...newComment,
+                                [`${post.id}-${comment.id}`]: ''
+                              })}
+                              className="text-xs font-medium text-gray-500 hover:text-green-600 transition-all"
+                            >
+                              Trả lời
+                            </button>
+                          </div>
 
-                            {/* Reply Input */}
-                            {newComment[`${post.id}-${comment.id}`] !== undefined && (
+                          {/* Reply Input */}
+                          {newComment[`${post.id}-${comment.id}`] !== undefined && (
                               <div className="flex space-x-2 mt-2">
                                 <Image
                                   src={currentUser.avatar}
@@ -840,235 +1090,232 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                               </div>
                             )}
 
-                            {/* Replies */}
-                            {comment.replies && comment.replies.length > 0 && (
-                              <div className="ml-8 space-y-3 mt-3">
-                                {comment.replies.map((reply) => (
-                                  <div key={reply.id} className="flex space-x-2">
-                                    <Image
-                                      src={reply.author.avatar}
-                                      alt={reply.author.name}
-                                      width={24}
-                                      height={24}
-                                      className="rounded-full"
-                                    />
-                                    <div className="flex-1">
-                                      <div className="bg-gray-50 rounded-lg p-2">
-                                        <div className="flex items-center justify-between">
-                                          <h4 className="font-medium text-gray-900 text-sm">{reply.author.name}</h4>
-                                          <span className="text-xs text-gray-500">{reply.timestamp}</span>
-                                        </div>
-                                        <p className="text-gray-800 text-sm mt-1">{reply.content}</p>
+                          {/* Replies */}
+                          {comment.replies && comment.replies.length > 0 && (
+                            <div className="ml-8 space-y-3 mt-3">
+                              {comment.replies.map((reply) => (
+                                <div key={reply.id} className="flex space-x-2">
+                                  <Image
+                                    src={reply.author.avatar}
+                                    alt={reply.author.name}
+                                    width={24}
+                                    height={24}
+                                    className="rounded-full"
+                                    unoptimized
+                                  />
+                                  <div className="flex-1">
+                                    <div className="bg-gray-50 rounded-lg p-2">
+                                      <div className="flex items-center justify-between">
+                                        <h4 className="font-medium text-gray-900 text-sm">{reply.author.name}</h4>
+                                        <span className="text-xs text-gray-500">{reply.timestamp}</span>
                                       </div>
-                                      
-                                      <div className="flex items-center space-x-4 mt-1 text-xs">
-                                        <button
-                                          onClick={() => handleLikeComment(post.id, reply.id, true, comment.id)}
-                                          className={`${reply.isLiked ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600`}
-                                        >
-                                          {reply.likes} Thích
-                                        </button>
-                                      </div>
+                                      <p className="text-gray-800 text-sm mt-1">{reply.content}</p>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-4 mt-1 text-xs">
+                                      <button
+                                        onClick={() => handleLikeComment(post.id, reply.id, true, comment.id)}
+                                        className={`${reply.isLiked ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600`}
+                                      >
+                                        {reply.likes} Thích
+                                      </button>
                                     </div>
                                   </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center">
-                  <Image
-                    src={post.author.avatar}
-                    alt={post.author.name}
-                    width={40}
-                    height={40}
-                    className="rounded-full"
-                    unoptimized
-                  />
-                  <div className="ml-3">
-                    <p className="font-medium text-gray-900">{post.author.name}</p>
-                    <p className="text-sm text-gray-500">{post.timestamp}</p>
-                  </div>
-                </div>
-                {(role === "admin" || post.author.id === currentUser.id) && (
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <FaEllipsisV />
-                  </button>
-                )}
-              </div>
-
-              {/* Post Content */}
-              <p className="text-gray-700 mb-4">{post.content}</p>
-
-              {/* Post Images */}
-              {post.images && post.images.length > 0 && (
-                <div className="mb-4 grid gap-2 grid-cols-2">
-                  {post.images.map((image, index) => (
-                    <div key={index} className="relative pt-[75%]">
-                      <Image
-                        src={image}
-                        alt={`Post image ${index + 1}`}
-                        fill
-                        className="absolute inset-0 object-cover rounded-lg"
-                        unoptimized
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Post Actions */}
-              <div className="flex items-center space-x-4 border-t border-gray-100 pt-4">
-                <button
-                  onClick={() => handleLike(post.id)}
-                  className={`flex items-center space-x-1 ${
-                    post.isLiked ? "text-red-500" : "text-gray-500 hover:text-red-500"
-                  }`}
-                >
-                  {post.isLiked ? <FaHeart /> : <FaRegHeart />}
-                  <span>{post.likes}</span>
-                </button>
-                <button
-                  onClick={() => setShowComments({ ...showComments, [post.id]: !showComments[post.id] })}
-                  className="flex items-center space-x-1 text-gray-500 hover:text-blue-500"
-                >
-                  <FaComment />
-                  <span>{post.comments.length}</span>
-                </button>
-                <button
-                  onClick={() => handleShare(post.id)}
-                  className="flex items-center space-x-1 text-gray-500 hover:text-green-500"
-                >
-                  <FaShare />
-                  <span>{post.shares}</span>
-                </button>
-              </div>
-
-              {/* Comments Section */}
-              {showComments[post.id] && (
-                <div className="mt-4 space-y-4">
-                  {post.comments.map((comment) => (
-                    <div key={comment.id} className="flex space-x-3">
-                      <Image
-                        src={comment.author.avatar}
-                        alt={comment.author.name}
-                        width={32}
-                        height={32}
-                        className="rounded-full"
-                        unoptimized
-                      />
-                      <div className="flex-1">
-                        <div className="bg-gray-50 rounded-lg px-4 py-2">
-                          <p className="font-medium text-gray-900">
-                            {comment.author.name}
-                            <span className="ml-2 text-sm font-normal text-gray-500">
-                              {comment.timestamp}
-                            </span>
-                          </p>
-                          <p className="text-gray-700">{comment.content}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  
-                  {/* Add Comment */}
-                  <div className="flex space-x-3">
-                    <Image
-                      src={currentUser.avatar}
-                      alt={currentUser.name}
-                      width={32}
-                      height={32}
-                      className="rounded-full"
-                      unoptimized
-                    />
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={newComment[post.id] || ""}
-                        onChange={(e) => setNewComment({ ...newComment, [post.id]: e.target.value })}
-                        placeholder="Viết bình luận..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        onKeyPress={(e) => e.key === "Enter" && handleComment(post.id)}
-                      />
-                    </div>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
           ))}
         </div>
+        </div>
       </div>
 
-      {/* Chat Sidebar */}
-      {showChat && (
-        <div className="w-96 bg-white border-l border-gray-200 flex flex-col h-screen sticky top-0">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="font-semibold text-gray-900">Chat nhóm sự kiện</h2>
+      {/* Right Sidebar - Members List */}
+      <div className="hidden lg:flex lg:flex-col w-72 xl:w-80 bg-white border-l border-gray-200 h-screen">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-800">Thành viên</h3>
+            <span className="text-sm text-gray-500">{event.currentParticipants}</span>
           </div>
+          <button
+            onClick={() => setShowChat(!showChat)}
+            className="w-full py-2 px-4 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg font-medium text-sm hover:shadow-lg transition-all flex items-center justify-center space-x-2"
+          >
+            <FaComments />
+            <span>Mở chat nhóm</span>
+          </button>
+        </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
+        {/* Members List */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-1">
+            {/* Mock members - replace with real data */}
+            {[
+              { id: 1, name: 'Nguyễn Văn A', avatar: 'https://i.pravatar.cc/150?img=1', online: true },
+              { id: 2, name: 'Trần Thị B', avatar: 'https://i.pravatar.cc/150?img=2', online: true },
+              { id: 3, name: 'Lê Văn C', avatar: 'https://i.pravatar.cc/150?img=3', online: false },
+              { id: 4, name: 'Phạm Thị D', avatar: 'https://i.pravatar.cc/150?img=4', online: true },
+              { id: 5, name: 'Hoàng Văn E', avatar: 'https://i.pravatar.cc/150?img=5', online: false },
+              { id: 6, name: 'Vũ Thị F', avatar: 'https://i.pravatar.cc/150?img=6', online: true },
+              { id: 7, name: 'Đặng Văn G', avatar: 'https://i.pravatar.cc/150?img=7', online: false },
+              { id: 8, name: 'Bùi Thị H', avatar: 'https://i.pravatar.cc/150?img=8', online: true },
+            ].map((member) => (
               <div
-                key={message.id}
-                className={`flex ${
-                  message.isCurrentUser ? "justify-end" : "justify-start"
-                }`}
+                key={member.id}
+                className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
               >
-                {!message.isCurrentUser && (
+                <div className="relative">
                   <Image
-                    src={message.userAvatar}
-                    alt={message.userName}
-                    width={32}
-                    height={32}
-                    className="rounded-full mr-2"
+                    src={member.avatar}
+                    alt={member.name}
+                    width={40}
+                    height={40}
+                    className="rounded-full"
                     unoptimized
                   />
-                )}
-                <div
-                  className={`max-w-[70%] ${
-                    message.isCurrentUser
-                      ? "bg-blue-500 text-white rounded-l-lg rounded-br-lg"
-                      : "bg-gray-100 text-gray-700 rounded-r-lg rounded-bl-lg"
-                  } px-4 py-2`}
-                >
-                  {!message.isCurrentUser && (
-                    <p className="text-xs font-medium mb-1">{message.userName}</p>
-                  )}
-                  <p>{message.message}</p>
-                  <p className="text-xs mt-1 opacity-70">{message.timestamp}</p>
+                  <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                    member.online ? 'bg-green-500' : 'bg-gray-400'
+                  }`}></div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{member.name}</p>
+                  <p className="text-xs text-gray-500">{member.online ? 'Đang hoạt động' : 'Không hoạt động'}</p>
                 </div>
               </div>
             ))}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Chat Input */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center space-x-2">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Nhập tin nhắn..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={!newMessage.trim()}
-                className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg disabled:opacity-50"
-              >
-                <FaPaperPlane />
-              </button>
-            </div>
           </div>
         </div>
+      </div>
+
+      {/* Chat Overlay - Facebook Style */}
+      {showChat && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/20 z-40 lg:hidden"
+            onClick={() => setShowChat(false)}
+          ></div>
+          
+          {/* Chat Box */}
+          <div className="fixed bottom-0 right-0 lg:right-4 lg:bottom-4 w-full lg:w-96 h-[70vh] lg:h-[600px] bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl z-50 flex flex-col border border-gray-200">
+            {/* Chat Header */}
+            <div className="p-4 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-t-2xl lg:rounded-t-2xl flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <FaComments className="text-xl" />
+                <div>
+                  <h3 className="font-bold">Chat nhóm</h3>
+                  <p className="text-xs text-green-100">{messages.length} tin nhắn</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowChat(false)}
+                className="p-2 hover:bg-white/20 rounded-lg transition-all"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gradient-to-br from-green-50/40 to-blue-50/40">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                  <div className="bg-white rounded-full p-6 mb-4 shadow-lg">
+                    <FaComments className="text-5xl text-gray-300" />
+                  </div>
+                  <h3 className="font-semibold text-gray-700 mb-2">Chưa có tin nhắn</h3>
+                  <p className="text-sm text-gray-500 px-8">Hãy bắt đầu cuộc trò chuyện với các thành viên khác!</p>
+                </div>
+              ) : (
+                <>
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex items-end space-x-2 ${
+                        message.isCurrentUser ? "flex-row-reverse space-x-reverse" : "flex-row"
+                      }`}
+                    >
+                      {!message.isCurrentUser && (
+                        <Image
+                          src={message.userAvatar}
+                          alt={message.userName}
+                          width={32}
+                          height={32}
+                          className="rounded-full ring-2 ring-white"
+                          unoptimized
+                        />
+                      )}
+                      <div className={`flex flex-col ${
+                        message.isCurrentUser ? 'items-end' : 'items-start'
+                      } max-w-[75%]`}>
+                        {!message.isCurrentUser && (
+                          <span className="text-xs font-medium text-gray-600 mb-1 ml-2">{message.userName}</span>
+                        )}
+                        <div
+                          className={`relative px-4 py-2.5 rounded-2xl shadow-sm ${
+                            message.isCurrentUser
+                              ? "bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-br-sm"
+                              : "bg-white text-gray-800 rounded-bl-sm border border-gray-100"
+                          }`}
+                        >
+                          <p className="text-sm leading-relaxed">{message.message}</p>
+                          <span className={`text-xs mt-1 block ${
+                            message.isCurrentUser ? 'text-green-100' : 'text-gray-400'
+                          }`}>
+                            {message.timestamp}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Chat Input */}
+            <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border-t border-gray-200 rounded-b-2xl">
+              <div className="flex items-center space-x-2 bg-white rounded-full shadow-md p-2">
+                <button 
+                  className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+                  title="Emoji"
+                >
+                  <FaSmile className="text-lg" />
+                </button>
+                <button 
+                  className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-full transition-colors"
+                  title="Đính kèm file"
+                >
+                  <FaPaperclip className="text-lg" />
+                </button>
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Nhập tin nhắn..."
+                  className="flex-1 bg-transparent px-3 py-2 focus:outline-none text-gray-700 placeholder-gray-400"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!newMessage.trim()}
+                  className="p-2.5 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-full hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FaPaperPlane />
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
+      </div>
     </div>
   );
 }

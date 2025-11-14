@@ -1,0 +1,157 @@
+-- 1. USERS 
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    address VARCHAR(255),
+    role VARCHAR(50) DEFAULT 'user',
+    image VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'active',
+    addressCard VARCHAR(255),
+    email_verified_at TIMESTAMP NULL,
+    remember_token VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- 2. EVENTS
+CREATE TABLE events (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    image VARCHAR(255),
+    address VARCHAR(255),
+    start_time TIMESTAMP,
+    end_time TIMESTAMP,
+    author_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(50) DEFAULT 'upcoming',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. POSTS
+CREATE TABLE posts (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    image VARCHAR(255),
+    address VARCHAR(255),
+    start_time TIMESTAMP,
+    end_time TIMESTAMP,
+    author_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. COMMENTS
+CREATE TABLE comments (
+    id BIGSERIAL PRIMARY KEY,
+    content TEXT NOT NULL,
+    author_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,
+    event_id BIGINT REFERENCES events(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. CHANNELS
+CREATE TABLE channels (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    event_id BIGINT REFERENCES events(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 6. MESSAGES
+CREATE TABLE messages (
+    id BIGSERIAL PRIMARY KEY,
+    sender_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    channel_id BIGINT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    content TEXT,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. EVENT MANAGEMENTS
+CREATE TABLE event_managements (
+    id BIGSERIAL PRIMARY KEY,
+    event_id BIGINT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. JOIN EVENTS
+CREATE TABLE join_events (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event_id BIGINT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    status VARCHAR(50),
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. NOTIS (Thông báo)
+CREATE TABLE notis (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255),
+    message TEXT,
+    sender_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. LIKES
+CREATE TABLE likes (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    status VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+INSERT INTO users (id, name, email, password, created_at, updated_at)
+VALUES
+(1, 'Nguyễn Văn A', 'vana@example.com', '123456', NOW(), NOW()),
+(2, 'Trần Thị B', 'thib@example.com', '123456', NOW(), NOW()),
+(3, 'Lê Văn C', 'vanc@example.com', '123456', NOW(), NOW());
+
+
+INSERT INTO posts (title, content, image, address, start_time, end_time, author_id, status)
+VALUES
+(
+    'Trồng cây xanh - Vì môi trường sạch',
+    '🌱 Cùng nhau trồng cây xanh tại Công viên Tao Đàn! Hãy tham gia với chúng mình để góp phần làm xanh thành phố. Mỗi cái cây nhỏ hôm nay sẽ là tấm bóng mát cho tương lai! 🌳',
+    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop',
+    'Công viên Tao Đàn, Q.1',
+    '2025-10-15 07:00:00',
+    '2025-10-15 11:00:00',
+    1,
+    'active'
+),
+(
+    'Dạy học cho trẻ em vùng cao',
+    '📚 Chương trình dạy học miễn phí cho trẻ em vùng cao đang cần thêm tình nguyện viên! Nếu bạn có kiến thức và tình yêu với trẻ em, hãy tham gia cùng chúng mình nhé! ❤️',
+    'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop',
+    'Sapa, Lào Cai',
+    '2025-10-20 00:00:00',
+    '2025-10-22 23:59:00',
+    2,
+    'active'
+),
+(
+    'Nấu cơm từ thiện cuối tuần',
+    '🍲 Nấu cơm từ thiện cho người vô gia cư! Cùng nhau mang đến những bữa ăn ấm áp và tình người đến với những hoàn cảnh khó khăn trong thành phố. Mọi người hãy tham gia nhé! 🤝',
+    'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&h=400&fit=crop',
+    'Chùa Vĩnh Nghiêm, Q.3',
+    '2025-10-14 16:00:00',
+    '2025-10-14 20:00:00',
+    3,
+    'active'
+);
+

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\UserRepo;
 use App\Repositories\EventRepo;
+use App\Repositories\EventManagementRepo;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -20,6 +21,16 @@ class EventService
     public function getAllEvents()
     {
         return $this->eventRepo->getAllEvents();
+    }
+
+    public function getEventById($id)
+    {
+        return $this->eventRepo->getEventById($id);
+    }
+
+    public function searchEvents($query)
+    {
+        return $this->eventRepo->searchEvents($query);
     }
 
     public function createEvent($data, $userId)

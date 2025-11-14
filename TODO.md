@@ -625,3 +625,387 @@ php artisan make:request StoreCommentRequest
    EVENTS (status = "completed")
    ↓
    NOTIFICATIONS cảm ơn volunteers
+
+
+
+   - [ ] /home/forgot-password/page.tsx       - Form quên mật khẩu
+- [ ] /home/reset-password/page.tsx        - Form reset mật khẩu
+- [ ] /home/verify-email/page.tsx          - Trang xác nhận email
+- [ ] /user/profile/page.tsx               - Trang profile user
+- [ ] /manager/profile/page.tsx            - Trang profile manager  
+- [ ] /admin/profile/page.tsx              - Trang profile admin
+- [ ] /user/settings/page.tsx              - Cài đặt tài khoản
+
+
+# 🎨 FRONTEND ARCHITECTURE - VOLUNTEER WEB
+
+## 📋 MỤC LỤC
+1. [Tổng quan Frontend](#1-tổng-quan-frontend)
+2. [Cấu trúc thư mục chi tiết](#2-cấu-trúc-thư-mục-chi-tiết)
+3. [User Flow - Tình nguyện viên](#3-user-flow---tình-nguyện-viên)
+4. [Manager Flow - Quản lý sự kiện](#4-manager-flow---quản-lý-sự-kiện)
+5. [Admin Flow - Quản trị viên](#5-admin-flow---quản-trị-viên)
+6. [Component Architecture](#6-component-architecture)
+7. [State Management](#7-state-management)
+8. [API Integration](#8-api-integration)
+9. [Routing Strategy](#9-routing-strategy)
+
+---
+
+## 1. TỔNG QUAN FRONTEND
+
+### 1.1. Tech Stack
+- **Framework**: Next.js 14 (App Router)
+- **UI Library**: React 18
+- **Styling**: Tailwind CSS 3.x
+- **HTTP Client**: Axios
+- **Icons**: React Icons (Font Awesome)
+- **State**: React Hooks (useState, useEffect)
+- **Storage**: localStorage (token, user data)
+
+### 1.2. Key Features
+- ✅ **Server-Side Rendering (SSR)**: Faster initial load
+- ✅ **Client-Side Navigation**: Smooth page transitions
+- ✅ **Role-based UI**: Different layouts for User/Manager/Admin
+- ✅ **Real-time updates**: Auto-refresh after actions
+- ✅ **Responsive Design**: Mobile-first approach
+
+---
+
+## 2. CẤU TRÚC THƯ MỤC CHI TIẾT
+frontend/
+├── src/
+│ ├── app/ # Next.js App Router
+│ │ ├── layout.tsx # Root layout (global)
+│ │ ├── page.tsx # Landing page
+│ │ ├── globals.css # Global styles
+│ │ │
+│ │ ├── home/ # 🏠 PUBLIC PAGES
+│ │ │ ├── login/
+│ │ │ │ └── page.tsx # Đăng nhập (email/password)
+│ │ │ └── register/
+│ │ │ └── page.tsx # Đăng ký tài khoản
+│ │ │
+│ │ ├── user/ # 👤 USER ROLE (Tình nguyện viên)
+│ │ │ ├── layout.tsx # User layout (NavbarUser)
+│ │ │ │
+│ │ │ ├── dashboard/
+│ │ │ │ └── page.tsx # Dashboard - Tổng hợp hoạt động
+│ │ │ │ # - Sự kiện đã tham gia
+│ │ │ │ # - Điểm tích lũy
+│ │ │ │ # - Thống kê cá nhân
+│ │ │ │
+│ │ │ ├── events/ # Quản lý sự kiện
+│ │ │ │ ├── page.tsx # Danh sách sự kiện
+│ │ │ │ │ # - Xem tất cả sự kiện
+│ │ │ │ │ # - Lọc theo category
+│ │ │ │ │ # - Tìm kiếm
+│ │ │ │ └── [id]/
+│ │ │ │ └── page.tsx # Chi tiết sự kiện
+│ │ │ │ # - Xem thông tin chi tiết
+│ │ │ │ # - Nút "Tham gia"
+│ │ │ │ # - Danh sách thành viên
+│ │ │ │
+│ │ │ ├── my-events/
+│ │ │ │ └── page.tsx # Sự kiện của tôi
+│ │ │ │ # - Đang chờ duyệt
+│ │ │ │ # - Đã được duyệt
+│ │ │ │ # - Đã hoàn thành
+│ │ │ │ # - Nút "Hủy đăng ký"
+│ │ │ │
+│ │ │ ├── posts/ # Bài viết/Hoạt động
+│ │ │ │ ├── page.tsx # Feed bài viết
+│ │ │ │ │ # - Xem tất cả posts
+│ │ │ │ │ # - Like/Comment
+│ │ │ │ └── [id]/
+│ │ │ │ └── page.tsx # Chi tiết bài viết
+│ │ │ │ # - Xem bài viết
+│ │ │ │ # - Danh sách comments
+│ │ │ │ # - Thêm comment
+│ │ │ │
+│ │ │ ├── profile/
+│ │ │ │ └── page.tsx # Hồ sơ cá nhân
+│ │ │ │ # - Xem thông tin
+│ │ │ │ # - Cập nhật profile
+│ │ │ │ # - Đổi avatar
+│ │ │ │ # - Lịch sử hoạt động
+│ │ │ │
+│ │ │ ├── notifications/
+│ │ │ │ └── page.tsx # Thông báo
+│ │ │ │ # - Thông báo mới
+│ │ │ │ # - Đánh dấu đã đọc
+│ │ │ │
+│ │ │ └── chat/
+│ │ │ └── [channelId]/
+│ │ │ └── page.tsx # Chat kênh sự kiện
+│ │ │ # - Trò chuyện realtime
+│ │ │ # - Gửi tin nhắn
+│ │ │
+│ │ ├── manager/ # 👔 MANAGER ROLE (Quản lý)
+│ │ │ ├── layout.tsx # Manager layout (NavbarManager)
+│ │ │ │
+│ │ │ ├── dashboard/
+│ │ │ │ └── page.tsx # Dashboard quản lý
+│ │ │ │ # - Tổng số sự kiện
+│ │ │ │ # - Tổng thành viên
+│ │ │ │ # - Thống kê tham gia
+│ │ │ │ # - Biểu đồ
+│ │ │ │
+│ │ │ ├── events/
+│ │ │ │ ├── page.tsx # Quản lý sự kiện
+│ │ │ │ │ # - Danh sách sự kiện của tôi
+│ │ │ │ │ # - Trạng thái: pending/approved
+│ │ │ │ │ # - Nút "Tạo sự kiện mới"
+│ │ │ │ │
+│ │ │ │ ├── create/
+│ │ │ │ │ └── page.tsx # Tạo sự kiện mới
+│ │ │ │ │ # - Form nhập thông tin:
+│ │ │ │ │ # + title, description
+│ │ │ │ │ # + location, dates
+│ │ │ │ │ # + max_participants
+│ │ │ │ │ # + points, category
+│ │ │ │ │ # + image upload
+│ │ │ │ │ # - Validate input
+│ │ │ │ │ # - POST /api/manager/createEvent
+│ │ │ │ │
+│ │ │ │ └── [id]/
+│ │ │ │ ├── page.tsx # Chi tiết/Chỉnh sửa
+│ │ │ │ │ # - Xem thông tin
+│ │ │ │ │ # - Sửa thông tin
+│ │ │ │ │ # - Xóa sự kiện
+│ │ │ │ │
+│ │ │ │ └── participants/
+│ │ │ │ └── page.tsx # Quản lý thành viên
+│ │ │ │ # - Danh sách đăng ký
+│ │ │ │ # - Nút "Duyệt"
+│ │ │ │ # - Nút "Từ chối"
+│ │ │ │
+│ │ │ ├── members/
+│ │ │ │ └── page.tsx # Thành viên toàn bộ
+│ │ │ │ # - Xem báo cáo
+│ │ │ │ # - Xuất dữ liệu
+│ │ │ │
+│ │ │ ├── posts/
+│ │ │ │ ├── page.tsx # Quản lý bài viết
+│ │ │ │ └── create/
+│ │ │ │ └── page.tsx # Tạo bài viết
+│ │ │ │
+│ │ │ └── notifications/
+│ │ │ └── page.tsx # Thông báo manager
+│ │ │
+│ │ └── admin/ # 👑 ADMIN ROLE (Quản trị)
+│ │ ├── layout.tsx # Admin layout (NavbarAdmin)
+│ │ │
+│ │ ├── dashboard/
+│ │ │ └── page.tsx # Dashboard admin
+│ │ │ # - Tổng số users
+│ │ │ # - Tổng số events
+│ │ │ # - Tổng số managers
+│ │ │ # - Biểu đồ thống kê
+│ │ │ # - Hoạt động gần đây
+│ │ │
+│ │ ├── users/
+│ │ │ ├── page.tsx # Quản lý users
+│ │ │ │ # - Danh sách tất cả users
+│ │ │ │ # - Tìm kiếm user
+│ │ │ │ # - Nút "Ban/Unban"
+│ │ │ │ # - Xem lịch sử
+│ │ │ │
+│ │ │ └── [id]/
+│ │ │ └── page.tsx # Chi tiết user
+│ │ │ # - Thông tin chi tiết
+│ │ │ # - Lịch sử hoạt động
+│ │ │ # - Ban/Unban
+│ │ │
+│ │ ├── events/
+│ │ │ ├── page.tsx # Duyệt sự kiện
+│ │ │ │ # - Danh sách pending events
+│ │ │ │ # - Nút "Approve"
+│ │ │ │ # - Nút "Reject"
+│ │ │ │ # - Xóa event
+│ │ │ │
+│ │ │ └── [id]/
+│ │ │ └── page.tsx # Chi tiết event
+│ │ │ # - Xem đầy đủ thông tin
+│ │ │ # - Approve/Reject
+│ │ │ # - Delete
+│ │ │
+│ │ ├── managers/
+│ │ │ ├── page.tsx # Quản lý managers
+│ │ │ │ # - Danh sách managers
+│ │ │ │ # - Nút "Tạo manager mới"
+│ │ │ │
+│ │ │ └── create/
+│ │ │ └── page.tsx # Tạo tài khoản manager
+│ │ │ # - Form tạo manager
+│ │ │ # - POST /api/admin/createManager
+│ │ │
+│ │ ├── posts/
+│ │ │ └── page.tsx # Quản lý posts
+│ │ │ # - Xem tất cả posts
+│ │ │ # - Xóa post vi phạm
+│ │ │
+│ │ └── reports/
+│ │ └── page.tsx # Báo cáo/Thống kê
+│ │ # - Xuất báo cáo CSV/JSON
+│ │ # - Thống kê theo tháng
+│ │
+│ ├── components/ # 🧩 COMPONENTS
+│ │ ├── layout/
+│ │ │ ├── Navbar.tsx # Navbar chung (role router)
+│ │ │ ├── NavbarUser.tsx # Navbar cho user
+│ │ │ ├── NavbarManager.tsx # Navbar cho manager
+│ │ │ ├── NavbarAdmin.tsx # Navbar cho admin
+│ │ │ ├── Footer.tsx # Footer
+│ │ │ └── Sidebar.tsx # Sidebar (optional)
+│ │ │
+│ │ ├── events/
+│ │ │ ├── EventCard.tsx # Card hiển thị event
+│ │ │ ├── EventList.tsx # Danh sách events
+│ │ │ ├── EventForm.tsx # Form tạo/sửa event
+│ │ │ ├── EventDetails.tsx # Chi tiết event
+│ │ │ └── JoinEventButton.tsx # Nút tham gia
+│ │ │
+│ │ ├── posts/
+│ │ │ ├── PostCard.tsx # Card bài viết
+│ │ │ ├── PostList.tsx # Danh sách posts
+│ │ │ ├── PostForm.tsx # Form tạo post
+│ │ │ └── CommentSection.tsx # Comments
+│ │ │
+│ │ ├── users/
+│ │ │ ├── UserCard.tsx # Card user
+│ │ │ ├── UserTable.tsx # Bảng users
+│ │ │ └── UserProfile.tsx # Profile card
+│ │ │
+│ │ ├── common/
+│ │ │ ├── Button.tsx # Button component
+│ │ │ ├── Input.tsx # Input field
+│ │ │ ├── Modal.tsx # Modal dialog
+│ │ │ ├── LoadingSpinner.tsx # Loading indicator
+│ │ │ ├── Pagination.tsx # Pagination
+│ │ │ └── SearchBar.tsx # Search input
+│ │ │
+│ │ └── dashboard/
+│ │ ├── StatCard.tsx # Thẻ thống kê
+│ │ ├── Chart.tsx # Biểu đồ
+│ │ └── RecentActivity.tsx # Hoạt động gần đây
+│ │
+│ └── utils/ # 🛠️ UTILITIES
+│ ├── api.ts # API client (axios)
+│ ├── auth.ts # Auth helpers
+│ ├── formatters.ts # Format date, number
+│ ├── validators.ts # Form validation
+│ └── constants.ts # Constants
+│
+├── public/ # Static files
+│ ├── images/
+│ ├── icons/
+│ └── fonts/
+│
+├── next.config.ts # Next.js config
+├── tailwind.config.ts # Tailwind config
+├── tsconfig.json # TypeScript config
+└── package.json # Dependencies
+
+┌─────────┐ ┌──────────────┐ ┌─────────────┐ ┌──────────┐
+│ Browser │ │ /home/ │ │ API │ │ Backend │
+│ │ │ register │ │ Client │ │ Laravel │
+└────┬────┘ └──────┬───────┘ └──────┬──────┘ └────┬─────┘
+│ │ │ │
+│ 1. Truy cập │ │ │
+│ /home/register │ │ │
+├────────────────────>│ │ │
+│ │ │ │
+│ 2. Render form │ │ │
+│<────────────────────┤ │ │
+│ │ │ │
+│ 3. User điền form: │ │ │
+│ - name │ │ │
+│ - email │ │ │
+│ - password │ │ │
+│ - phone │ │ │
+│ - address │ │ │
+│ │ │ │
+│ 4. Click "Đăng ký" │ │ │
+├────────────────────>│ │ │
+│ │ │ │
+│ │ 5. Validate client │ │
+│ │ - Email format │ │
+│ │ - Password length │ │
+│ │ │ │
+│ │ 6. POST /api/register │ │
+│ ├───────────────────────>│ │
+│ │ │ │
+│ │ │ 7. POST /register │
+│ │ ├────────────────────>│
+│ │ │ │
+│ │ │ 8. Validate input │
+│ │ │ Check email dup │
+│ │ │ Hash password │
+│ │ │ Create user │
+│ │ │ role='user' │
+│ │ │ │
+│ │ │ 9. Return user data │
+│ │ │<────────────────────┤
+│ │ │ │
+│ │ 10. {message, user} │ │
+│ │<───────────────────────┤ │
+│ │ │ │
+│ 11. Show success │ │ │
+│ Redirect login │ │ │
+│<────────────────────┤ │ │
+│ │ │ │
+│ 12. Redirect to │ │ │
+│ /home/login │ │ │
+├────────────────────>│ │ │
+
+┌─────────┐ ┌──────────────┐ ┌─────────────┐ ┌──────────┐
+│ Browser │ │ /home/login │ │ API Client │ │ Backend │
+└────┬────┘ └──────┬───────┘ └──────┬──────┘ └────┬─────┘
+│ │ │ │
+│ 1. Nhập email/pass │ │ │
+│ Click "Đăng nhập" │ │ │
+├────────────────────>│ │ │
+│ │ │ │
+│ │ 2. POST /api/login │ │
+│ ├───────────────────────>│ │
+│ │ │ │
+│ │ │ 3. POST /login │
+│ │ ├────────────────────>│
+│ │ │ │
+│ │ │ 4. Find user │
+│ │ │ Check password │
+│ │ │ Delete old token │
+│ │ │ Create new token │
+│ │ │ │
+│ │ │ 5. {user, token} │
+│ │ │<────────────────────┤
+│ │ │ │
+│ │ 6. Response data │ │
+│ │<───────────────────────┤ │
+│ │ │ │
+│ │ 7. localStorage. │ │
+│ │ setItem('token') │ │
+│ │ setItem('user') │ │
+│ │ │ │
+│ │ 8. Check user.role │ │
+│ │ if (role==='user') │ │
+│ │ → /user/dashboard │ │
+│ │ │ │
+│ 9. Redirect │ │ │
+│<────────────────────┤ │ │
+
+3.3. Tham gia sự kiện
+3.3.1. Sequence Diagram
+3.3.2. Component: EventCard.tsx
+3.4. Xem Dashboard
+3.4.1. Page: page.tsx
+4. MANAGER FLOW - QUẢN LÝ SỰ KIỆN
+4.1. Tạo sự kiện
+4.1.1. Page: page.tsx
+4.2. Duyệt tình nguyện viên
+4.2.1. Sequence Diagram - Duyệt thành viên
+4.2.2. Page: page.tsx
+Sorry, the response hit the length limit. Please rephrase your prompt.
+
+Claude Sonnet 4.5 • 1x

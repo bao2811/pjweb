@@ -1,0 +1,338 @@
+"use client";
+import { use, useState, useEffect } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import {
+  FaCalendarAlt,
+  FaMapMarkerAlt,
+  FaUsers,
+  FaClock,
+  FaHeart,
+  FaRegHeart,
+  FaShare,
+  FaPhone,
+  FaEnvelope,
+  FaComments,
+  FaUserFriends,
+  FaLeaf,
+  FaTrophy,
+  FaHandsHelping,
+} from "react-icons/fa";
+import api from "@/utils/api";
+
+interface EventDetail {
+  id: number;
+  title: string;
+  description: string;
+  image: string;
+  start_date: string;
+  end_date: string;
+  location: string;
+  max_participants: number;
+  points: number;
+  category: string;
+  status: string;
+  creator_id: number;
+  currentParticipants?: number;
+}
+
+export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const router = useRouter();
+  const [event, setEvent] = useState<EventDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likes, setLikes] = useState(0);
+
+  useEffect(() => {
+    const fetchEventDetail = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api.get(`events/getEventDetails/${id}`);
+        if (response.data && response.data.event) {
+          setEvent(response.data.event);
+        }
+      } catch (error) {
+        console.error("Error fetching event details:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEventDetail();
+  }, [id]);
+
+  const handleLike = () => {
+    setIsLiked(!isLiked);
+    setLikes(isLiked ? likes - 1 : likes + 1);
+  };
+
+  const handleJoinChat = () => {
+    router.push(`/user/events/${id}/chat`);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-green-600"></div>
+          <p className="mt-4 text-gray-600 text-lg">Đang tải thông tin sự kiện...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <FaLeaf className="mx-auto text-6xl text-gray-400 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-700 mb-2">Không tìm thấy sự kiện</h2>
+          <button
+            onClick={() => router.push("/user/events")}
+            className="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+          >
+            Quay lại danh sách
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const progress = event.max_participants > 0 
+    ? Math.min(((event.currentParticipants || 0) / event.max_participants) * 100, 100)
+    : 0;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+      {/* Hero Section */}
+      <div className="relative h-[400px] w-full">
+        <Image
+          src={event.image || 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&h=400&fit=crop'}
+          alt={event.title}
+          fill
+          className="object-cover"
+          unoptimized
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+        
+        {/* Overlay Content */}
+        <div className="absolute bottom-0 left-0 right-0 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center space-x-2 mb-3">
+              <span className="px-3 py-1 bg-green-500 text-white rounded-full text-sm font-semibold flex items-center">
+                <FaLeaf className="mr-1" />
+                {event.category || 'Tình nguyện'}
+              </span>
+              <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-gray-700 rounded-full text-sm font-semibold">
+                {event.status === 'upcoming' ? 'Sắp diễn ra' : 
+                 event.status === 'ongoing' ? 'Đang diễn ra' : 
+                 event.status === 'completed' ? 'Đã kết thúc' : 'Đã hủy'}
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">
+              {event.title}
+            </h1>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Event Details */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Description Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 border border-green-100">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <FaLeaf className="text-green-600 mr-3" />
+                Giới thiệu sự kiện
+              </h2>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                {event.description}
+              </p>
+            </div>
+
+            {/* Benefits Card */}
+            <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl shadow-lg p-8 border border-green-200">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                <FaTrophy className="text-yellow-500 mr-3" />
+                Lợi ích khi tham gia
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start space-x-3 bg-white p-4 rounded-xl">
+                  <FaHandsHelping className="text-green-600 text-2xl mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Đóng góp cộng đồng</h3>
+                    <p className="text-sm text-gray-600">Tạo giá trị tích cực cho xã hội</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3 bg-white p-4 rounded-xl">
+                  <FaTrophy className="text-yellow-500 text-2xl mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Tích điểm</h3>
+                    <p className="text-sm text-gray-600">Nhận {event.points} điểm tình nguyện</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3 bg-white p-4 rounded-xl">
+                  <FaUserFriends className="text-blue-600 text-2xl mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Kết nối bạn bè</h3>
+                    <p className="text-sm text-gray-600">Gặp gỡ những người cùng chí hướng</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3 bg-white p-4 rounded-xl">
+                  <FaLeaf className="text-green-600 text-2xl mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Trải nghiệm ý nghĩa</h3>
+                    <p className="text-sm text-gray-600">Kỷ niệm đáng nhớ và bổ ích</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Requirements Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 border border-green-100">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <FaUsers className="text-blue-600 mr-3" />
+                Yêu cầu tham gia
+              </h2>
+              <ul className="space-y-3 text-gray-700">
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Đăng ký tài khoản và xác thực thông tin</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Có tinh thần trách nhiệm và nhiệt huyết</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Tham gia đầy đủ thời gian của sự kiện</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Tuân thủ các quy định của ban tổ chức</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Right Column - Action Cards */}
+          <div className="space-y-6">
+            {/* Join Chat Card - Featured */}
+            <div className="bg-gradient-to-br from-sky-500 to-white rounded-2xl shadow-xl p-8 text-white sticky top-4">
+              <div className="text-center mb-6">
+                <FaComments className="text-6xl mx-auto mb-4 opacity-90" />
+                <h3 className="text-2xl font-bold mb-2">Tham gia thảo luận</h3>
+                <p className="text-green-100">Kết nối với các tình nguyện viên khác</p>
+              </div>
+              <button
+                onClick={handleJoinChat}
+                className="w-full bg-white text-green-700 font-bold py-4 px-6 rounded-xl hover:bg-green-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+              >
+                <FaComments className="text-xl" />
+                <span>Vào kênh chat</span>
+              </button>
+            </div>
+
+            {/* Event Info Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-green-100">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Thông tin sự kiện</h3>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <FaCalendarAlt className="text-green-600 mt-1 text-lg" />
+                  <div>
+                    <p className="text-sm text-gray-500">Thời gian</p>
+                    <p className="font-semibold text-gray-800">
+                      {new Date(event.start_date).toLocaleDateString('vi-VN')}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      đến {new Date(event.end_date).toLocaleDateString('vi-VN')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <FaMapMarkerAlt className="text-red-600 mt-1 text-lg" />
+                  <div>
+                    <p className="text-sm text-gray-500">Địa điểm</p>
+                    <p className="font-semibold text-gray-800">{event.location}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <FaUsers className="text-blue-600 mt-1 text-lg" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500 mb-2">Số lượng tham gia</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold text-gray-800">
+                        {event.currentParticipants || 0}/{event.max_participants}
+                      </span>
+                      <span className="text-sm text-gray-600">{progress.toFixed(0)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <FaTrophy className="text-yellow-500 mt-1 text-lg" />
+                  <div>
+                    <p className="text-sm text-gray-500">Điểm thưởng</p>
+                    <p className="font-semibold text-gray-800">{event.points} điểm</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-green-100 space-y-3">
+              <button
+                onClick={handleLike}
+                className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 ${
+                  isLiked
+                    ? 'bg-red-50 text-red-600 border-2 border-red-200'
+                    : 'bg-gray-50 text-gray-700 border-2 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                {isLiked ? <FaHeart className="text-xl" /> : <FaRegHeart className="text-xl" />}
+                <span>{isLiked ? 'Đã yêu thích' : 'Yêu thích'}</span>
+              </button>
+
+              <button className="w-full bg-blue-50 text-blue-600 py-3 px-4 rounded-xl font-semibold hover:bg-blue-100 transition-all duration-200 flex items-center justify-center space-x-2 border-2 border-blue-200">
+                <FaShare className="text-lg" />
+                <span>Chia sẻ</span>
+              </button>
+            </div>
+
+            {/* Contact Card */}
+            <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-2xl shadow-lg p-6 border border-blue-200">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Liên hệ ban tổ chức</h3>
+              <div className="space-y-3">
+                <a
+                  href="tel:0123456789"
+                  className="flex items-center space-x-3 text-gray-700 hover:text-green-600 transition"
+                >
+                  <FaPhone className="text-green-600" />
+                  <span>0123 456 789</span>
+                </a>
+                <a
+                  href="mailto:contact@volunteer.com"
+                  className="flex items-center space-x-3 text-gray-700 hover:text-green-600 transition"
+                >
+                  <FaEnvelope className="text-green-600" />
+                  <span>contact@volunteer.com</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

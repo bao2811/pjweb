@@ -61,7 +61,7 @@ export default function LoginPage() {
     // 🔄 Redirect theo role
     if (data.user.role === 'manager') {
       console.log('🔄 Redirecting to /manager/events...');
-      window.location.href = '/manager/events';
+      window.location.href = '/manager/dashboard';
     } else if (data.user.role === 'admin') {
       console.log('🔄 Redirecting to /admin/dashboard...');
       window.location.href = '/admin/dashboard';

@@ -2,14 +2,7 @@
 
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
-use Illuminate\Support\Facades\Facade;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
-use Monolog\Handler\StreamHandler;
-use Monolog\Handler\SyslogUdpHandler;
-use Monolog\Logger;
-use Dotenv\Dotenv;
-use Dotenv\Exception\InvalidPathException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,52 +11,86 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
         then: function () {
-            // Load thêm route files tùy chỉnh
-            Route::middleware('api')
-                ->prefix('api')
-                ->group(base_path('routes/admin.php'));
-            
-            Route::middleware('api')
-                ->prefix('api')
-                ->group(base_path('routes/manager.php'));
+            // Nạp thêm các file route tuỳ chỉnh với prefix 'api'
+            Route::prefix('api')
+                ->middleware('api')
+                ->group(function () {
+                    require __DIR__.'/../routes/admin.php';
+                    require __DIR__.'/../routes/manager.php';
+                    require __DIR__.'/../routes/user.php';
+                });
         }
     )
-    // Middleware cho Laravel 11
-    ->withMiddleware(function ($middleware): void {
+    ->withMiddleware(function ($middleware) {
+        // RateLimiter 'api' được đăng ký trong AppServiceProvider::boot()
+
         // Middleware toàn cục
-        $middleware->use([
-            \Illuminate\Http\Middleware\HandleCors::class,
+        $global = [
+            \App\Http\Middleware\TrustProxies::class,
+            \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
+            \App\Http\Middleware\TrimStrings::class,
             \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
-        ]);
+            \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+            \Illuminate\Http\Middleware\HandleCors::class,
+        ];
 
-        // Middleware nhóm web
-        $middleware->web(append: [
-            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \Illuminate\Session\Middleware\StartSession::class,
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
-        ]);
+        if (method_exists($middleware, 'middleware')) {
+            $middleware->middleware($global);
+        } elseif (method_exists($middleware, 'prepend')) {
+            foreach ($global as $m) {
+                $middleware->prepend($m);
+            }
+        }
 
-        // Middleware nhóm api
-        $middleware->api(prepend: [
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
-        ]);
+        // Nhóm middleware
+        $groups = [
+            'web' => [
+                \App\Http\Middleware\EncryptCookies::class,
+                \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+                \Illuminate\Session\Middleware\StartSession::class,
+                \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+                \App\Http\Middleware\VerifyCsrfToken::class,
+                \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            ],
+            'api' => [
+                \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+                \Illuminate\Routing\Middleware\SubstituteBindings::class,
+                \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+            ],
+            'admin' => [
+                \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+                \Illuminate\Routing\Middleware\SubstituteBindings::class,
+                \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+            ],
+        ];
+
+        foreach ($groups as $name => $list) {
+            if (method_exists($middleware, 'group')) {
+                $middleware->group($name, $list);
+            }
+        }
 
         // Alias middleware
-        $middleware->alias([
-            'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
-            'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
-            'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
-            'can' => \Illuminate\Auth\Middleware\Authorize::class,
-            'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
-            'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
-            'precognitive' => \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
-            'signed' => \App\Http\Middleware\ValidateSignature::class,
-            'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-            'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        ]);
+        if (method_exists($middleware, 'alias')) {
+            $middleware->alias([
+                'jwt' => \App\Http\Middleware\JwtMiddleware::class,
+                'auth' => \App\Http\Middleware\Authenticate::class,
+                'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+                'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
+                'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
+                'can' => \Illuminate\Auth\Middleware\Authorize::class,
+                'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+                'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
+                'precognitive' => \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
+                'signed' => \App\Http\Middleware\ValidateSignature::class,
+                'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+                'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+                'role' => \App\Http\Middleware\CheckRole::class,
+            ]);
+        }
+
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        // xử lý exception nếu cần
+    ->withExceptions(function (Exceptions $exceptions) {
+        // Laravel 12 tự dùng App\Exceptions\Handler
     })
     ->create();

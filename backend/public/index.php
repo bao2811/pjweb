@@ -3,6 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
+// Suppress vendor warnings in production
+error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
+
 define('LARAVEL_START', microtime(true));
 
 // Determine if the application is in maintenance mode...

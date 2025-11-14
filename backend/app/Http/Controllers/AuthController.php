@@ -33,7 +33,10 @@ class AuthController extends Controller
             return response()->json(['error' => 'Email hoặc mật khẩu không đúng'], 401);
         }
 
-        // Tạo Sanctum token
+        // // XÓA TẤT CẢ TOKEN CŨ (logout tất cả devices khác)
+        // $user->tokens()->delete();
+
+        // Tạo Sanctum token mới
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([

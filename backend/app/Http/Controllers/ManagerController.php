@@ -68,21 +68,37 @@ class ManagerController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'date' => 'required|date',
-            'user_id' => 'required|integer|exists:users,id',
-            'image' => 'nullable|image|max:2048',
-            'comanager' => 'nullable|array',
-            'comanager.*' => 'integer|exists:users,id',
+            'description' => 'nullable|string',
+            'location' => 'required|string|max:255',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'max_participants' => 'required|integer|min:1',
+            'points' => 'nullable|integer|min:0',
+            'category' => 'required|string|max:100',
+            'image' => 'nullable|string',
+            'status' => 'nullable|string|in:pending,approved,rejected',
         ]);
 
-        $eventData = $request->only(['title', 'description', 'date', 'user_id', 'image']);
-        if ($request->hasFile('image')) {
-            $eventData['image'] = $request->file('image')->store('events');
-        }
-        $event = $this->managerService->createEvent($eventData, $request->input('comanager', []));
+        // Lấy user_id từ token (không cho client gửi)
+        $userId = auth('sanctum')->id();
+        
+        $eventData = $request->only([
+            'title', 'description', 'location', 'start_date', 'end_date',
+            'max_participants', 'points', 'category', 'image', 'status'
+        ]);
+        
+        // Set default values
+        $eventData['status'] = $eventData['status'] ?? 'pending';
+        $eventData['points'] = $eventData['points'] ?? 100;
+        $eventData['current_participants'] = 0;
+        $eventData['creator_id'] = $userId;
+        
+        $event = $this->managerService->createEvent($eventData, []);
 
-        return response()->json(['event' => $event], 201);
+        return response()->json([
+            'message' => 'Event created successfully',
+            'event' => $event
+        ], 201);
     }
 
 }

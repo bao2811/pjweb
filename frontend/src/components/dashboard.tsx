@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import Navbar from "./navbar";
+// import Navbar from "./navbar";
 import {
   FaHeart,
   FaRegHeart,
@@ -137,11 +137,39 @@ const trendingEvents = [
 ];
 
 export default function Dashboard() {
-  const [posts, setPosts] = useState(mockPosts);
+  const [posts, setPosts] = useState<any[]>([]);
   const [commentInputs, setCommentInputs] = useState<{ [key: number]: string }>(
     {}
   );
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      setCurrentUser(JSON.parse(userData));
+    }
+  }, []);
+
+  async function fetchPosts() {
+    const res = await fetch("http://localhost:8000/api/posts/getAllPosts", {
+      headers: {
+        Authorization: `Bearer ${currentUser?.token}`,
+      },
+    });
+    const data = await res.json();
+    if (data.posts) {
+      setPosts(data.posts);
+      console.log(data.posts);
+    }
+    setLoading(false);
+  }
+
+  // if (loading === false && posts.length === 0) {
+  //   setLoading(true);
+  //   fetchPosts();
+  // }
 
   const handleLike = (postId: number) => {
     setPosts(
@@ -173,6 +201,10 @@ export default function Dashboard() {
     return timestamp;
   };
 
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Main Content */}
@@ -195,7 +227,7 @@ export default function Dashboard() {
                     <FaStar className="text-yellow-500 text-xl" />
                     <span className="text-gray-700 font-medium">Điểm</span>
                   </div>
-                  <span className="text-2xl font-bold text-yellow-600">{mockCurrentUser.points}</span>
+                  <span className="text-2xl font-bold text-yellow-600">{currentUser?.points || 0}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
                   <div className="flex items-center space-x-3">
@@ -234,7 +266,9 @@ export default function Dashboard() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-start space-x-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-lg">{mockCurrentUser.name.charAt(0)}</span>
+                  <span className="text-white font-bold text-lg">
+                    {currentUser?.name?.charAt(0) || 'U'}
+                  </span>
                 </div>
                 <div className="flex-1">
                   <textarea
@@ -306,7 +340,7 @@ export default function Dashboard() {
                 <div className="relative h-48">
                   <Image
                     src={post.image}
-                    alt={post.event.title}
+                    alt={post.title}
                     fill
                     className="object-cover"
                     unoptimized
@@ -315,28 +349,32 @@ export default function Dashboard() {
                 </div>
                 <div className="p-4">
                   <h4 className="font-bold text-lg text-gray-900 mb-2">
-                    {post.event.title}
+                    {post.title}
                   </h4>
                   <div className="space-y-2 text-sm text-gray-600">
                     <div className="flex items-center space-x-2">
                       <FaCalendarAlt className="text-blue-500" />
                       <span>
-                        {post.event.date} • {post.event.time}
+                        {post.start_time} • {post.end_time}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <FaMapMarkerAlt className="text-red-500" />
-                      <span>{post.event.location}</span>
+                      <span>{post.address}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <FaUsers className="text-green-500" />
-                      <span>
-                        {post.event.participants}/{post.event.maxParticipants}{" "}
-                        người tham gia
-                      </span>
+                      {post.role === "manager" ? (
+                        <span>
+                          {post.participants}/{post.maxParticipants} người tham
+                          gia
+                        </span>
+                      ) : (
+                        <span></span>
+                      )}
                     </div>
                   </div>
-                  <div className="mt-3">
+                  {/* <div className="mt-3">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
@@ -349,7 +387,7 @@ export default function Dashboard() {
                         }}
                       ></div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 

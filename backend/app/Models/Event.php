@@ -11,18 +11,27 @@ class Event extends Model
 
     protected $fillable = [
         'title',
-        'content',
+        'description',      // Đổi từ 'content'
+        'location',         // Đổi từ 'address'
+        'start_date',       // Đổi từ 'start_time'
+        'end_date',         // Đổi từ 'end_date'
+        'max_participants', // Thêm mới
+        'points',           // Thêm mới
+        'category',         // Thêm mới
         'image',
-        'address',
-        'start_time',
-        'end_time',
-        'author_id',
         'status',
+        'creator_id',       // Đổi từ 'author_id'
     ];
 
-    // Quan hệ: Event thuộc về 1 User (author)
+    // Quan hệ: Event thuộc về 1 User (creator)
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+    
+    // Alias cho backward compatibility
     public function author()
     {
-        return $this->belongsTo(User::class, 'author_id');
+        return $this->creator();
     }
 }

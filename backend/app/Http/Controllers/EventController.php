@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\EventService;
 use App\Helpers\WebPushApi;
+use App\Services\EventService;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
+use Illuminate\Http\Request;
+
 
 class EventController extends Controller
 {
@@ -39,13 +41,13 @@ class EventController extends Controller
     }
 
 
-    public function getAllEvent(Request $request)
+    public function getAllEvents(Request $request)
     {
-        $events = $this->eventService->getAllEvent();
+        $events = $this->eventService->getAllEvents();
         return response()->json(['events' => $events]);
     }
 
-    public function getDetailEvent(Request $request, $id)
+    public function getEventDetails(Request $request, $id)
     {
         $event = $this->eventService->getEventById($id);
         if (!$event) {
@@ -82,7 +84,7 @@ class EventController extends Controller
         ], 201);
     }
 
-    public function updateEvent(Request $request, $id)
+    public function updateEventById(Request $request, $id)
     {
         $event = $this->eventService->getEventById($id);
         if (!$event) {
@@ -105,7 +107,7 @@ class EventController extends Controller
         return response()->json(['event' => $event]);
     }
 
-    public function deleteEvent(Request $request, $id)
+    public function deleteEventById(Request $request, $id)
     {
         $event = $this->eventService->getEventById($id);
         if (!$event) {
@@ -115,6 +117,13 @@ class EventController extends Controller
         $this->eventService->deleteEvent($event);
 
         return response()->json(['message' => 'Event deleted successfully']);
+    }
+
+    public function searchEvents(Request $request)
+    {
+        $query = $request->input('query', '');
+        $events = $this->eventService->searchEvents($query);
+        return response()->json(['events' => $events]);
     }
 
 }

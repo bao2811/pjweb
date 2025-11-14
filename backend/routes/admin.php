@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Middleware\JwtMiddleware;
 
-Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+Route::middleware('auth:sanctum','role:admin')->prefix('admin')->group(function () {
     Route::get('/banUser', [AdminController::class, 'banUser']);
     Route::get('/unbanUser', [AdminController::class, 'unbanUser']);
     Route::get('/deleteEvent/{id}', [AdminController::class, 'deleteEvent']);

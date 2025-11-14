@@ -22,8 +22,12 @@ class Post extends Model
         'published_at',
         'like',
         'comment',
-        'user_id',
         'event_id',
         'status',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'author_id'); // nếu cột khóa ngoại là author_id
+    }
 }

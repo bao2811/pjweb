@@ -1,6 +1,6 @@
 import React from "react";
 import { UserProvider } from "@/components/User";
-import NavbarUser from "@/components/NavbarUser"
+import Navbar from "@/components/Navbar";
 
 export default function UserLayout({
   children,
@@ -10,7 +10,7 @@ export default function UserLayout({
   return (
     <div>
       <UserProvider>
-        <NavbarUser />
+        <Navbar />
         {children}
       </UserProvider>
     </div>

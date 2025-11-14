@@ -21,6 +21,10 @@ class PostController extends Controller
     {
         try {
             $posts = $this->postService->getAllPosts();
+
+            if (empty($posts)) {
+                return response()->json(['message' => 'No posts found'], 404);
+            }
             return response()->json(['posts' => $posts], 200);
         } catch (\Exception $e) {
             return response()->json([
