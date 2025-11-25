@@ -15,10 +15,11 @@ class JwtMiddleware
             $token = JWTUtil::extractToken($request);
             $decoded = JWTUtil::validateToken($token);
             $request->attributes->set('userId', $decoded->sub);
+            $request->attributes->set('jwtPayload', $decoded);
         } catch (Exception $e) {
-            return response()->json([
+           return response()->json([
                 'error' => 'Invalid token: ' . $e->getMessage()
-            ], 401, route('login'));
+            ], 401);
         }
 
         return $next($request);

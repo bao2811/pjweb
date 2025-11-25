@@ -1,0 +1,22 @@
+python run_api_tests.py api_test/test.yaml
+
+python run_api_tests.py
+
+python -m pyresttest.cli api_test/test.yaml --perf --async
+
+python run_api_tests.py api_test/test.yaml --base-url https://api.example.com
+
+
+Bạn có thể chạy CLI gốc như xưa: python -m pyresttest.cli api_test/test.yaml
+
+python -m pyresttest.cli api_test/test.yaml --perf async --repeat 100 --concurrency 20
+
+python -m pyresttest.cli api_test/test.yaml --json
+
+⚡ Hướng dẫn sử dụng:
+
+Chạy normal test: python run_api_tests.py api_test/test.yaml
+Chạy performance mode (async): python run_api_tests.py api_test/test.yaml --perf async --repeat 50 --concurrency 10
+Override base URL cho tất cả test: python run_api_tests.py api_test/test.yaml --base-url https://api.example.com
+
+tôi có thể viết cách chạy cả summary + thống kê p95/avg/max + JSON output cho YAML này luôn. Bạn có muốn tôi làm không?

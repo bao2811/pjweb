@@ -7,6 +7,9 @@ use App\Repositories\EventRepo;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Models\Event;
+use App\Models\EventManagement;
+use App\Models\Noti;
 
 class EventRepo
 {
@@ -35,6 +38,7 @@ class EventRepo
         $event = Event::create($data);
         // Attach comanagers to the event
         $event->comanagers()->attach($comanager);
+        Noti::sendpush();
         return $event;
     }
 

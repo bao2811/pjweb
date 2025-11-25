@@ -3,18 +3,84 @@ import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
-import { useUser } from "../context/User";
+import { useAuth } from "@/hooks/useAuth";
+import { authFetch } from "@/utils/auth";
 import { IoIosNotifications } from "react-icons/io";
-import { FaUserCircle, FaChevronDown } from "react-icons/fa";
+import { FaUserCircle, FaChevronDown, FaBell, FaTimes } from "react-icons/fa";
 import { RiSettings4Fill, RiLogoutBoxLine } from "react-icons/ri";
-import { MdDashboard } from "react-icons/md";
+import { MdDashboard, MdEdit } from "react-icons/md";
 
 export default function NavbarAdmin() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useUser();
+  const { user, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState({
+    count: 0,
+    listNoti: [],
+  });
+  const [isSubscribedToPush, setIsSubscribedToPush] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Form state for editing profile
+  const [profileData, setProfileData] = useState({
+    username: "",
+    email: "",
+    phone: "",
+    address: "",
+    image: "",
+  });
+
+  // Load user data when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        username: user.username || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        address: user.address || "",
+        image: user.image || "",
+      });
+    }
+  }, [user]);
+
+  // Fetch notification count
+  // useEffect(() => {
+  //   const fetchNotifications = async () => {
+  //     try {
+  //       const response = await authFetch("/notifications/unread-count");
+  //       const data = await response.json();
+  //       setNotificationCount((prev) => ({
+  //         ...prev,
+  //         count: data.count || 0,
+  //       }));
+  //     } catch (error) {
+  //       console.error("Error fetching notifications:", error);
+  //     }
+  //   };
+
+  //   if (user) {
+  //     fetchNotifications();
+  //   }
+  // }, [user]);
+
+  // Check Web Push subscription status
+  useEffect(() => {
+    const checkPushSubscription = async () => {
+      try {
+        if ("serviceWorker" in navigator && "PushManager" in window) {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+          setIsSubscribedToPush(!!subscription);
+        }
+      } catch (error) {
+        console.error("Error checking push subscription:", error);
+      }
+    };
+
+    checkPushSubscription();
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -36,15 +102,109 @@ export default function NavbarAdmin() {
   }, [isDropdownOpen]);
 
   const handleLogout = () => {
-    // Clear authentication tokens
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    // Redirect to login
-    router.push("/home/login");
+    logout();
+    router.push("/login");
   };
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProfileData({
+      ...profileData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const response = await authFetch("/user/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update profile");
+      }
+
+      const data = await response.json();
+      alert("Profile updated successfully!");
+      setIsEditProfileOpen(false);
+      // Optionally refresh user data
+      window.location.reload();
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile");
+    }
+  };
+
+  const handleSubscribeToPush = async () => {
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        alert("Push notifications are not supported in your browser");
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+
+      if (isSubscribedToPush) {
+        // Unsubscribe
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          await subscription.unsubscribe();
+
+          // Send to backend to remove subscription
+          await authFetch("/notifications/unsubscribe", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ endpoint: subscription.endpoint }),
+          });
+
+          setIsSubscribedToPush(false);
+          alert("Unsubscribed from push notifications");
+        }
+      } else {
+        // Subscribe
+        const permission = await Notification.requestPermission();
+
+        if (permission !== "granted") {
+          alert("Permission for notifications was denied");
+          return;
+        }
+
+        // Get VAPID public key from backend
+        const vapidResponse = await authFetch(
+          "/notifications/vapid-public-key"
+        );
+        const { publicKey } = await vapidResponse.json();
+
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: publicKey,
+        });
+
+        // Send subscription to backend
+        await authFetch("/notifications/subscribe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(subscription),
+        });
+
+        setIsSubscribedToPush(true);
+        alert("Subscribed to push notifications successfully!");
+      }
+    } catch (error) {
+      console.error("Error managing push subscription:", error);
+      alert("Failed to manage push subscription");
+    }
   };
 
   return (
@@ -70,6 +230,12 @@ export default function NavbarAdmin() {
           Dashboard
         </Link>
         <Link
+          href="/admin/manager"
+          className={pathname === "/admin/manager" ? "underline" : ""}
+        >
+          Manager
+        </Link>
+        <Link
           href="/admin/users"
           className={pathname === "/admin/users" ? "underline" : ""}
         >
@@ -87,9 +253,11 @@ export default function NavbarAdmin() {
         {/* Notifications Icon */}
         <Link href="/admin/notifications" className="relative">
           <IoIosNotifications className="text-white h-8 w-8 hover:text-gray-200 transition-colors cursor-pointer" />
-          <span className="absolute -top-1 -right-1 text-white bg-red-500 rounded-full px-1.5 py-0.5 text-xs font-bold">
-            3
-          </span>
+          {notificationCount.count > 0 && (
+            <span className="absolute -top-1 -right-1 text-white bg-red-500 rounded-full px-1.5 py-0.5 text-xs font-bold">
+              {notificationCount.count}
+            </span>
+          )}
         </Link>
 
         {/* Profile Dropdown */}
@@ -134,14 +302,16 @@ export default function NavbarAdmin() {
 
               {/* Menu Items */}
               <div className="py-1">
-                <Link
-                  href="/admin/profile"
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
-                  onClick={() => setIsDropdownOpen(false)}
+                <button
+                  onClick={() => {
+                    setIsEditProfileOpen(true);
+                    setIsDropdownOpen(false);
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
                 >
-                  <FaUserCircle className="mr-3 h-5 w-5 text-gray-400" />
-                  Hồ sơ của tôi
-                </Link>
+                  <MdEdit className="mr-3 h-5 w-5 text-gray-400" />
+                  Chỉnh sửa hồ sơ
+                </button>
 
                 <Link
                   href="/admin/dashboard"
@@ -161,14 +331,18 @@ export default function NavbarAdmin() {
                   Cài đặt
                 </Link>
 
-                <Link
-                  href="/admin/notifications-settings"
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
-                  onClick={() => setIsDropdownOpen(false)}
+                <button
+                  onClick={() => {
+                    handleSubscribeToPush();
+                    setIsDropdownOpen(false);
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
                 >
-                  <IoIosNotifications className="mr-3 h-5 w-5 text-gray-400" />
-                  Cài đặt thông báo
-                </Link>
+                  <FaBell className="mr-3 h-5 w-5 text-gray-400" />
+                  {isSubscribedToPush
+                    ? "Tắt thông báo Push"
+                    : "Bật thông báo Push"}
+                </button>
               </div>
 
               {/* Logout */}
@@ -185,6 +359,108 @@ export default function NavbarAdmin() {
           )}
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditProfileOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Chỉnh sửa hồ sơ
+              </h2>
+              <button
+                onClick={() => setIsEditProfileOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FaTimes className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tên người dùng
+                </label>
+                <input
+                  type="text"
+                  name="username"
+                  value={profileData.username}
+                  onChange={handleProfileChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={profileData.email}
+                  onChange={handleProfileChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Số điện thoại
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={profileData.phone}
+                  onChange={handleProfileChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Địa chỉ
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  value={profileData.address}
+                  onChange={handleProfileChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  URL Ảnh đại diện
+                </label>
+                <input
+                  type="url"
+                  name="image"
+                  value={profileData.image}
+                  onChange={handleProfileChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={handleSaveProfile}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Lưu thay đổi
+              </button>
+              <button
+                onClick={() => setIsEditProfileOpen(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

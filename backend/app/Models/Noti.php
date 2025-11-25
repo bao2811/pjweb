@@ -6,8 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Utils\WebPushApi;
 use Illuminate\Support\Facades\Log;
+use App\Models\PushSubscription;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
-class Noti extends Model {
+class Noti extends Model implements ShouldQueue  {
+
+    use Queueable;
 
     protected $table = 'notis';
 
@@ -58,6 +62,15 @@ class Noti extends Model {
         return $notification;
     }
 
+    public static function dispatchCreateAndPush(array $data)
+    {
+        dispatch(function() use ($data) {
+            $notification = self::create($data);
+            $notification->sendPush();
+        });
+    }
+
+
     /**
      * Gửi push notification cho user nhận
      */
@@ -76,12 +89,9 @@ class Noti extends Model {
             $url = $this->data['url'] ?? '/notifications';
 
             // Gửi push notification
-            WebPushApi::sendNotification(
-                $subscriptions,
-                $this->title,
-                $this->message,
-                $url
-            );
+            foreach ($subscriptions as $sub) {
+                WebPushApi::sendNotification($sub, $this->title, $this->message, $url);
+            }
 
             Log::info("Push notification sent to user {$this->receiver_id}");
             return true;

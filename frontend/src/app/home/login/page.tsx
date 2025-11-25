@@ -3,10 +3,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaHeart } from "react-icons/fa";
+import { useAuth } from "@/hooks/useAuth";
 import axios from "axios";
 
 export default function LoginPage() {
   const route = useRouter();
+  const { login, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -25,39 +27,33 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // await axios.get("http://localhost:8000/sanctum/csrf-cookie", {
-    //   withCredentials: true,
-    // });
-
-    // const res = await axios.post("http://localhost:8000/api/login", formData, {
-    //   withCredentials: true,
-    // });
-
-    // const xsrfToken = document.cookie
-    //   .split("; ")
-    //   .find((row) => row.startsWith("XSRF-TOKEN="))
-    //   ?.split("=")[1];
-
-    const res = fetch("http://localhost:8000/api/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // "X-XSRF-TOKEN": decodeURIComponent(xsrfToken || ""),
-      },
-      body: JSON.stringify(formData),
-      credentials: "include",
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        localStorage.setItem("user", JSON.stringify(data.user));
-        route.push(`/${data.user.role}/dashboard`);
-        console.log("Success:", data);
-        // Handle successful login (e.g., redirect to dashboard)
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        // Handle login error (e.g., show error message)
-      });
+    const res = await login(
+      formData.email,
+      formData.password,
+      formData.rememberMe
+    );
+    // const res = fetch("http://localhost:8000/api/login", {
+    //   method: "POST",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //     // "X-XSRF-TOKEN": decodeURIComponent(xsrfToken || ""),
+    //   },
+    //   body: JSON.stringify(formData),
+    //   credentials: "include",
+    // })
+    //   .then((response) => response.json())
+    //   .then((data) => {
+    //     localStorage.setItem("user", JSON.stringify(data.user));
+    //     localStorage.setItem("jwt_token", data.access_token);
+    //     localStorage.setItem("refresh_token", data.refresh_token);
+    //     console.log("Success:", data);
+    //     route.push(`/${data.user.role}/dashboard`);
+    //     // Handle successful login (e.g., redirect to dashboard)
+    //   })
+    //   .catch((error) => {
+    //     console.error("Error:", error);
+    //     // Handle login error (e.g., show error message)
+    //   });
   };
 
   return (

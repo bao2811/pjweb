@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function Layout({
   children,
@@ -16,7 +17,7 @@ export default function Layout({
             "url('https://image.slidesdocs.com/responsive-images/background/blue-white-leaf-outdoor-sunny-rural-cartoon-beautiful-powerpoint-background_9a81889e57__960_540.jpg')",
         }}
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </div>
       <Footer />
     </div>

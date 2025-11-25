@@ -1,5 +1,5 @@
 import NavbarAdmin from "@/components/NavbarAdmin";
-import { UserProvider } from "@/context/User";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 export default function AdminLayout({
   children,
@@ -7,9 +7,11 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
+    // <ProtectedRoute allowedRoles={["admin"]}>
     <div>
       <NavbarAdmin />
       {children}
     </div>
+    // </ProtectedRoute>
   );
 }

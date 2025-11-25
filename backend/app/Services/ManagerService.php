@@ -21,12 +21,12 @@ class ManagerService {
         return $this->joinEventRepo->getListUserByEvent($eventId);
     }
 
-    public function acceptUserJoinEvent($user, $eventId) {
-        return $this->joinEventRepo->acceptUserJoinEvent($user, $eventId);
+    public function acceptUserJoinEvent($userId, $eventId, $managerId) {
+        return $this->joinEventRepo->acceptUserJoinEvent($userId, $eventId, $managerId);
     }
 
-    public function rejectUserJoinEvent($eventId) {
-        return $this->joinEventRepo->rejectUserJoinEvent($eventId);
+    public function rejectUserJoinEvent($eventId, $userId, $managerId) {
+        return $this->joinEventRepo->rejectUserJoinEvent($eventId, $userId, $managerId);
     }
 
     public function createEvent(array $data, array $comanager = [])

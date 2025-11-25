@@ -11,13 +11,20 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\JoinEventController;
 use App\Events\ChatMessage;
 use Illuminate\Http\Request;
+use App\Jobs\ExampleJob;
+
+Route::get('/dispatch-job', function () {
+    ExampleJob::dispatch(['user_id' => 123, 'action' => 'test']);
+    return 'Job dispatched!';
+});
 
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/logout', [AuthController::class, 'logout']);
 Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail']);
-
+Route::post('/refresh', [AuthController::class, 'refreshToken']);
+Route::get('/me', [AuthController::class, 'getCurrentUser'])->middleware('jwt');
 
 Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified']);

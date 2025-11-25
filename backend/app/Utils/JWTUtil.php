@@ -21,7 +21,7 @@ class JWTUtil
         return self::$secretKey;
     }
 
-    public static function generateToken($userId, $expiryMinutes = 60)
+    public static function generateToken($user, $expiryMinutes = 60)
     {
         $issuedAt = time();
         $expiry = $issuedAt + ($expiryMinutes * 60);
@@ -31,7 +31,10 @@ class JWTUtil
             'aud' => 'your-audience',
             'iat' => $issuedAt,
             'exp' => $expiry,
-            'sub' => $userId,
+            'sub' => $user->id,
+            'email' => $user->email,
+            'username' => $user->username,
+            'role' => $user->role,
         ];
 
         return JWT::encode($payload, self::getSecretKey(), 'HS256');

@@ -2,8 +2,9 @@
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 import React, { useState, useEffect, useRef } from "react";
-import { useUser } from "../context/User";
+
 import { IoIosNotifications } from "react-icons/io";
 import { FaUserCircle, FaChevronDown } from "react-icons/fa";
 import { RiSettings4Fill, RiLogoutBoxLine } from "react-icons/ri";
@@ -12,7 +13,7 @@ import { MdDashboard, MdEvent } from "react-icons/md";
 export default function NavbarUser() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useUser();
+  const { user } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

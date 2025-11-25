@@ -14,5 +14,5 @@ COPY . .
 # Cài dependencies của Laravel
 RUN composer install --no-dev --optimize-autoloader
 
-EXPOSE 9000
+EXPOSE 8000
 CMD ["php-fpm"]

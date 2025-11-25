@@ -1,18 +1,32 @@
+// app/admin/layout.tsx
 "use client";
+import { AuthProvider } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import Dashboard from "@/components/dashboard";
 
-import React from "react";
-import DashBoard from "@/components/dashboard";
+function Inner({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, hasRole } = useAuth();
+  const router = useRouter();
 
-export default function AdminDashboardPage() {
-  const user = localStorage.getItem("user");
-  if (!user || JSON.parse(user).role !== "admin") {
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoading) {
+      if (!isAuthenticated) router.replace("/home/login");
+      else if (!hasRole("admin")) router.replace("/403"); // page No Permission
+    }
+  }, [isAuthenticated, isLoading, hasRole, router]);
 
-  return (
-    <div>
-      <DashBoard />
-      {/* Admin dashboard content goes here */}
-    </div>
-  );
+  if (isLoading || !isAuthenticated || !hasRole("admin"))
+    return <p>Loading...</p>;
+
+  return <>{children}</>;
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <Dashboard />;
 }

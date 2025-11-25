@@ -1,23 +1,70 @@
-version: "3.8"
-
 services:
-  # Laravel backend
+  # Laravel backend (serves HTTP on port 8080 inside the compose network)
   backend:
-    build: ./backend
+    build: ../backend
     container_name: laravel_app
     volumes:
-      - ./backend:/var/www/html
+      - ../backend:/var/www/html:cached
+    # use artisan serve as a simple HTTP server so nginx can proxy to it
+    command: ["sh", "-lc", "php artisan serve --host=0.0.0.0 --port=8080"]
+    environment:
+      - APP_ENV=local
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=data
+      - DB_USERNAME=hoangyen
+      - DB_PASSWORD=yourpassword
     expose:
-      - 9000
+      - "8080"
+    restart: unless-stopped
+    depends_on:
+      - postgres
 
-  # Next.js frontend
+  # Next.js frontend (development/preview server)
   frontend:
-    build: ./frontend
+    build: ../frontend
     container_name: nextjs_app
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost/api
+      # frontend should call nginx (reverse proxy) for API routes
+      - NEXT_PUBLIC_API_URL=http://nginx/api
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:16
+    container_name: pj_postgres
+    environment:
+      POSTGRES_DB: data
+      POSTGRES_USER: hoangyen
+      POSTGRES_PASSWORD: yourpassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hoangyen -d data"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgbouncer:
+  #   image: edoburu/pgbouncer
+  #   container_name: pgbouncer
+  #   environment:
+  #     DB_USER: hoangyen
+  #     DB_PASSWORD: yourpassword
+  #     DB_HOST: postgres
+  #     DB_NAME: data
+  #     POOL_MODE: transaction
+  #     MAX_CLIENT_CONN: 100
+  #   ports:
+  #     - "6432:6432"
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - postgres
 
   # Nginx reverse proxy
   nginx:
@@ -26,7 +73,15 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../nginx/default.conf:/etc/nginx/conf.d/default.conf
+    restart: unless-stopped
     depends_on:
       - frontend
       - backend
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: pjweb_net

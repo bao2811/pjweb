@@ -39,6 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+AUTH_SETUP.md
+AUTHENTICATION.md
+EVENT_GROUP_SYSTEM.md
+IMPROVEMENTS.md
 # local env files
 .env.local
 .env.development.local

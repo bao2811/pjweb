@@ -209,5 +209,20 @@ class UserService
         }
     }
 
+    public function cancelJoinEvent($userId, $eventId)
+    {
+        $result = $this->joinEventRepo->cancelJoinEvent($userId, $eventId);
+
+        if ($result) {
+            return [
+                'success' => true,
+                'message' => 'JoinEvent destroyed successfully',
+                'data' => $result
+            ];
+        } else {
+            return false;
+        }
+    }
+
 
 }

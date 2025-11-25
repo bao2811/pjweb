@@ -1,5 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
+import { authFetch } from "@/utils/auth";
 import Image from "next/image";
 import {
   FaCalendarAlt,
@@ -185,6 +188,19 @@ const mockEvents: Event[] = [
 ];
 
 export default function AdminEventsPage() {
+  const { user: currentUser, isLoading: authLoading, hasRole } = useAuth();
+  const router = useRouter();
+
+  // Role check: only allow admin
+  useEffect(() => {
+    if (!authLoading) {
+      if (!hasRole("admin")) {
+        // Redirect to unauthorized page
+        router.push("/unauthorized");
+      }
+    }
+  }, [authLoading, hasRole, router]);
+
   const [events, setEvents] = useState<Event[]>(mockEvents);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -192,6 +208,22 @@ export default function AdminEventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
+
+  // TODO: Fetch events from API
+  // useEffect(() => {
+  //   const fetchEvents = async () => {
+  //     try {
+  //       const response = await authFetch("/admin/events");
+  //       const data = await response.json();
+  //       setEvents(data);
+  //     } catch (error) {
+  //       console.error("Error fetching events:", error);
+  //     }
+  //   };
+  //   if (currentUser) {
+  //     fetchEvents();
+  //   }
+  // }, [currentUser]);
 
   // Filter events
   const filteredEvents = events.filter((event) => {
@@ -426,6 +458,22 @@ export default function AdminEventsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+      {/* Welcome Banner */}
+      {/* {currentUser && (
+        <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div>
+              <p className="text-sm opacity-90">Xin chào, Admin</p>
+              <h2 className="text-xl font-bold">{currentUser.username}</h2>
+            </div>
+            <div className="text-right">
+              <p className="text-sm opacity-90">Role</p>
+              <p className="font-semibold uppercase">{currentUser.role}</p>
+            </div>
+          </div>
+        </div>
+      )} */}
+
       {/* Header */}
       <div className="bg-white border-b border-green-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-6">

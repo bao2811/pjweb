@@ -27,11 +27,9 @@ class CheckRole
     public function handleCheckManager(Request $request, Closure $next): Response
     {
         $user = $request->user;
-
         if (!$user || !($user->role === 'manager' || $user->role === 'admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-
         return $next($request);
     }
 }

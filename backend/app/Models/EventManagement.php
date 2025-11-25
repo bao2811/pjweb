@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+
+// đồng quản lý sự kiện
 class EventManagement extends Model
 {
     use HasFactory;
