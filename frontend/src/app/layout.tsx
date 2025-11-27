@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,15 +28,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div
-          className="bg-cover bg-center min-h-screen"
-          style={{
-            backgroundImage:
-              "url('https://image.slidesdocs.com/responsive-images/background/blue-white-leaf-outdoor-sunny-rural-cartoon-beautiful-powerpoint-background_9a81889e57__960_540.jpg')",
-          }}
-        >
-          {children}
-        </div>
+        <AuthProvider>
+          <div
+            className="bg-cover bg-center min-h-screen"
+            style={{
+              backgroundImage:
+                "url('https://image.slidesdocs.com/responsive-images/background/blue-white-leaf-outdoor-sunny-rural-cartoon-beautiful-powerpoint-background_9a81889e57__960_540.jpg')",
+            }}
+          >
+            {children}
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Repositories\UserRepo;
 use App\Repositories\EventRepo;
 use App\Repositories\EventManagementRepo;
+use App\Models\Like;
+use App\Models\Channel;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -18,9 +20,44 @@ class EventService
         $this->eventRepo = $eventRepo;
     }
 
-    public function getAllEvents()
+    public function getAllEvents($userId = null)
     {
-        return $this->eventRepo->getAllEvents();
+        $events = $this->eventRepo->getAllEvents();
+        
+        \Log::info('🔍 EventService getAllEvents called', ['userId' => $userId]);
+        
+        // Thêm thông tin isLiked và likes cho mỗi event
+        $events = $events->map(function ($event) use ($userId) {
+            // Đếm tổng số likes
+            $likesCount = Like::where('event_id', $event->id)->count();
+            
+            \Log::info("📊 Event {$event->id} likes count", [
+                'event_id' => $event->id,
+                'likesCount' => $likesCount,
+                'userId' => $userId
+            ]);
+            
+            // Kiểm tra user đã like event này chưa (nếu có userId)
+            $isLiked = false;
+            if ($userId) {
+                $isLiked = Like::where('user_id', $userId)
+                              ->where('event_id', $event->id)
+                              ->exists();
+                              
+                \Log::info("👍 User like status", [
+                    'user_id' => $userId,
+                    'event_id' => $event->id,
+                    'isLiked' => $isLiked
+                ]);
+            }
+            
+            $event->isLiked = $isLiked;
+            $event->likes = $likesCount;
+            
+            return $event;
+        });
+        
+        return $events;
     }
 
     public function getEventById($id)
@@ -39,7 +76,17 @@ class EventService
         $data['author_id'] = $userId;
         $data['status'] = 'upcoming'; // Sự kiện sắp diễn ra
 
-        return $this->eventRepo->createEvent($data);
+        $event = $this->eventRepo->createEvent($data);
+        
+        // Tạo channel cho sự kiện
+        if ($event) {
+            Channel::create([
+                'title' => 'Channel - ' . $event->title,
+                'event_id' => $event->id,
+            ]);
+        }
+        
+        return $event;
     }
 
     public function deleteEvent($id)

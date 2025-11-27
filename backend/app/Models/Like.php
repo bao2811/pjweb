@@ -15,8 +15,9 @@ class Like extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'user_id',
-        'post_id',
-        'status',
-    ];
+    'user_id',
+    'post_id',
+    'event_id',
+    'status',
+];
 }

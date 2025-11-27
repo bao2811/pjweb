@@ -12,6 +12,6 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        'api/*',  // Tất cả API routes không cần CSRF (dùng JWT)
     ];
 }

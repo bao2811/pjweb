@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaHeart } from "react-icons/fa";
-import axios from  "axios";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +20,7 @@ export default function LoginPage() {
     }));
   };
 
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,62 +30,33 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-    // Prefer env at build-time, but default to relative "/api" so browser hits the same host/nginx
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
-    console.log('🔍 API_URL:', API_URL); // Debug
-    console.log('📤 Sending login request...', { email: formData.email }); // Debug
+      // ✅ Dùng login() từ AuthContext
+      await login(formData.email, formData.password);
+      
+      // AuthContext đã lưu token + user vào localStorage và state
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      console.log('✅ Login success! Role:', userData.role);
 
-    // 🧠 Dùng axios thay cho fetch
-    const response = await axios.post(
-      `${API_URL}/login`,
-      {
-        email: formData.email,
-        password: formData.password,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+      // 🔄 Redirect theo role
+      if (userData.role === 'manager') {
+        window.location.href = '/manager/dashboard';
+      } else if (userData.role === 'admin') {
+        window.location.href = '/admin/dashboard';
+      } else {
+        window.location.href = '/user/dashboard';
       }
-    );
 
-    // axios tự động parse JSON → response.data là object
-    const data = response.data;
-    console.log('📥 Response data:', data); // Debug
-
-    // ✅ Lưu token và user info
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    console.log('✅ Login success! Role:', data.user.role); // Debug
-
-    // 🔄 Redirect theo role
-    if (data.user.role === 'manager') {
-      console.log('🔄 Redirecting to /manager/events...');
-      window.location.href = '/manager/dashboard';
-    } else if (data.user.role === 'admin') {
-      console.log('🔄 Redirecting to /admin/dashboard...');
-      window.location.href = '/admin/dashboard';
-    } else {
-      console.log('🔄 Redirecting to /user/dashboard...');
-      window.location.href = '/user/dashboard';
+    } catch (err: any) {
+      console.error('❌ Login error:', err);
+      const errorMessage =
+        err.response?.data?.error ||
+        err.message ||
+        'Đã xảy ra lỗi khi đăng nhập';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-
-  } catch (err: any) {
-    // axios ném lỗi khác fetch một chút
-    console.error('❌ Login error:', err); // Debug
-
-    // Nếu backend trả về lỗi JSON, ta lấy message trong err.response.data
-    const errorMessage =
-      err.response?.data?.message ||
-      err.message ||
-      'Đã xảy ra lỗi khi đăng nhập';
-
-    setError(errorMessage);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
     <div

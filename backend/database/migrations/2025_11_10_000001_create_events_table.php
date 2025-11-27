@@ -11,20 +11,16 @@ return new class extends Migration
         Schema::create('events', function (Blueprint $table) {
             $table->id();
             $table->string('title');
-            $table->text('description')->nullable();
-            $table->string('location')->nullable();
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
-            $table->integer('max_participants')->default(0);
-            $table->integer('points')->default(0);
-            $table->string('category')->nullable();
+            $table->text('content')->nullable();
             $table->string('image')->nullable();
-            $table->string('status')->default('pending'); // pending, approved, rejected, cancelled
-            $table->unsignedBigInteger('creator_id');
+            $table->string('address')->nullable();
+            $table->timestamp('start_time')->nullable();
+            $table->timestamp('end_time')->nullable();
+            $table->unsignedBigInteger('author_id');
+            $table->string('status')->default('upcoming');
             $table->timestamps();
 
-            // Khóa ngoại: sự kiện do user nào tạo
-            $table->foreign('creator_id')
+            $table->foreign('author_id')
                   ->references('id')->on('users')
                   ->onDelete('cascade');
         });

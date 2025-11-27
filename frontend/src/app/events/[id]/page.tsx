@@ -17,6 +17,9 @@ import {
   FaLeaf,
   FaTrophy,
   FaHandsHelping,
+  FaCheckCircle,
+  FaExclamationCircle,
+  FaTimes,
 } from "react-icons/fa";
 import api from "@/utils/api";
 
@@ -34,6 +37,16 @@ interface EventDetail {
   status: string;
   creator_id: number;
   currentParticipants?: number;
+  manager?: {
+    id: number;
+    name: string;
+    email: string;
+    phone?: string;
+    avatar?: string;
+  };
+  requirements?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,24 +56,41 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [isLoading, setIsLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
   const [likes, setLikes] = useState(0);
+  const [registrationStatus, setRegistrationStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none');
+  const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
-    const fetchEventDetail = async () => {
-      try {
-        setIsLoading(true);
-        const response = await api.get(`events/getEventDetails/${id}`);
-        if (response.data && response.data.event) {
-          setEvent(response.data.event);
-        }
-      } catch (error) {
-        console.error("Error fetching event details:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchEventDetail();
+    fetchRegistrationStatus();
   }, [id]);
+
+  const fetchEventDetail = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get(`events/getEventDetails/${id}`);
+      if (response.data && response.data.event) {
+        setEvent(response.data.event);
+      }
+    } catch (error) {
+      console.error("Error fetching event details:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchRegistrationStatus = async () => {
+    try {
+      const response = await api.get('my-registrations');
+      if (response.data && Array.isArray(response.data)) {
+        const registration = response.data.find((reg: any) => reg.event_id === parseInt(id));
+        if (registration) {
+          setRegistrationStatus(registration.status);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching registration status:", error);
+    }
+  };
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -68,7 +98,48 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   const handleJoinChat = () => {
-    router.push(`/user/events/${id}/chat`);
+    router.push(`/events/${id}/channel`);
+  };
+
+  const handleRegister = async () => {
+    try {
+      setIsRegistering(true);
+      const response = await api.post(`/joinEvent/${id}`);
+      
+      if (response.data && response.data.registration) {
+        setRegistrationStatus(response.data.registration.status);
+        alert('Đã gửi yêu cầu tham gia sự kiện. Vui lòng chờ manager duyệt!');
+      } else if (response.data && response.data.success) {
+        setRegistrationStatus('pending');
+        alert('Đã gửi yêu cầu tham gia sự kiện. Vui lòng chờ manager duyệt!');
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      alert(error.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại!');
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!confirm('Bạn có chắc muốn hủy yêu cầu tham gia sự kiện này?')) {
+      return;
+    }
+
+    try {
+      setIsRegistering(true);
+      const response = await api.post(`/leaveEvent/${id}`);
+      
+      if (response.data) {
+        setRegistrationStatus('none');
+        alert('Đã hủy yêu cầu tham gia sự kiện');
+      }
+    } catch (error: any) {
+      console.error('Cancel error:', error);
+      alert(error.response?.data?.message || 'Hủy yêu cầu thất bại. Vui lòng thử lại!');
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   if (isLoading) {
@@ -214,26 +285,216 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   <span className="text-green-600 mr-2">✓</span>
                   <span>Tuân thủ các quy định của ban tổ chức</span>
                 </li>
+                {event.requirements && (
+                  <li className="flex items-start">
+                    <span className="text-green-600 mr-2">✓</span>
+                    <span>{event.requirements}</span>
+                  </li>
+                )}
               </ul>
+            </div>
+
+            {/* Manager Info Card */}
+            {event.manager && (
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-lg p-8 border border-purple-200">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <FaUserFriends className="text-purple-600 mr-3" />
+                  Quản lý sự kiện
+                </h2>
+                <div className="flex items-center space-x-4">
+                  {event.manager.avatar ? (
+                    <Image
+                      src={event.manager.avatar}
+                      alt={event.manager.name}
+                      width={80}
+                      height={80}
+                      className="rounded-full border-4 border-white shadow-lg"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                      {event.manager.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-800">{event.manager.name}</h3>
+                    <div className="space-y-1 mt-2">
+                      <a
+                        href={`mailto:${event.manager.email}`}
+                        className="flex items-center text-sm text-gray-600 hover:text-purple-600 transition"
+                      >
+                        <FaEnvelope className="mr-2" />
+                        {event.manager.email}
+                      </a>
+                      {event.manager.phone && (
+                        <a
+                          href={`tel:${event.manager.phone}`}
+                          className="flex items-center text-sm text-gray-600 hover:text-purple-600 transition"
+                        >
+                          <FaPhone className="mr-2" />
+                          {event.manager.phone}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Event Timeline */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 border border-green-100">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                <FaClock className="text-orange-600 mr-3" />
+                Thời gian chi tiết
+              </h2>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <FaCalendarAlt className="text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Bắt đầu</p>
+                    <p className="font-semibold text-gray-800">
+                      {new Date(event.start_date).toLocaleString('vi-VN', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <FaCalendarAlt className="text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Kết thúc</p>
+                    <p className="font-semibold text-gray-800">
+                      {new Date(event.end_date).toLocaleString('vi-VN', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                {event.created_at && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <p className="text-sm text-gray-500">
+                      Sự kiện được tạo vào {new Date(event.created_at).toLocaleDateString('vi-VN')}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Right Column - Action Cards */}
           <div className="space-y-6">
-            {/* Join Chat Card - Featured */}
-            <div className="bg-gradient-to-br from-sky-500 to-white rounded-2xl shadow-xl p-8 text-white sticky top-4">
+            {/* Registration Card - Featured */}
+            <div className="bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl shadow-xl p-8 text-white sticky top-4">
               <div className="text-center mb-6">
-                <FaComments className="text-6xl mx-auto mb-4 opacity-90" />
-                <h3 className="text-2xl font-bold mb-2">Tham gia thảo luận</h3>
-                <p className="text-green-100">Kết nối với các tình nguyện viên khác</p>
+                <FaHandsHelping className="text-6xl mx-auto mb-4 opacity-90" />
+                <h3 className="text-2xl font-bold mb-2">
+                  {registrationStatus === 'approved' ? 'Đã được duyệt' :
+                   registrationStatus === 'pending' ? 'Chờ duyệt' :
+                   registrationStatus === 'rejected' ? 'Bị từ chối' :
+                   'Tham gia ngay'}
+                </h3>
+                <p className="text-green-100">
+                  {registrationStatus === 'approved' ? 'Bạn đã được chấp nhận tham gia sự kiện này' :
+                   registrationStatus === 'pending' ? 'Yêu cầu của bạn đang chờ manager duyệt' :
+                   registrationStatus === 'rejected' ? 'Yêu cầu của bạn đã bị từ chối' :
+                   'Đăng ký để trở thành tình nguyện viên'}
+                </p>
               </div>
-              <button
-                onClick={handleJoinChat}
-                className="w-full bg-white text-green-700 font-bold py-4 px-6 rounded-xl hover:bg-green-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
-              >
-                <FaComments className="text-xl" />
-                <span>Vào kênh chat</span>
-              </button>
+              
+              {registrationStatus === 'none' ? (
+                <button
+                  onClick={handleRegister}
+                  disabled={isRegistering || event.status === 'completed' || event.status === 'cancelled'}
+                  className="w-full bg-white text-green-700 font-bold py-4 px-6 rounded-xl hover:bg-green-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {isRegistering ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-700"></div>
+                      <span>Đang xử lý...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaHandsHelping className="text-xl" />
+                      <span>Đăng ký tham gia</span>
+                    </>
+                  )}
+                </button>
+              ) : registrationStatus === 'pending' ? (
+                <div className="space-y-3">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <FaClock className="text-3xl mx-auto mb-2" />
+                    <p className="font-semibold">Đang chờ duyệt</p>
+                  </div>
+                  <button
+                    onClick={handleCancelRequest}
+                    disabled={isRegistering}
+                    className="w-full bg-red-500/90 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
+                  >
+                    {isRegistering ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <span>Đang xử lý...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaTimes className="text-xl" />
+                        <span>Hủy yêu cầu tham gia</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : registrationStatus === 'approved' ? (
+                <div className="space-y-3">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <FaCheckCircle className="text-3xl mx-auto mb-2" />
+                    <p className="font-semibold">Đã được chấp nhận!</p>
+                  </div>
+                  <button
+                    onClick={handleJoinChat}
+                    className="w-full bg-white text-blue-700 font-bold py-3 px-6 rounded-xl hover:bg-blue-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+                  >
+                    <FaComments className="text-xl" />
+                    <span>Vào kênh chat</span>
+                  </button>
+                  <button
+                    onClick={handleCancelRequest}
+                    disabled={isRegistering}
+                    className="w-full bg-red-500/90 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-xl transition-all flex items-center justify-center space-x-2 text-sm disabled:opacity-50"
+                  >
+                    {isRegistering ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Đang xử lý...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaTimes />
+                        <span>Rời khỏi sự kiện</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                  <FaExclamationCircle className="text-3xl mx-auto mb-2" />
+                  <p className="font-semibold">Yêu cầu bị từ chối</p>
+                  <p className="text-sm text-green-100 mt-2">Vui lòng liên hệ manager để biết thêm chi tiết</p>
+                </div>
+              )}
             </div>
 
             {/* Event Info Card */}

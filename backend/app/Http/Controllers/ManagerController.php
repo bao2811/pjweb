@@ -70,8 +70,8 @@ class ManagerController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'location' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
+            'start_time' => 'required|date',
+            'end_time' => 'required|date|after_or_equal:start_time',
             'max_participants' => 'required|integer|min:1',
             'points' => 'nullable|integer|min:0',
             'category' => 'required|string|max:100',
@@ -79,11 +79,11 @@ class ManagerController extends Controller
             'status' => 'nullable|string|in:pending,approved,rejected',
         ]);
 
-        // Lấy user_id từ token (không cho client gửi)
-        $userId = auth('sanctum')->id();
+        // Lấy user_id từ JWT token
+        $userId = auth()->id();
         
         $eventData = $request->only([
-            'title', 'description', 'location', 'start_date', 'end_date',
+            'title', 'description', 'location', 'start_time', 'end_time',
             'max_participants', 'points', 'category', 'image', 'status'
         ]);
         

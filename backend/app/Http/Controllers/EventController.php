@@ -43,7 +43,8 @@ class EventController extends Controller
 
     public function getAllEvents(Request $request)
     {
-        $events = $this->eventService->getAllEvents();
+        $userId = $request->user()->id ?? null;
+        $events = $this->eventService->getAllEvents($userId);
         return response()->json(['events' => $events]);
     }
 
@@ -67,7 +68,7 @@ class EventController extends Controller
             'end_time' => 'nullable|date',
         ]);
 
-        // Lấy user_id từ user đã đăng nhập
+        // Lấy user_id từ JWT
         $userId = auth()->id();
         
         // Kiểm tra user có role manager không
@@ -124,6 +125,29 @@ class EventController extends Controller
         $query = $request->input('query', '');
         $events = $this->eventService->searchEvents($query);
         return response()->json(['events' => $events]);
+    }
+
+    public function getEventChannel($id)
+    {
+        try {
+            $event = $this->eventService->getEventById($id);
+            if (!$event) {
+                return response()->json(['error' => 'Event not found'], 404);
+            }
+
+            $channel = $event->channel;
+            if (!$channel) {
+                // Create channel if it doesn't exist
+                $channel = \App\Models\Channel::create([
+                    'title' => 'Channel - ' . $event->title,
+                    'event_id' => $event->id,
+                ]);
+            }
+
+            return response()->json(['channel' => $channel]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
 }

@@ -13,25 +13,30 @@ class JWTUtil
 
     private function __construct() {}
 
-    public static function getSecretKey()
+    public static function getSecretKey(): string
     {
         if (!self::$secretKey) {
-            self::$secretKey = env('JWT_SECRET');
+            self::$secretKey = (string) config('jwt.secret');
+        }
+        if (self::$secretKey === '' || self::$secretKey === null) {
+            throw new \RuntimeException('JWT secret is missing. Set JWT_SECRET in .env');
         }
         return self::$secretKey;
     }
 
-    public static function generateToken($userId, $expiryMinutes = 60)
+    public static function generateToken(int $userId, int $expiryMinutes = 60): string
     {
         $issuedAt = time();
         $expiry = $issuedAt + ($expiryMinutes * 60);
 
         $payload = [
-            'iss' => 'your-issuer',
-            'aud' => 'your-audience',
+            'iss' => config('jwt.issuer'),
+            'aud' => config('jwt.audience'),
             'iat' => $issuedAt,
+            'nbf' => $issuedAt,
             'exp' => $expiry,
             'sub' => $userId,
+            'jti' => bin2hex(random_bytes(8)),
         ];
 
         return JWT::encode($payload, self::getSecretKey(), 'HS256');

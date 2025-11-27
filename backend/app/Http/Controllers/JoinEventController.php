@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\WebPushApi;
+use App\Utils\WebPushApi;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 use Illuminate\Http\Request;
@@ -42,11 +42,15 @@ class JoinEventController extends Controller
     public function joinEvent(Request $request, $eventId)
     {
         $user = $request->user();
-        $data = $this->joinEventService->joinEvent($user->id, $eventId);
-        if(!$data){
+        $result = $this->joinEventService->joinEvent($user->id, $eventId);
+        if(!$result){
             return response()->json(['error' => 'Event not found'], 404);
         }
-        return response()->json(['message' => 'Joined event successfully']);
+        return response()->json([
+            'success' => $result['success'],
+            'message' => $result['message'],
+            'registration' => $result['data']
+        ]);
     }
 
     public function leaveEvent(Request $request, $eventId)
@@ -57,5 +61,12 @@ class JoinEventController extends Controller
             return response()->json(['error' => 'Event not found'], 404);
         }
         return response()->json(['message' => 'Left event successfully']);
+    }
+
+    public function getMyRegistrations(Request $request)
+    {
+        $user = $request->user();
+        $registrations = $this->joinEventService->getMyRegistrations($user->id);
+        return response()->json($registrations);
     }
 }

@@ -11,16 +11,16 @@ class Event extends Model
 
     protected $fillable = [
         'title',
-        'description',      // Đổi từ 'content'
-        'location',         // Đổi từ 'address'
-        'start_date',       // Đổi từ 'start_time'
-        'end_date',         // Đổi từ 'end_date'
-        'max_participants', // Thêm mới
-        'points',           // Thêm mới
-        'category',         // Thêm mới
+        'description',
+        'location',
+        'start_time',
+        'end_time',
+        'max_participants',
+        'points',
+        'category',
         'image',
         'status',
-        'creator_id',       // Đổi từ 'author_id'
+        'creator_id',
     ];
 
     // Quan hệ: Event thuộc về 1 User (creator)
@@ -33,5 +33,11 @@ class Event extends Model
     public function author()
     {
         return $this->creator();
+    }
+    
+    // Quan hệ: Event có 1 Channel
+    public function channel()
+    {
+        return $this->hasOne(Channel::class, 'event_id');
     }
 }

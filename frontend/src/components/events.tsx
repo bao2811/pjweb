@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
   FaCalendarAlt,
@@ -78,19 +79,17 @@ interface User {
   avatar: string;
 }
 
-// Mock current user (thay đổi role để test các quyền khác nhau)
-const currentUser: User = {
-  id: 1,
-  name: "Nguyễn Văn A",
-  role: "admin", // Có thể thay đổi thành 'user', 'manager' hoặc 'admin' để test
-  avatar:
-    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
-};
-
-
-
 export default function Events() {
+  // Current user từ API
+  const [currentUser, setCurrentUser] = useState<User>({
+    id: 0,
+    name: "",
+    role: "user",
+    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
+  });
   const [events, setEvents] = useState<Event[]>([]);
+  const [joiningEvents, setJoiningEvents] = useState<Set<number>>(new Set());
+  const [likingEvents, setLikingEvents] = useState<Set<number>>(new Set());
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -98,11 +97,25 @@ export default function Events() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [registeredEvents, setRegisteredEvents] = useState<number[]>([]);
+  const [myRegistrations, setMyRegistrations] = useState<{
+    [eventId: number]: {
+      id: number;
+      status: 'pending' | 'accepted' | 'rejected';
+    }
+  }>({});
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [showHidden, setShowHidden] = useState(false);
   const [showPendingApproval, setShowPendingApproval] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [sortBy, setSortBy] = useState<"date" | "participants" | "newest">("date");
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "tomorrow" | "this_week" | "this_month" | "specific">("all");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
     description: "",
@@ -119,17 +132,24 @@ export default function Events() {
   const statuses = ["all", "upcoming", "ongoing", "completed", "cancelled"];
 
   // Fetch events from backend
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setIsLoading(true);
-  // Use env-injected base URL if present, otherwise default to same-origin "/api"
-        const response = await api.get('events/getAllEvents');
-        const data = await response.data;
+  const fetchEvents = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get('events/getAllEvents');
+      const data = await response.data;
 
-        if (response.status === 200 && data.events) {
-          // Transform backend data to frontend format
-          const transformedEvents: Event[] = data.events.map((event: any) => ({
+      console.log('🔍 BACKEND RESPONSE:', data); // DEBUG
+
+      if (response.status === 200 && data.events) {
+        const transformedEvents: Event[] = data.events.map((event: any) => {
+          console.log('📦 Event từ backend:', { 
+            id: event.id, 
+            title: event.title,
+            isLiked: event.isLiked, 
+            likes: event.likes 
+          }); // DEBUG
+          
+          return {
             id: event.id,
             eventId: event.id.toString(),
             title: event.title,
@@ -150,25 +170,71 @@ export default function Events() {
               role: 'manager',
             },
             participants: [],
-            isLiked: false,
-            likes: 0,
+            isLiked: event.isLiked || false,
+            likes: event.likes || 0,
             status: event.status || 'upcoming',
             isHidden: false,
             approvalStatus: 'approved',
             createdAt: event.created_at || '',
-          }));
-          setEvents(transformedEvents);
+          };
+        });
+        
+        console.log('✅ Transformed events:', transformedEvents); // DEBUG
+        setEvents(transformedEvents);
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch current user info
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await api.get('me');
+        if (response.data) {
+          setCurrentUser({
+            id: response.data.id,
+            name: response.data.name || response.data.email,
+            role: response.data.role || 'user',
+            avatar: response.data.avatar || response.data.image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face',
+          });
         }
       } catch (error) {
-        console.error('Error fetching events:', error);
-        // Fallback to mock data if API fails
-    
-      } finally {
-        setIsLoading(false);
+        console.error('Error fetching user info:', error);
       }
     };
+    fetchUserInfo();
+  }, []);
 
+  // Fetch my registrations
+  const fetchMyRegistrations = async () => {
+    try {
+      const response = await api.get('my-registrations');
+      console.log('🔍 My Registrations Response:', response.data); // DEBUG
+      if (response.data && Array.isArray(response.data)) {
+        const registrationsMap: { [key: number]: { id: number; status: 'pending' | 'accepted' | 'rejected' } } = {};
+        response.data.forEach((reg: any) => {
+          console.log('📝 Processing registration:', reg); // DEBUG
+          registrationsMap[reg.event_id] = {
+            id: reg.id,
+            status: reg.status
+          };
+        });
+        console.log('✅ Final registrations map:', registrationsMap); // DEBUG
+        setMyRegistrations(registrationsMap);
+      }
+    } catch (error) {
+      console.error('Error fetching my registrations:', error);
+    }
+  };
+
+  // Fetch events from backend
+  useEffect(() => {
     fetchEvents();
+    fetchMyRegistrations();
   }, []);
 
   // Filter events
@@ -213,6 +279,57 @@ export default function Events() {
       filtered = filtered.filter((event) => event.status === selectedStatus);
     }
 
+    // Date filter
+    if (selectedDate) {
+      // Specific date selected
+      const targetDate = new Date(selectedDate);
+      const targetDateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+      
+      filtered = filtered.filter((event) => {
+        const eventDate = new Date(event.date);
+        const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+        return eventDateOnly.getTime() === targetDateOnly.getTime();
+      });
+    } else if (dateFilter !== "all") {
+      // Preset date filters
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      filtered = filtered.filter((event) => {
+        const eventDate = new Date(event.date);
+        const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+        
+        if (dateFilter === "today") {
+          const todayOnly = new Date(today);
+          return eventDateOnly.getTime() === todayOnly.getTime();
+        } else if (dateFilter === "tomorrow") {
+          const tomorrow = new Date(today);
+          tomorrow.setDate(today.getDate() + 1);
+          return eventDateOnly.getTime() === tomorrow.getTime();
+        } else if (dateFilter === "this_week") {
+          const nextWeek = new Date(today);
+          nextWeek.setDate(today.getDate() + 7);
+          return eventDateOnly >= today && eventDateOnly < nextWeek;
+        } else if (dateFilter === "this_month") {
+          const nextMonth = new Date(today);
+          nextMonth.setDate(today.getDate() + 30);
+          return eventDateOnly >= today && eventDateOnly < nextMonth;
+        }
+        return true;
+      });
+    }
+
+    // Sort events
+    filtered = [...filtered].sort((a, b) => {
+      if (sortBy === "date") {
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      } else if (sortBy === "participants") {
+        return b.currentParticipants - a.currentParticipants;
+      } else { // newest
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+
     setFilteredEvents(filtered);
   }, [
     events,
@@ -221,6 +338,8 @@ export default function Events() {
     selectedStatus,
     showHidden,
     showPendingApproval,
+    sortBy,
+    dateFilter,
   ]);
 
   // Check permissions
@@ -254,31 +373,112 @@ export default function Events() {
   };
 
   // Handle like event
-  const handleLike = (eventId: number) => {
+  const handleLike = async (eventId: number) => {
+    // Tìm event hiện tại
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+    
+    // 1️⃣ TÍNH TOÁN like mới (optimistic)
+    const newLikesCount = event.isLiked ? (event.likes || 1) - 1 : (event.likes || 0) + 1;
+    const newIsLiked = !event.isLiked;
+    
+    // 2️⃣ CẬP NHẬT UI NGAY LẬP TỨC (optimistic update)
     setEvents(
-      events.map((event) =>
-        event.id === eventId
+      events.map((e) =>
+        e.id === eventId
           ? {
-              ...event,
-              isLiked: !event.isLiked,
-              likes: event.isLiked ? event.likes - 1 : event.likes + 1,
+              ...e,
+              isLiked: newIsLiked,
+              likes: newLikesCount,
             }
-          : event
+          : e
       )
     );
+    
+    // 3️⃣ GỬI REQUEST ĐẾN API (KHÔNG reload toàn bộ)
+    try {
+      let response;
+      if (event.isLiked) {
+        response = await api.post(`/likes/event/unlike/${eventId}`);
+      } else {
+        response = await api.post(`/likes/event/like/${eventId}`);
+      }
+      
+      console.log('✅ Like API response:', response.data);
+      // Không cần reload - optimistic update đã đúng
+    } catch (error: any) {
+      console.error('❌ Error liking event:', error);
+      console.error('Error details:', error.response?.data);
+      
+      // 4️⃣ ROLLBACK nếu có lỗi
+      setEvents(
+        events.map((e) =>
+          e.id === eventId
+            ? {
+                ...e,
+                isLiked: event.isLiked,  // ← Revert lại
+                likes: event.likes,       // ← Revert số like
+              }
+            : e
+        )
+      );
+      alert(error.response?.data?.message || 'Lỗi khi yêu thích sự kiện');
+    }
   };
 
   // Handle join event
-  const handleJoinEvent = (eventId: number) => {
-    setEvents(
-      events.map((event) =>
-        event.id === eventId &&
-        event.currentParticipants < event.maxParticipants
-          ? { ...event, currentParticipants: event.currentParticipants + 1 }
-          : event
-      )
-    );
-    setShowDetailModal(false);
+  const handleJoinEvent = async (eventId: number) => {
+    if (joiningEvents.has(eventId)) return; // Prevent double submission
+    
+    setJoiningEvents(prev => new Set(prev).add(eventId));
+    
+    // Lưu state cũ để rollback nếu cần
+    const prevRegistrations = { ...myRegistrations };
+    
+    try {
+      const event = events.find(e => e.id === eventId);
+      
+      // 1️⃣ CẬP NHẬT UI NGAY - optimistic update
+      setMyRegistrations({
+        ...myRegistrations,
+        [eventId]: {
+          id: eventId,
+          status: 'pending'
+        }
+      });
+
+      // 2️⃣ GỬI REQUEST ĐẾN API
+      const response = await api.post(`/joinEvent/${eventId}`);
+      
+      // 3️⃣ ĐỒNG BỘ với server response
+      if (response.data && response.data.registration) {
+        const registration = response.data.registration;
+        setMyRegistrations(prev => ({
+          ...prev,
+          [eventId]: {
+            id: registration.id,
+            status: registration.status
+          }
+        }));
+        alert(`Đã gửi yêu cầu tham gia sự kiện: ${event?.title || ''}. Vui lòng chờ manager duyệt!`);
+        setShowDetailModal(false);
+      } else if (response.data && response.data.success) {
+        // Fallback nếu backend chưa sửa
+        alert(`Đã gửi yêu cầu tham gia sự kiện: ${event?.title || ''}. Vui lòng chờ manager duyệt!`);
+        setShowDetailModal(false);
+      }
+    } catch (error: any) {
+      console.error('Error joining event:', error);
+      // 4️⃣ Rollback nếu lỗi
+      setMyRegistrations(prevRegistrations);
+      alert(error.response?.data?.message || 'Lỗi khi đăng ký sự kiện');
+    } finally {
+      setJoiningEvents(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(eventId);
+        return newSet;
+      });
+    }
   };
 
   // Handle delete event
@@ -298,7 +498,7 @@ export default function Events() {
   const showEventDetails = (event: Event) => {
     // setSelectedEvent(event);
     // setShowDetailModal(true);
-    window.location.href = `/user/events/${event.eventId}`;
+    window.location.href = `/events/${event.eventId}`;
   };
 
   // Handle hide/show event
@@ -470,24 +670,24 @@ export default function Events() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">      
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
                 Sự kiện tình nguyện
               </h1>
-              <p className="text-gray-600 mt-2 text-lg">
+              <p className="text-gray-600 mt-1">
                 Khám phá và tham gia các hoạt động ý nghĩa 🌱
               </p>
             </div>
 
             {/* Actions */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-3">
               {/* Create Event Button */}
               {canCreateEvent() && (
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white font-medium rounded-lg transition duration-200"
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white font-medium rounded-lg transition duration-200 shadow-md"
                 >
                   <FaPlus />
                   <span>Tạo sự kiện</span>
@@ -534,83 +734,149 @@ export default function Events() {
             </div>
           </div>
 
-          {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          <div className="flex gap-4 items-center">
             {/* Search */}
             <div className="relative flex-1">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Tìm kiếm sự kiện..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400 shadow-sm"
               />
             </div>
 
-            {/* Category Filter */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category === "all" ? "Tất cả danh mục" : category}
-                </option>
-              ))}
-            </select>
+            {/* Filters - Custom Dropdowns */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Category Filter */}
+              <div className="relative">
+                <button
+                  id="category-button"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setDropdownPosition({
+                      top: rect.bottom + 8,
+                      left: rect.left
+                    });
+                    setShowCategoryDropdown(!showCategoryDropdown);
+                    setShowStatusDropdown(false);
+                    setShowDateDropdown(false);
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-blue-200 rounded-full text-sm font-semibold text-gray-800 hover:border-blue-400 hover:bg-blue-50 transition-all shadow-md hover:shadow-lg"
+                >
+                  {selectedCategory === "all" ? "🌍 Tất cả danh mục" : 
+                   selectedCategory === "Môi trường" ? "🌱 Môi trường" :
+                   selectedCategory === "Giáo dục" ? "📚 Giáo dục" :
+                   selectedCategory === "Xã hội" ? "🤝 Xã hội" : "❤️ Y tế"}
+                  <svg className={`w-4 h-4 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
 
-            {/* Status Filter */}
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {statuses.map((status) => (
-                <option key={status} value={status}>
-                  {status === "all"
-                    ? "Tất cả trạng thái"
-                    : status === "upcoming"
-                    ? "Sắp diễn ra"
-                    : status === "ongoing"
-                    ? "Đang diễn ra"
-                    : status === "completed"
-                    ? "Đã kết thúc"
-                    : "Đã hủy"}
-                </option>
-              ))}
-            </select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="relative">
+                <button
+                  id="status-button"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setDropdownPosition({
+                      top: rect.bottom + 8,
+                      left: rect.left
+                    });
+                    setShowStatusDropdown(!showStatusDropdown);
+                    setShowCategoryDropdown(false);
+                    setShowDateDropdown(false);
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-purple-200 rounded-full text-sm font-semibold text-gray-800 hover:border-purple-400 hover:bg-purple-50 transition-all shadow-md hover:shadow-lg"
+                >
+                  {selectedStatus === "all" ? "📋 Tất cả trạng thái" :
+                   selectedStatus === "upcoming" ? "🔜 Sắp diễn ra" :
+                   selectedStatus === "ongoing" ? "▶️ Đang diễn ra" :
+                   selectedStatus === "completed" ? "✅ Đã kết thúc" : "❌ Đã hủy"}
+                  <svg className={`w-4 h-4 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+              </div>
+
+              {/* Date Filter */}
+              <div className="relative">
+                <button
+                  id="date-button"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setDropdownPosition({
+                      top: rect.bottom + 8,
+                      left: rect.left
+                    });
+                    setShowDateDropdown(!showDateDropdown);
+                    setShowCategoryDropdown(false);
+                    setShowStatusDropdown(false);
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-orange-200 rounded-full text-sm font-semibold text-gray-800 hover:border-orange-400 hover:bg-orange-50 transition-all shadow-md hover:shadow-lg"
+                >
+                  {selectedDate ? `📅 ${new Date(selectedDate).toLocaleDateString('vi-VN')}` :
+                   dateFilter === "today" ? "📅 Hôm nay" :
+                   dateFilter === "tomorrow" ? "📅 Ngày mai" :
+                   dateFilter === "this_week" ? "📅 Tuần này" :
+                   dateFilter === "this_month" ? "📅 Tháng này" : "📅 Tất cả thời gian"}
+                  <svg className={`w-4 h-4 transition-transform ${showDateDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+              </div>
+
+              {/* Clear Filters */}
+              {(selectedCategory !== "all" || selectedStatus !== "all" || dateFilter !== "all" || selectedDate) && (
+                <button
+                  onClick={() => {
+                    setSelectedCategory("all");
+                    setSelectedStatus("all");
+                    setSelectedDate("");
+                    setDateFilter("all");
+                  }}
+                  className="px-5 py-2.5 bg-gradient-to-r from-red-50 to-red-100 text-red-600 hover:from-red-100 hover:to-red-200 rounded-full text-sm font-semibold transition-all flex items-center gap-2 shadow-md hover:shadow-lg border-2 border-red-200"
+                >
+                  <FaTimes />
+                  Xóa bộ lọc
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Events Grid */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6">
         {isLoading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Đang tải sự kiện...</p>
-          </div>
-        ) : filteredEvents.length === 0 ? (
-          <div className="text-center py-12">
-            <FaCalendarAlt className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">
-              Không tìm thấy sự kiện
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Hãy thử thay đổi bộ lọc hoặc tìm kiếm khác.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p className="mt-4 text-gray-600">Đang tải sự kiện...</p>
+              </div>
+            ) : filteredEvents.length === 0 ? (
+              <div className="text-center py-12">
+                <FaCalendarAlt className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">
+                  Không tìm thấy sự kiện
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Hãy thử thay đổi bộ lọc hoặc tìm kiếm khác.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {filteredEvents.map((event) => (
               <div
                 key={event.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 flex flex-col h-full"
               >
                 {/* Event Image */}
-                <div className="relative h-56 group">
+                <div className="relative h-40 flex-shrink-0 group">
                   <Image
                     src={event.image}
                     alt={event.title}
@@ -630,10 +896,10 @@ export default function Events() {
                 </div>
 
                 {/* Event Content */}
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-3">
+                <div className="p-4 flex flex-col flex-1">
+                  <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                      <h3 className="text-base font-semibold text-gray-900 line-clamp-2 mb-1">
                         {event.title}
                       </h3>
                       {/* Approval Status Badge */}
@@ -721,13 +987,13 @@ export default function Events() {
                     </div>
                   </div>
 
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  <p className="text-gray-600 text-xs mb-3 line-clamp-2">
                     {event.description}
                   </p>
 
-                  {/* Event Info */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center text-sm text-gray-600">
+                  {/* Event Info - flexible spacer */}
+                  <div className="space-y-1.5 mb-3">
+                    <div className="flex items-center text-xs text-gray-600">
                       <FaCalendarAlt className="mr-2 text-blue-500" />
                       <span>
                         {new Date(event.date).toLocaleDateString("vi-VN")} •{" "}
@@ -747,8 +1013,10 @@ export default function Events() {
                     </div>
                   </div>
 
+                  {/* Bottom Section - Fixed */}
+                  <div className="mt-auto">
                   {/* Progress Bar */}
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
@@ -765,7 +1033,7 @@ export default function Events() {
                   </div>
 
                   {/* Organizer */}
-                  <div className="flex items-center mb-4 pb-4 border-b border-gray-100">
+                  <div className="flex items-center mb-3 pb-3 border-b border-gray-100">
                     <Image
                       src={event.organizer.avatar}
                       alt={event.organizer.name}
@@ -789,14 +1057,26 @@ export default function Events() {
                     <div className="flex items-center space-x-4">
                       <button
                         onClick={() => handleLike(event.id)}
-                        className={`flex items-center space-x-1 text-sm ${
-                          event.isLiked
-                            ? "text-red-500"
-                            : "text-gray-500 hover:text-red-500"
+                        disabled={likingEvents.has(event.id)}
+                        className={`flex items-center space-x-1 text-sm transition-colors ${
+                          likingEvents.has(event.id)
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : event.isLiked
+                            ? 'text-red-500 hover:text-red-600'
+                            : 'text-gray-500 hover:text-red-500'
                         }`}
                       >
-                        {event.isLiked ? <FaHeart /> : <FaRegHeart />}
-                        <span>{event.likes}</span>
+                        {likingEvents.has(event.id) ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent"></div>
+                            <span>{event.likes}</span>
+                          </>
+                        ) : (
+                          <>
+                            {event.isLiked ? <FaHeart /> : <FaRegHeart />}
+                            <span>{event.likes}</span>
+                          </>
+                        )}
                       </button>
                     </div>
 
@@ -808,26 +1088,74 @@ export default function Events() {
                         <FaEye />
                         <span>Chi tiết</span>
                       </button>
-                      {event.currentParticipants < event.maxParticipants &&
-                        event.status === "upcoming" && (
+                      {event.status === "upcoming" && (
+                        myRegistrations[event.id]?.status === 'pending' ? (
+                          <button
+                            disabled
+                            className="flex items-center space-x-1 px-3 py-2 text-sm text-yellow-700 bg-yellow-50 rounded-lg cursor-not-allowed"
+                          >
+                            <FaHourglassHalf />
+                            <span>Chờ duyệt</span>
+                          </button>
+                        ) : myRegistrations[event.id]?.status === 'accepted' ? (
+                          <button
+                            disabled
+                            className="flex items-center space-x-1 px-3 py-2 text-sm text-green-700 bg-green-50 rounded-lg cursor-not-allowed"
+                          >
+                            <FaCheckCircle />
+                            <span>Đã duyệt</span>
+                          </button>
+                        ) : myRegistrations[event.id]?.status === 'rejected' ? (
                           <button
                             onClick={() => handleJoinEvent(event.id)}
-                            className="flex items-center space-x-1 px-3 py-2 text-sm text-white bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 rounded-lg transition duration-200"
+                            className="flex items-center space-x-1 px-3 py-2 text-sm text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition"
                           >
-                            <FaUserPlus />
-                            <span>Tham gia</span>
+                            <FaTimesCircle />
+                            <span>Bị từ chối - Đăng ký lại</span>
                           </button>
-                        )}
+                        ) : event.currentParticipants < event.maxParticipants ? (
+                          <button
+                            onClick={() => handleJoinEvent(event.id)}
+                            disabled={joiningEvents.has(event.id)}
+                            className={`flex items-center space-x-1 px-3 py-2 text-sm rounded-lg transition duration-200 ${
+                              joiningEvents.has(event.id)
+                                ? 'text-white bg-blue-400 cursor-not-allowed'
+                                : 'text-white bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600'
+                            }`}
+                          >
+                            {joiningEvents.has(event.id) ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                <span>Đang gửi...</span>
+                              </>
+                            ) : (
+                              <>
+                                <FaUserPlus />
+                                <span>Tham gia</span>
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-500 bg-gray-100 rounded-lg cursor-not-allowed"
+                          >
+                            <FaUsers />
+                            <span>Đã đầy</span>
+                          </button>
+                        )
+                      )}
                     </div>
+                  </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        )}
+        )}  
       </div>
 
-      {/* Event Detail Modal
+      {/* Event Detail Modal */}
       {showDetailModal && selectedEvent && (
         <div className="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -908,17 +1236,31 @@ export default function Events() {
                   selectedEvent.status === "upcoming" && (
                     <button
                       onClick={() => handleJoinEvent(selectedEvent.id)}
-                      className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white font-medium rounded-lg transition duration-200"
+                      disabled={joiningEvents.has(selectedEvent.id)}
+                      className={`flex items-center space-x-2 px-6 py-3 font-medium rounded-lg transition duration-200 ${
+                        joiningEvents.has(selectedEvent.id)
+                          ? 'bg-blue-400 text-white cursor-not-allowed'
+                          : 'bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white'
+                      }`}
                     >
-                      <FaUserPlus />
-                      <span>Tham gia sự kiện</span>
+                      {joiningEvents.has(selectedEvent.id) ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                          <span>Đang gửi yêu cầu...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaUserPlus />
+                          <span>Tham gia sự kiện</span>
+                        </>
+                      )}
                     </button>
                   )}
               </div>
             </div>
           </div>
         </div>
-      )} */}
+      )}
 
       {/* Create Event Modal */}
       {showCreateModal && (
@@ -984,16 +1326,16 @@ export default function Events() {
                     <input
                       type="file"
                       className="block w-full text-sm text-gray-500
-        file:me-4 file:py-2 file:px-4
-        file:rounded-lg file:border-0
-        file:text-sm file:font-semibold
-        file:bg-blue-600 file:text-white
-        hover:file:bg-blue-700
-        file:disabled:opacity-50 file:disabled:pointer-events-none
-        dark:text-neutral-500
-        dark:file:bg-blue-500
-        dark:hover:file:bg-blue-400
-      "
+                                file:me-4 file:py-2 file:px-4
+                                file:rounded-lg file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-blue-600 file:text-white
+                                hover:file:bg-blue-700
+                                file:disabled:opacity-50 file:disabled:pointer-events-none
+                                dark:text-neutral-500
+                                dark:file:bg-blue-500
+                                dark:hover:file:bg-blue-400
+                              "
                     />
                   </label>
                 </div>
@@ -1174,6 +1516,167 @@ export default function Events() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Portal Dropdowns */}
+      {showCategoryDropdown && createPortal(
+        <>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, backgroundColor: 'transparent' }} onClick={() => setShowCategoryDropdown(false)} />
+          <div style={{ position: 'absolute', top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 1000000 }} id="category-dropdown-portal">
+            <div className="w-64 bg-white rounded-2xl shadow-2xl border-2 border-blue-100 overflow-hidden">
+              {["all", "Môi trường", "Giáo dục", "Xã hội", "Y tế"].map((category) => (
+                <button
+                  key={category}
+                  onClick={() => {
+                    setSelectedCategory(category);
+                    setShowCategoryDropdown(false);
+                  }}
+                  className={`w-full text-left px-5 py-3.5 text-sm font-semibold transition-all ${
+                    selectedCategory === category
+                      ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+                      : "text-gray-700 hover:bg-blue-50"
+                  }`}
+                >
+                  {category === "all" ? "🌍 Tất cả danh mục" : 
+                   category === "Môi trường" ? "🌱 Môi trường" :
+                   category === "Giáo dục" ? "📚 Giáo dục" :
+                   category === "Xã hội" ? "🤝 Xã hội" : "❤️ Y tế"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+
+      {showStatusDropdown && createPortal(
+        <>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, backgroundColor: 'transparent' }} onClick={() => setShowStatusDropdown(false)} />
+          <div style={{ position: 'absolute', top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 1000000 }} id="status-dropdown-portal">
+            <div className="w-64 bg-white rounded-2xl shadow-2xl border-2 border-purple-100 overflow-hidden">
+              {["all", "upcoming", "ongoing", "completed", "cancelled"].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => {
+                    setSelectedStatus(status);
+                    setShowStatusDropdown(false);
+                  }}
+                  className={`w-full text-left px-5 py-3.5 text-sm font-semibold transition-all ${
+                    selectedStatus === status
+                      ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white"
+                      : "text-gray-700 hover:bg-purple-50"
+                  }`}
+                >
+                  {status === "all" ? "📋 Tất cả trạng thái" :
+                   status === "upcoming" ? "🔜 Sắp diễn ra" :
+                   status === "ongoing" ? "▶️ Đang diễn ra" :
+                   status === "completed" ? "✅ Đã kết thúc" : "❌ Đã hủy"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+
+      {showDateDropdown && createPortal(
+        <>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, backgroundColor: 'transparent' }} onClick={() => setShowDateDropdown(false)} />
+          <div style={{ position: 'absolute', top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 1000000 }} id="date-dropdown-portal">
+            <div className="w-80 bg-white rounded-2xl shadow-2xl border-2 border-orange-100 overflow-hidden">
+              <button
+                onClick={() => {
+                  setSelectedDate("");
+                  setDateFilter("all");
+                  setShowDateDropdown(false);
+                }}
+                className={`w-full text-left px-5 py-3.5 text-sm font-semibold transition-all ${
+                  dateFilter === "all" && !selectedDate
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
+                    : "text-gray-700 hover:bg-orange-50"
+                }`}
+              >
+                📅 Tất cả thời gian
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedDate("");
+                  setDateFilter("today");
+                  setShowDateDropdown(false);
+                }}
+                className={`w-full text-left px-5 py-3.5 text-sm font-semibold transition-all ${
+                  dateFilter === "today"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
+                    : "text-gray-700 hover:bg-orange-50"
+                }`}
+              >
+                <div>📆 Hôm nay</div>
+                <div className="text-xs opacity-75 mt-1">Sự kiện diễn ra hôm nay</div>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedDate("");
+                  setDateFilter("tomorrow");
+                  setShowDateDropdown(false);
+                }}
+                className={`w-full text-left px-5 py-3.5 text-sm font-semibold transition-all ${
+                  dateFilter === "tomorrow"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
+                    : "text-gray-700 hover:bg-orange-50"
+                }`}
+              >
+                <div>📆 Ngày mai</div>
+                <div className="text-xs opacity-75 mt-1">Sự kiện diễn ra ngày mai</div>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedDate("");
+                  setDateFilter("this_week");
+                  setShowDateDropdown(false);
+                }}
+                className={`w-full text-left px-5 py-3.5 text-sm font-semibold transition-all ${
+                  dateFilter === "this_week"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
+                    : "text-gray-700 hover:bg-orange-50"
+                }`}
+              >
+                <div>📅 Tuần này</div>
+                <div className="text-xs opacity-75 mt-1">7 ngày tới từ hôm nay</div>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedDate("");
+                  setDateFilter("this_month");
+                  setShowDateDropdown(false);
+                }}
+                className={`w-full text-left px-5 py-3.5 text-sm font-semibold transition-all ${
+                  dateFilter === "this_month"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
+                    : "text-gray-700 hover:bg-orange-50"
+                }`}
+              >
+                <div>📅 Tháng này</div>
+                <div className="text-xs opacity-75 mt-1">30 ngày tới từ hôm nay</div>
+              </button>
+              
+              <div className="border-t border-gray-200 p-4">
+                <div className="text-sm font-semibold text-gray-800 mb-2">📅 Chọn ngày cụ thể</div>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setDateFilter(e.target.value ? "specific" : "all");
+                    setShowDateDropdown(false);
+                  }}
+                  className="w-full px-4 py-2.5 border-2 border-orange-200 rounded-lg text-sm font-medium text-black focus:border-orange-500 focus:outline-none transition-colors"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );

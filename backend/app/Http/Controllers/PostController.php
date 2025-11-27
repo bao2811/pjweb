@@ -53,7 +53,8 @@ class PostController extends Controller
     public function createPost(Request $request): JsonResponse
     {
         try {
-            $postData = $request->only(['title', 'content', 'image', 'user_id', 'event_id']);
+            $postData = $request->only(['title', 'content', 'image', 'event_id']);
+            $postData['user_id'] = auth()->id(); // Lấy từ JWT, không tin client
             $post = $this->postService->createPost($postData);
             return response()->json(['post' => $post], 201);
         } catch (ValidationException $e) {
@@ -137,20 +138,44 @@ class PostController extends Controller
         }
     }
 
-    public function addCommentOfPost(Request $request, $postId): JsonResponse
-    {
-        $commentData = $request->only(['user_id', 'content']);
+    public function addCommentOfPost(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'post_id' => 'required|exists:posts,id',
+            'content' => 'required|string|max:1000',
+            'parent_id' => 'nullable|exists:comments,id',
+        ]);
 
-        try {
-            $comment = $this->postService->addCommentOfPost($postId, $commentData);
-            return response()->json(['comment' => $comment], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Server error',
-                'message' => $e->getMessage()
-            ], 500);
-        }
+        // Add author_id from current user or request
+        $validated['author_id'] = auth()->id() ?? $request->input('author_id');
+
+        $comment = $this->postService->addCommentOfPost($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comment added successfully',
+            'comment' => [
+                'id' => $comment->id,
+                'content' => $comment->content,
+                'created_at' => $comment->created_at,
+                'author' => [
+                    'id' => $comment->author->id,
+                    'name' => $comment->author->name,
+                    'avatar' => $comment->author->avatar,
+                    'role' => $comment->author->role,
+                ]
+            ]
+        ], 201);
+    } catch (\Exception $e) {
+        \Log::error('Error in addCommentOfPost:', ['error' => $e->getMessage()]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to add comment',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     public function getPostsByEventId(Request $request, $eventId): JsonResponse
     {
@@ -182,6 +207,61 @@ class PostController extends Controller
         try {
             $comments = $this->postService->getCommentsOfPost($postId);
             return response()->json(['comments' => $comments], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Lấy tất cả posts của 1 channel
+    public function getPostsByChannel(Request $request, $channelId): JsonResponse
+    {
+        try {
+            $userId = $request->query('user_id') ?? auth()->id();
+            $posts = $this->postService->getPostsByChannel($channelId, $userId);
+            return response()->json(['posts' => $posts], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Tạo post mới trong channel
+    public function addPostToChannel(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'channel_id' => 'required|exists:channels,id',
+                'title' => 'required|string|max:255',
+                'content' => 'nullable|string',
+                'image' => 'nullable|string',
+                'author_id' => 'nullable|exists:users,id', // Tạm thời cho phép gửi author_id
+            ]);
+
+            $postData = [
+                'channel_id' => $request->channel_id,
+                'title' => $request->title,
+                'content' => $request->content,
+                'image' => $request->image,
+                'author_id' => $request->author_id ?? auth()->id(), // Ưu tiên auth, fallback về request
+                'status' => 'active',
+            ];
+            
+            if (!$postData['author_id']) {
+                return response()->json(['error' => 'Author ID is required'], 400);
+            }
+
+            $post = $this->postService->createPost($postData);
+            return response()->json(['post' => $post], 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'messages' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Server error',

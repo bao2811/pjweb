@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Services\UserService;
+use App\Utils\JWTUtil;
 
 class AuthController extends Controller
 {
@@ -33,11 +34,8 @@ class AuthController extends Controller
             return response()->json(['error' => 'Email hoặc mật khẩu không đúng'], 401);
         }
 
-        // // XÓA TẤT CẢ TOKEN CŨ (logout tất cả devices khác)
-        // $user->tokens()->delete();
-
-        // Tạo Sanctum token mới
-        $token = $user->createToken('auth-token')->plainTextToken;
+        $accessToken = JWTUtil::generateToken($user->id, 60); // 60 phút
+        $refreshToken = JWTUtil::generateToken($user->id, 60 * 24 * 7); // 7 ngày
 
         return response()->json([
             'message' => 'Đăng nhập thành công!',
@@ -47,7 +45,10 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
             ],
-            'token' => $token,
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken,
+            'token_type' => 'Bearer',
+            'expires_in' => 3600,
         ]);
     }
 
@@ -79,14 +80,65 @@ class AuthController extends Controller
 
         $user = $result['data'];
 
+        $accessToken = JWTUtil::generateToken($user->id, 60);
+        $refreshToken = JWTUtil::generateToken($user->id, 60 * 24 * 7);
+
         return response()->json([
             'message' => 'Registration successful',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-            ]
+            ],
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken,
+            'token_type' => 'Bearer',
+            'expires_in' => 3600,
         ], 201);
+    }
+
+
+    public function refresh(Request $request)
+    {
+        try {
+            $refreshToken = JWTUtil::extractToken($request);
+            $decoded = JWTUtil::validateToken($refreshToken);
+            
+            // Tạo access token mới
+            $newAccessToken = JWTUtil::generateToken($decoded->sub, 60);
+            
+            return response()->json([
+                'access_token' => $newAccessToken,
+                'token_type' => 'Bearer',
+                'expires_in' => 3600,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Invalid refresh token'
+            ], 401);
+        }
+    }
+
+    public function me(Request $request)
+    {
+        $userId = $request->attributes->get('userId');
+        $user = User::find($userId);
+
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'avatar' => $user->avatar,
+                'phone' => $user->phone,
+                'address' => $user->address,
+            ]
+        ]);
     }
 
 

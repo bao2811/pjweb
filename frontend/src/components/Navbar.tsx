@@ -4,40 +4,55 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FaBell, FaUser, FaSignOutAlt, FaCog, FaCalendarAlt, FaTrophy, FaHome } from 'react-icons/fa';
+import { useAuth } from '@/contexts/AuthContext';
+import api from '@/utils/api';
 
-interface NavbarProps {
-  user?: {
-    name: string;
-    email: string;
-    avatar?: string;
-    role: 'user' | 'manager' | 'admin';
-    points?: number;
-  };
-}
-
-export default function Navbar({ user }: NavbarProps) {
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isMounted, setIsMounted] = useState(false);
+export default function Navbar() {
+  const { user: currentUser, logout, loading } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: 'Sự kiện "Trồng cây xanh" được duyệt', read: false, time: '2 giờ trước' },
-    { id: 2, message: 'Bạn có 1 tin nhắn mới trong kênh "Dọn rác biển"', read: false, time: '1 ngày trước' },
-    { id: 3, message: 'Sự kiện "Hỗ trợ người già" sắp bắt đầu', read: true, time: '2 ngày trước' },
-  ]);
-
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setCurrentUser(JSON.parse(userData));
-    }
-    setIsMounted(true);
-  }, []);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  // Fetch notifications
+  useEffect(() => {
+    if (currentUser) {
+      fetchNotifications();
+    }
+  }, [currentUser]);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifications(true);
+      const response = await api.get('/notifications');
+      if (response.data && Array.isArray(response.data)) {
+        // Chỉ lấy 5 thông báo mới nhất
+        setNotifications(response.data.slice(0, 5));
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diff < 60) return 'Vừa xong';
+    if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)} ngày trước`;
+    
+    return date.toLocaleDateString('vi-VN');
+  };
 
   // Get base path theo role
   const getBasePath = (role: string) => {
@@ -53,11 +68,6 @@ export default function Navbar({ user }: NavbarProps) {
   };
 
   const basePath = currentUser ? getBasePath(currentUser.role) : '/user';
-
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -75,14 +85,18 @@ export default function Navbar({ user }: NavbarProps) {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.href = '/home/login';
+    logout(); // Dùng logout từ AuthContext
   };
 
-  const markAsRead = (id: number) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
+  const markAsRead = async (id: number) => {
+    try {
+      await api.post(`/notifications/${id}/read`);
+      setNotifications(notifications.map(n => 
+        n.id === id ? { ...n, is_read: true } : n
+      ));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
   return (
@@ -115,7 +129,7 @@ export default function Navbar({ user }: NavbarProps) {
               </Link>
               
               <Link 
-                href={`${basePath}/events`}
+                href={`/events`}
                 className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
               >
                 Sự kiện
@@ -178,15 +192,10 @@ export default function Navbar({ user }: NavbarProps) {
 
           {/* Right Side */}
           <div className="flex items-center space-x-4">
-            {currentUser ? (
+            {loading ? (
+              <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+            ) : currentUser ? (
               <>
-                {/* Points Badge */}
-                <div className="hidden sm:flex items-center space-x-2 bg-gradient-to-r from-yellow-100 to-orange-100 px-4 py-2 rounded-full border border-yellow-300">
-                  <FaTrophy className="text-yellow-600" />
-                  <span className="font-bold text-yellow-700">{currentUser.points || 0}</span>
-                  <span className="text-xs text-yellow-600">điểm</span>
-                </div>
-
                 {/* Notifications */}
                 <div className="relative" ref={notificationRef}>
                   <button
@@ -208,7 +217,11 @@ export default function Navbar({ user }: NavbarProps) {
                         <h3 className="text-white font-semibold">Thông báo</h3>
                       </div>
                       <div className="max-h-96 overflow-y-auto">
-                        {notifications.length === 0 ? (
+                        {loadingNotifications ? (
+                          <div className="p-4 text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+                          </div>
+                        ) : notifications.length === 0 ? (
                           <div className="p-4 text-center text-gray-500">
                             Không có thông báo mới
                           </div>
@@ -218,13 +231,14 @@ export default function Navbar({ user }: NavbarProps) {
                               key={noti.id}
                               onClick={() => markAsRead(noti.id)}
                               className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                                !noti.read ? 'bg-blue-50' : ''
+                                !noti.is_read ? 'bg-blue-50' : ''
                               }`}
                             >
-                              <p className={`text-sm ${!noti.read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
-                                {noti.message}
+                              <p className={`text-sm ${!noti.is_read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                                {noti.title}
                               </p>
-                              <p className="text-xs text-gray-500 mt-1">{noti.time}</p>
+                              <p className="text-xs text-gray-600 mt-1 line-clamp-2">{noti.message}</p>
+                              <p className="text-xs text-gray-500 mt-1">{formatTime(noti.created_at)}</p>
                             </div>
                           ))
                         )}
@@ -280,9 +294,6 @@ export default function Navbar({ user }: NavbarProps) {
                         <div className="flex items-center space-x-2 mt-2">
                           <span className="bg-white/20 text-white text-xs font-medium px-2 py-1 rounded-full capitalize">
                             {currentUser?.role || 'user'}
-                          </span>
-                          <span className="bg-white/20 text-white text-xs font-medium px-2 py-1 rounded-full">
-                            ⭐ {currentUser?.points || 0} điểm
                           </span>
                         </div>
                       </div>
@@ -350,10 +361,11 @@ export default function Navbar({ user }: NavbarProps) {
                   )}
                 </div>
               </>
+            ) : loading ? (
+              null
             ) : (
               /* Login/Register buttons when not logged in */
-              <div className="flex items-center space-x-3">
-                <Link
+              <div className="flex items-center space-x-3">\n                <Link
                   href="/home/login"
                   className="px-4 py-2 text-gray-700 hover:text-green-600 font-medium transition-colors"
                 >

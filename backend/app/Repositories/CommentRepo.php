@@ -21,4 +21,20 @@ class CommentRepo
     {
         return $this->commentModel->create($data);
     }
+
+    public function createComment(array $data): Comment
+    {
+        return $this->commentModel->create($data);
+    }
+
+    public function getCommentsByPost($postId)
+    {
+        return $this->commentModel
+            ->where('post_id', $postId)
+            ->whereNull('parent_id') // Chỉ lấy comment gốc, không lấy replies
+            ->with('author:id,name,avatar,role')
+            ->with('replies.author:id,name,avatar,role')
+            ->orderBy('created_at', 'asc')
+            ->get();
+    }
 }

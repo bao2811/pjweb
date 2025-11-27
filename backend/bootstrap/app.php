@@ -53,12 +53,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
             ],
             'api' => [
-                \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+                // ❌ BỎ JwtMiddleware - sẽ dùng ['jwt.auth'] trong routes thay vì auto-apply
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
                 \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
             ],
             'admin' => [
-                \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+                \App\Http\Middleware\JwtMiddleware::class,
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
                 \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
             ],
@@ -73,6 +73,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias middleware
         if (method_exists($middleware, 'alias')) {
             $middleware->alias([
+                'jwt.auth' => \App\Http\Middleware\JwtMiddleware::class,
+                'check.role' => \App\Http\Middleware\CheckRole::class,
                 'jwt' => \App\Http\Middleware\JwtMiddleware::class,
                 'auth' => \App\Http\Middleware\Authenticate::class,
                 'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,

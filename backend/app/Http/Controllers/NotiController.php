@@ -11,6 +11,61 @@ use App\Services\NotiService;
 
 class NotiController extends Controller
 {
+    protected $notiService;
+
+    public function __construct(NotiService $notiService)
+    {
+        $this->notiService = $notiService;
+    }
+
+    public function getUserNotifications(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $notifications = $this->notiService->getNotificationsByUserId($user->id);
+            return response()->json($notifications);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function markAsRead(Request $request, $id)
+    {
+        try {
+            $noti = $this->notiService->markAsRead($id);
+            if ($noti) {
+                return response()->json(['success' => true, 'notification' => $noti]);
+            }
+            return response()->json(['error' => 'Notification not found'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function markAllAsRead(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $this->notiService->markAllAsRead($user->id);
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteNotification(Request $request, $id)
+    {
+        try {
+            $result = $this->notiService->deleteNotification($id);
+            if ($result) {
+                return response()->json(['success' => true]);
+            }
+            return response()->json(['error' => 'Notification not found'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function sendNotification(Request $request)
     {
         $subscriptions = PushSubscription::all();

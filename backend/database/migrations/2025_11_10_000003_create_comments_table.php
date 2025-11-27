@@ -14,24 +14,11 @@ return new class extends Migration
             $table->unsignedBigInteger('author_id');
             $table->unsignedBigInteger('post_id')->nullable();
             $table->unsignedBigInteger('event_id')->nullable();
-            $table->timestamps();
+            $table->timestamp('created_at')->useCurrent();
 
-            // Khóa ngoại: người viết comment
-            // $table->foreign('author_id')
-            //       ->references('id')
-            //       ->on('users')
-            //       ->onDelete('cascade');
-
-            // // Comment có thể thuộc về post hoặc event
-            // $table->foreign('post_id')
-            //       ->references('id')
-            //       ->on('posts')
-            //       ->onDelete('cascade');
-
-            // $table->foreign('event_id')
-            //       ->references('id')
-            //       ->on('events')
-            //       ->onDelete('cascade');
+            $table->foreign('author_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('post_id')->references('id')->on('posts')->onDelete('cascade');
+            $table->foreign('event_id')->references('id')->on('events')->onDelete('cascade');
         });
     }
 

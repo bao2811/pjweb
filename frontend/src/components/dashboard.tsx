@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-// import Navbar from "./navbar";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   FaHeart,
   FaRegHeart,
@@ -19,15 +19,6 @@ import {
   FaTrophy,
   FaStar,
 } from "react-icons/fa";
-
-// Mock current user
-const mockCurrentUser = {
-  name: "Nguyễn Văn An",
-  email: "nguyenvanan@example.com",
-  avatar: "https://i.pravatar.cc/150?img=12",
-  role: "user" as const,
-  points: 1250,
-};
 
 // Mock data for volunteer events
 const mockPosts = [
@@ -137,25 +128,17 @@ const trendingEvents = [
 ];
 
 export default function Dashboard() {
+  const { user: currentUser } = useAuth(); // Dùng user từ AuthContext
   const [posts, setPosts] = useState<any[]>([]);
-  const [commentInputs, setCommentInputs] = useState<{ [key: number]: string }>(
-    {}
-  );
+  const [commentInputs, setCommentInputs] = useState<{ [key: number]: string }>({});
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-
-  useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      setCurrentUser(JSON.parse(userData));
-    }
-  }, []);
 
   async function fetchPosts() {
+    const token = localStorage.getItem('access_token');
     const res = await fetch("http://localhost:8000/api/posts/getAllPosts", {
       headers: {
-        Authorization: `Bearer ${currentUser?.token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
     const data = await res.json();
@@ -222,13 +205,6 @@ export default function Dashboard() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <h3 className="font-bold text-gray-800 mb-4">Thống kê nhanh</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-xl">
-                  <div className="flex items-center space-x-3">
-                    <FaStar className="text-yellow-500 text-xl" />
-                    <span className="text-gray-700 font-medium">Điểm</span>
-                  </div>
-                  <span className="text-2xl font-bold text-yellow-600">{currentUser?.points || 0}</span>
-                </div>
                 <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
                   <div className="flex items-center space-x-3">
                     <FaCalendarAlt className="text-green-500 text-xl" />

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Service;
+namespace App\Services;
 use App\Repositories\NotiRepo;
 use Exception;
 
@@ -18,7 +18,6 @@ class NotiService
         try {
             return $this->notiRepo->findByUserId($userId);
         } catch (Exception $e) {
-            // Handle exception
             return [];
         }
     }
@@ -28,8 +27,39 @@ class NotiService
         try {
             return $this->notiRepo->create($data);
         } catch (Exception $e) {
-            // Handle exception
             return null;
+        }
+    }
+
+    public function markAsRead($id)
+    {
+        try {
+            return $this->notiRepo->markAsRead($id);
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    public function markAllAsRead($userId)
+    {
+        try {
+            $notifications = $this->notiRepo->findByUserId($userId);
+            foreach ($notifications as $noti) {
+                $noti->is_read = true;
+                $noti->save();
+            }
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    public function deleteNotification($id)
+    {
+        try {
+            return $this->notiRepo->delete($id);
+        } catch (Exception $e) {
+            return false;
         }
     }
 }

@@ -25,7 +25,7 @@ class UserController extends Controller
 
    public function getUserDetails(Request $request)
    {
-      $userId = $request->session()->get('user_id');
+      $userId = auth()->id(); // Lấy từ JWT
       $id = $request->param('id');
       $user = $this->userService->getUserById($id);
       return response()->json($user);
@@ -40,7 +40,7 @@ class UserController extends Controller
              'password' => 'sometimes|string|min:6',
          ]);
          
-         $userId = $request->session()->get('user_id');
+         $userId = auth()->id(); // Lấy từ JWT
          $data = $request->only(['name', 'email', 'password']);
          $updatedUser = $this->userService->updateUser($userId, $data);
          return response()->json($updatedUser);
@@ -65,5 +65,37 @@ class UserController extends Controller
              'message' => $e->getMessage()
          ], 500);
       }
+   }
+
+   /**
+    * Get user's event history (completed/past events)
+    */
+   public function getEventHistory(Request $request)
+   {
+       try {
+           $userId = $request->input('user_id') ?? auth()->id();
+           
+           if (!$userId) {
+               return response()->json([
+                   'success' => false,
+                   'message' => 'User ID is required'
+               ], 400);
+           }
+
+           $history = $this->userService->getEventHistory($userId);
+
+           return response()->json([
+               'success' => true,
+               'history' => $history
+           ]);
+
+       } catch (\Exception $e) {
+           \Log::error('Error getting event history: ' . $e->getMessage());
+           return response()->json([
+               'success' => false,
+               'message' => 'Failed to get event history',
+               'error' => $e->getMessage()
+           ], 500);
+       }
    }
 }

@@ -28,13 +28,34 @@ class WebPushApi
             $webPush->queueNotification(
                 $subscription,
                 json_encode([
-                    'title' => 'Thông báo sự kiện 🎉',
-                    'body' => 'Manager vừa gửi thông báo cho bạn!',
-                    'url' => '/events/123'
+                    'title' => $title,
+                    'body' => $body,
+                    'url' => $url
                 ])
             );
         }
 
         $webPush->flush();
+    }
+
+    public static function sendNotificationToAll($title, $body, $url)
+    {
+        $auth = [
+            'VAPID' => [
+                'subject' => 'mailto:admin@domain.com',
+                'publicKey' => env('VAPID_PUBLIC_KEY'),
+                'privateKey' => env('VAPID_PRIVATE_KEY'),
+            ],
+        ];
+
+        $webPush = new WebPush($auth);
+
+        // Lấy tất cả subscriptions từ database (cần implement lấy từ users table)
+        // Tạm thời return empty vì chưa có table lưu subscriptions
+        // TODO: Implement get all user subscriptions from database
+        
+        $webPush->flush();
+        
+        return true;
     }
 }

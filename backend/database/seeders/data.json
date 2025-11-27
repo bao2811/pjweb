@@ -1,0 +1,164 @@
+{
+  "users": [
+    {
+      "name": "Nguyễn Văn A",
+      "email": "vana@example.com",
+      "password": "$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+      "phone": "0912345678",
+      "address": "123 Đường ABC, Quận 1, TP.HCM",
+      "role": "user",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
+      "status": "active",
+      "addressCard": null
+    },
+    {
+      "name": "Trần Thị B",
+      "email": "thib@example.com",
+      "password": "$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+      "phone": "0923456789",
+      "address": "456 Đường XYZ, Quận 2, TP.HCM",
+      "role": "user",
+      "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
+      "status": "active",
+      "addressCard": null
+    },
+    {
+      "name": "Lê Văn C",
+      "email": "vanc@example.com",
+      "password": "123456",
+      "phone": "0934567890",
+      "address": "789 Đường DEF, Quận 3, TP.HCM",
+      "role": "user",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+      "status": "active",
+      "addressCard": null
+    },
+    {
+      "name": "Admin User",
+      "email": "admin@example.com",
+      "password": "123456",
+      "phone": "0978901234",
+      "address": "100 Đường Admin, Quận 7, TP.HCM",
+      "role": "admin",
+      "avatar": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&h=150&fit=crop&crop=face",
+      "status": "active",
+      "addressCard": null
+    }
+  ],
+  "events": [
+    {
+      "title": "Dọn dẹp bãi biển Vũng Tàu",
+      "content": "Thu gom rác thải nhựa và làm sạch bãi biển.",
+      "image": "https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=600&h=400&fit=crop",
+      "address": "Bãi Trước, Vũng Tàu",
+      "start_time": "2025-12-15 08:00:00",
+      "end_time": "2025-12-15 17:00:00",
+      "author_id": 1,
+      "status": "upcoming"
+    },
+    {
+      "title": "Dạy học miễn phí cho trẻ em vùng cao",
+      "content": "Dạy học các môn cơ bản và tặng sách vở.",
+      "image": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop",
+      "address": "Sapa, Lào Cai",
+      "start_time": "2025-10-20 08:00:00",
+      "end_time": "2025-10-22 17:00:00",
+      "author_id": 2,
+      "status": "upcoming"
+    },
+    {
+      "title": "Nấu cơm từ thiện cuối tuần",
+      "content": "Chuẩn bị và phát cơm cho người vô gia cư.",
+      "image": "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&h=400&fit=crop",
+      "address": "Chùa Vĩnh Nghiêm, Q.3",
+      "start_time": "2025-09-28 16:00:00",
+      "end_time": "2025-09-28 20:00:00",
+      "author_id": 3,
+      "status": "upcoming"
+    }
+  ],
+  "posts": [
+    {
+      "title": "Trồng cây xanh - Vì môi trường sạch",
+      "content": "🌱 Cùng nhau trồng cây xanh tại Công viên Tao Đàn!",
+      "image": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop",
+      "address": "Công viên Tao Đàn, Q.1",
+      "start_time": "2025-10-15 07:00:00",
+      "end_time": "2025-10-15 11:00:00",
+      "author_id": 1,
+      "status": "active"
+    },
+    {
+      "title": "Dạy học cho trẻ em vùng cao",
+      "content": "📚 Chương trình dạy học miễn phí cho trẻ em vùng cao.",
+      "image": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop",
+      "address": "Sapa, Lào Cai",
+      "start_time": "2025-10-20 00:00:00",
+      "end_time": "2025-10-22 23:59:00",
+      "author_id": 2,
+      "status": "active"
+    },
+    {
+      "title": "Nấu cơm từ thiện cuối tuần",
+      "content": "🍲 Nấu cơm từ thiện cho người vô gia cư!",
+      "image": "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&h=400&fit=crop",
+      "address": "Chùa Vĩnh Nghiêm, Q.3",
+      "start_time": "2025-10-14 16:00:00",
+      "end_time": "2025-10-14 20:00:00",
+      "author_id": 3,
+      "status": "active"
+    }
+  ],
+  "comments": [
+    {
+      "content": "Sự kiện ý nghĩa quá!",
+      "author_id": 2,
+      "post_id": 1
+    },
+    {
+      "content": "Cho mình đăng ký tham gia.",
+      "author_id": 3,
+      "post_id": 1
+    },
+    {
+      "content": "Rất mong chờ chương trình này!",
+      "author_id": 1,
+      "post_id": 2
+    },
+    {
+      "content": "Mình sẽ rủ thêm bạn.",
+      "author_id": 2,
+      "post_id": 3
+    }
+  ],
+  "channels": [
+    { "title": "Kênh dọn dẹp biển", "event_id": 1 },
+    { "title": "Kênh dạy học vùng cao", "event_id": 2 },
+    { "title": "Kênh nấu cơm thiện nguyện", "event_id": 3 }
+  ],
+  "messages": [
+    { "sender_id": 1, "channel_id": 1, "content": "Mai mọi người tập trung lúc 7h nhé." },
+    { "sender_id": 2, "channel_id": 2, "content": "Chuẩn bị giáo án xong rồi!" },
+    { "sender_id": 3, "channel_id": 3, "content": "Ai có thêm nồi lớn mang giúp nha." }
+  ],
+  "event_managements": [
+    { "event_id": 1, "user_id": 1, "role": "leader" },
+    { "event_id": 2, "user_id": 2, "role": "coordinator" },
+    { "event_id": 3, "user_id": 3, "role": "organizer" }
+  ],
+  "join_events": [
+    { "user_id": 1, "event_id": 1, "status": "joined" },
+    { "user_id": 2, "event_id": 1, "status": "joined" },
+    { "user_id": 2, "event_id": 2, "status": "joined" },
+    { "user_id": 3, "event_id": 3, "status": "joined" }
+  ],
+  "notis": [
+    { "title": "Chào mừng!", "message": "Bạn đã tạo tài khoản thành công", "sender_id": 4 },
+    { "title": "Sự kiện mới", "message": "Dọn dẹp bãi biển vừa được đăng", "sender_id": 1 }
+  ],
+  "likes": [
+    { "user_id": 2, "post_id": 1, "status": "liked" },
+    { "user_id": 3, "post_id": 1, "status": "liked" },
+    { "user_id": 1, "post_id": 2, "status": "liked" }
+  ]
+}

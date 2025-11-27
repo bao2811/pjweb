@@ -18,16 +18,31 @@ class Post extends Model
         'title',
         'content',
         'author_id',
+        'channel_id', // Post thuộc channel
         'image', 
         'published_at',
         'like',
         'comment',
-        'event_id',
         'status',
     ];
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'author_id'); // nếu cột khóa ngoại là author_id
+        return $this->belongsTo(User::class, 'author_id');
+    }
+
+    public function channel()
+    {
+        return $this->belongsTo(Channel::class, 'channel_id');
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(\App\Models\Comment::class, 'post_id');
+    }
+
+    public function likes()
+    {
+        return $this->hasMany(\App\Models\Like::class, 'post_id');
     }
 }

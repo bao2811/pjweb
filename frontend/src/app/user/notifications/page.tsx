@@ -1,102 +1,84 @@
 ﻿"use client";
 import { useState, useEffect } from "react";
-import { FaBell, FaCheckCircle, FaExclamationCircle, FaInfoCircle, FaHeart, FaComment, FaUserPlus, FaCalendarCheck, FaTimes, FaCheck, FaEye, FaTrash } from "react-icons/fa";
+import { FaBell, FaCheckCircle, FaExclamationCircle, FaInfoCircle, FaHeart, FaComment, FaUserPlus, FaCalendarCheck, FaTimes, FaCheck, FaEye, FaTrash, FaCheckDouble } from "react-icons/fa";
+import api from "@/utils/api";
+import { useRouter } from "next/navigation";
 
 // Notification types
-type NotificationType = "success" | "info" | "warning" | "like" | "comment" | "join" | "approved";
+type NotificationType = "success" | "info" | "warning" | "like" | "comment" | "join" | "approved" | "event_approved" | "event_rejected" | "event_reminder" | "event_cancelled" | "achievement" | "new_event" | "system" | "message";
 
 interface Notification {
   id: number;
   type: NotificationType;
   title: string;
   message: string;
-  time: string;
-  isRead: boolean;
+  created_at: string;
+  is_read: boolean;
   link?: string;
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      type: "approved",
-      title: "Đơn đăng ký được chấp nhận",
-      message: "Đơn đăng ký tham gia sự kiện 'Dọn bãi biển Cần Giờ' của bạn đã được chấp nhận!",
-      time: "5 phút trước",
-      isRead: false,
-      link: "/user/events/1",
-    },
-    {
-      id: 2,
-      type: "comment",
-      title: "Bình luận mới",
-      message: "Nguyễn Văn B đã bình luận vào bài viết của bạn: 'Ý tưởng tuyệt vời!'",
-      time: "1 giờ trước",
-      isRead: false,
-      link: "/user/posts/123",
-    },
-    {
-      id: 3,
-      type: "like",
-      title: "Lượt thích mới",
-      message: "Trần Thị C và 15 người khác đã thích bài viết của bạn",
-      time: "2 giờ trước",
-      isRead: false,
-      link: "/user/posts/122",
-    },
-    {
-      id: 4,
-      type: "info",
-      title: "Sự kiện sắp diễn ra",
-      message: "Sự kiện 'Trồng cây xanh' sẽ diễn ra vào ngày mai lúc 7:00 sáng. Đừng quên tham gia nhé!",
-      time: "3 giờ trước",
-      isRead: true,
-      link: "/user/events/2",
-    },
-    {
-      id: 5,
-      type: "success",
-      title: "Hoàn thành sự kiện",
-      message: "Chúc mừng! Bạn đã hoàn thành sự kiện 'Nấu cơm từ thiện' và nhận được 50 điểm",
-      time: "1 ngày trước",
-      isRead: true,
-    },
-    {
-      id: 6,
-      type: "join",
-      title: "Thành viên mới",
-      message: "Có 5 tình nguyện viên mới tham gia sự kiện 'Dạy học miễn phí' của bạn",
-      time: "1 ngày trước",
-      isRead: true,
-      link: "/user/events/3",
-    },
-    {
-      id: 7,
-      type: "warning",
-      title: "Nhắc nhở",
-      message: "Bạn chưa hoàn thành hồ sơ cá nhân. Vui lòng cập nhật thông tin để tham gia nhiều sự kiện hơn",
-      time: "2 ngày trước",
-      isRead: true,
-      link: "/user/profile",
-    },
-  ]);
-
+  const router = useRouter();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/notifications');
+      
+      if (response.data && Array.isArray(response.data)) {
+        setNotifications(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
   const filteredNotifications = filter === "unread" 
-    ? notifications.filter((n) => !n.isRead)
+    ? notifications.filter((n) => !n.is_read)
     : notifications;
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diff < 60) return 'Vừa xong';
+    if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)} ngày trước`;
+    
+    return date.toLocaleDateString('vi-VN');
+  };
 
   const getIcon = (type: NotificationType) => {
     switch (type) {
-      case "success":
+      case "event_approved":
       case "approved":
         return <FaCheckCircle className="text-2xl text-green-500" />;
-      case "info":
-        return <FaInfoCircle className="text-2xl text-blue-500" />;
-      case "warning":
-        return <FaExclamationCircle className="text-2xl text-yellow-500" />;
+      case "event_rejected":
+        return <FaExclamationCircle className="text-2xl text-red-500" />;
+      case "event_reminder":
+        return <FaCalendarCheck className="text-2xl text-blue-500" />;
+      case "event_cancelled":
+        return <FaTimes className="text-2xl text-orange-500" />;
+      case "achievement":
+        return <FaCheckCircle className="text-2xl text-yellow-500" />;
+      case "new_event":
+        return <FaCalendarCheck className="text-2xl text-purple-500" />;
+      case "system":
+        return <FaInfoCircle className="text-2xl text-gray-500" />;
+      case "message":
+        return <FaComment className="text-2xl text-indigo-500" />;
       case "like":
         return <FaHeart className="text-2xl text-pink-500" />;
       case "comment":
@@ -110,13 +92,23 @@ export default function NotificationsPage() {
 
   const getBackgroundClass = (type: NotificationType) => {
     switch (type) {
-      case "success":
+      case "event_approved":
       case "approved":
         return "from-green-50 to-green-100 border-green-200";
-      case "info":
+      case "event_rejected":
+        return "from-red-50 to-red-100 border-red-200";
+      case "event_reminder":
         return "from-blue-50 to-blue-100 border-blue-200";
-      case "warning":
+      case "event_cancelled":
+        return "from-orange-50 to-orange-100 border-orange-200";
+      case "achievement":
         return "from-yellow-50 to-yellow-100 border-yellow-200";
+      case "new_event":
+        return "from-purple-50 to-purple-100 border-purple-200";
+      case "system":
+        return "from-gray-50 to-gray-100 border-gray-200";
+      case "message":
+        return "from-indigo-50 to-indigo-100 border-indigo-200";
       case "like":
         return "from-pink-50 to-pink-100 border-pink-200";
       case "comment":
@@ -128,40 +120,79 @@ export default function NotificationsPage() {
     }
   };
 
-  const markAsRead = (id: number) => {
-    setNotifications(
-      notifications.map((n) =>
-        n.id === id ? { ...n, isRead: true } : n
-      )
-    );
+  const markAsRead = async (id: number) => {
+    try {
+      await api.post(`/notifications/${id}/read`);
+      setNotifications(
+        notifications.map((n) =>
+          n.id === id ? { ...n, is_read: true } : n
+        )
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+  const markAllAsRead = async () => {
+    try {
+      await api.post('/notifications/read-all');
+      setNotifications(notifications.map((n) => ({ ...n, is_read: true })));
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
   };
 
-  const deleteNotification = (id: number) => {
-    setNotifications(notifications.filter((n) => n.id !== id));
+  const deleteNotification = async (id: number) => {
+    if (!confirm('Bạn có chắc muốn xóa thông báo này?')) return;
+    
+    try {
+      await api.delete(`/notifications/${id}`);
+      setNotifications(notifications.filter((n) => n.id !== id));
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark as read
+    if (!notification.is_read) {
+      markAsRead(notification.id);
+    }
+    
+    // Navigate to link if exists
+    if (notification.link) {
+      router.push(notification.link);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600 mb-2">
                 Thông Báo
               </h1>
-              <p className="text-gray-600">
-                Bạn có {unreadCount} thông báo chưa đọc
+              <p className="text-gray-600 flex items-center gap-2">
+                {unreadCount > 0 ? (
+                  <>
+                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                    {unreadCount} thông báo chưa đọc
+                  </>
+                ) : (
+                  <>
+                    <FaCheckCircle className="text-green-500" />
+                    Bạn đã đọc hết tất cả thông báo
+                  </>
+                )}
               </p>
             </div>
             <div className="relative">
-              <FaBell className="text-5xl text-green-500 animate-pulse" />
+              <FaBell className="text-5xl text-green-500" />
               {unreadCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
                   {unreadCount}
                 </span>
               )}
@@ -169,28 +200,31 @@ export default function NotificationsPage() {
           </div>
 
           {/* Filter & Actions */}
-          <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex flex-wrap gap-3 items-center bg-white rounded-xl p-4 shadow-md">
             <div className="flex gap-2">
               <button
                 onClick={() => setFilter("all")}
-                className={'px-6 py-2 rounded-xl font-semibold transition-all ' + (filter === "all" ? "bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-lg" : "bg-white text-gray-700 border border-gray-300 hover:border-green-500")}
+                className={'px-6 py-2.5 rounded-lg font-semibold transition-all text-sm ' + (filter === "all" ? "bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-lg transform scale-105" : "bg-gray-100 text-gray-700 hover:bg-gray-200")}
               >
-                Tất cả ({notifications.length})
+                Tất cả <span className="ml-1 opacity-75">({notifications.length})</span>
               </button>
               <button
                 onClick={() => setFilter("unread")}
-                className={'px-6 py-2 rounded-xl font-semibold transition-all ' + (filter === "unread" ? "bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-lg" : "bg-white text-gray-700 border border-gray-300 hover:border-green-500")}
+                className={'px-6 py-2.5 rounded-lg font-semibold transition-all text-sm relative ' + (filter === "unread" ? "bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-lg transform scale-105" : "bg-gray-100 text-gray-700 hover:bg-gray-200")}
               >
-                Chưa đọc ({unreadCount})
+                Chưa đọc <span className="ml-1 opacity-75">({unreadCount})</span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+                )}
               </button>
             </div>
 
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="ml-auto px-6 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-all font-semibold flex items-center gap-2"
+                className="ml-auto px-5 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all font-semibold flex items-center gap-2 shadow-md hover:shadow-lg text-sm"
               >
-                <FaCheck />
+                <FaCheckDouble />
                 Đánh dấu tất cả đã đọc
               </button>
             )}
@@ -198,8 +232,15 @@ export default function NotificationsPage() {
         </div>
 
         {/* Notifications List */}
-        <div className="space-y-4">
-          {filteredNotifications.length === 0 ? (
+        <div className="space-y-3">
+          {loading ? (
+            <div className="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-100">
+              <div className="flex flex-col items-center gap-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+                <p className="text-gray-600 font-medium">Đang tải thông báo...</p>
+              </div>
+            </div>
+          ) : filteredNotifications.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-100">
               <FaBell className="text-6xl text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-400 mb-2">
@@ -215,60 +256,60 @@ export default function NotificationsPage() {
             filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={'relative bg-gradient-to-r rounded-2xl shadow-md border p-5 transition-all hover:shadow-lg group ' + getBackgroundClass(notification.type) + (notification.isRead ? " opacity-60" : "")}
+                className={'relative bg-gradient-to-r rounded-xl shadow-md border transition-all hover:shadow-xl group cursor-pointer ' + getBackgroundClass(notification.type) + (!notification.is_read ? " border-l-4" : " opacity-70")}
+                onClick={() => handleNotificationClick(notification)}
               >
                 {/* Unread indicator */}
-                {!notification.isRead && (
-                  <div className="absolute top-3 left-3 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                {!notification.is_read && (
+                  <div className="absolute top-4 left-4 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-lg"></div>
                 )}
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 p-4">
                   {/* Icon */}
-                  <div className="flex-shrink-0">
-                    <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-md">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-11 h-11 bg-white rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                       {getIcon(notification.type)}
                     </div>
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <h3 className="font-bold text-gray-800 text-lg">
+                    <div className="flex items-start justify-between gap-4 mb-1">
+                      <h3 className={'font-bold text-gray-800 text-sm ' + (!notification.is_read ? "text-gray-900" : "")}>
                         {notification.title}
                       </h3>
                       <span className="text-xs text-gray-500 whitespace-nowrap">
-                        {notification.time}
+                        {formatTime(notification.created_at)}
                       </span>
                     </div>
-                    <p className="text-gray-700 mb-3 leading-relaxed">
+                    
+                    <p className="text-gray-700 text-sm mb-3 leading-relaxed">
                       {notification.message}
                     </p>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-3">
-                      {notification.link && (
-                        <a
-                          href={notification.link}
-                          className="text-sm font-semibold text-green-600 hover:text-green-700 flex items-center gap-1 transition-all"
-                        >
-                          <FaEye />
-                          Xem chi tiết
-                        </a>
-                      )}
-                      {!notification.isRead && (
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {!notification.is_read && (
                         <button
-                          onClick={() => markAsRead(notification.id)}
-                          className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsRead(notification.id);
+                          }}
+                          className="px-3 py-1.5 bg-white text-green-600 rounded-lg hover:bg-green-50 transition-all text-xs font-semibold flex items-center gap-1 shadow-sm"
                         >
-                          <FaCheck />
+                          <FaCheck className="text-xs" />
                           Đánh dấu đã đọc
                         </button>
                       )}
+                      
                       <button
-                        onClick={() => deleteNotification(notification.id)}
-                        className="ml-auto text-sm font-semibold text-red-600 hover:text-red-700 flex items-center gap-1 transition-all opacity-0 group-hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(notification.id);
+                        }}
+                        className="px-3 py-1.5 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-all text-xs font-semibold flex items-center gap-1 shadow-sm"
                       >
-                        <FaTrash />
+                        <FaTrash className="text-xs" />
                         Xóa
                       </button>
                     </div>
@@ -278,36 +319,6 @@ export default function NotificationsPage() {
             ))
           )}
         </div>
-
-        {/* Summary Stats */}
-        {notifications.length > 0 && (
-          <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl shadow-md p-4 text-center border border-gray-100">
-              <FaBell className="text-3xl text-green-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-gray-800">{notifications.length}</p>
-              <p className="text-sm text-gray-600">Tổng số</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-md p-4 text-center border border-gray-100">
-              <FaEye className="text-3xl text-blue-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-gray-800">
-                {notifications.filter((n) => n.isRead).length}
-              </p>
-              <p className="text-sm text-gray-600">Đã đọc</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-md p-4 text-center border border-gray-100">
-              <FaExclamationCircle className="text-3xl text-red-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-gray-800">{unreadCount}</p>
-              <p className="text-sm text-gray-600">Chưa đọc</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-md p-4 text-center border border-gray-100">
-              <FaHeart className="text-3xl text-pink-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-gray-800">
-                {notifications.filter((n) => n.type === "like" || n.type === "comment").length}
-              </p>
-              <p className="text-sm text-gray-600">Tương tác</p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

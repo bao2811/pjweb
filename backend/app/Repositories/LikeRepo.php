@@ -59,5 +59,16 @@ class LikeRepo
         return $listike;
     }
 
+    public function getLikeByUserAndPost($userId, $postId)
+    {
+        return Like::where('user_id', $userId)
+                   ->where('post_id', $postId)
+                   ->first();
+    }
+
+    public function getListLikeOfPost($postId)
+    {
+        return $this->getListLikeByPost($postId);
+    }
 }
 

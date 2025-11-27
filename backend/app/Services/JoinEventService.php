@@ -48,4 +48,9 @@ class JoinEventService {
         }
     }
 
+    public function getMyRegistrations($userId)
+    {
+        return $this->joinEventRepo->getMyRegistrations($userId);
+    }
+
 }

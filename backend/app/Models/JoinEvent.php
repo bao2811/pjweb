@@ -21,4 +21,20 @@ class JoinEvent extends Model
         'joined_at',
         'created_at',
     ];
+
+    /**
+     * Relationship with User
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relationship with Event
+     */
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
 }

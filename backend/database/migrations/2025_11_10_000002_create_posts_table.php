@@ -15,24 +15,17 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('content')->nullable();
-            
-            // Khóa ngoại (có thể null nếu chưa gán)
-            $table->unsignedBigInteger('author_id')->nullable();
-            $table->unsignedBigInteger('user_id')->nullable();
-            $table->unsignedBigInteger('event_id')->nullable();
-            
-            $table->text('image')->nullable();
-            $table->timestamp('published_at')->nullable();
-            $table->integer('like')->default(0);
-            $table->integer('comment')->default(0);
-            $table->boolean('status')->default(true);
-            
-            $table->timestamps(); // tạo created_at, updated_at
+            $table->string('image')->nullable();
+            $table->string('address')->nullable();
+            $table->timestamp('start_time')->nullable();
+            $table->timestamp('end_time')->nullable();
+            $table->unsignedBigInteger('author_id');
+            $table->unsignedBigInteger('channel_id'); // Post thuộc channel
+            $table->string('status')->default('active');
+            $table->timestamps();
 
-            // Các khóa ngoại (chỉ chạy nếu bạn đã có bảng users, events)
             $table->foreign('author_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
-            $table->foreign('event_id')->references('id')->on('events')->onDelete('set null');
+            $table->foreign('channel_id')->references('id')->on('channels')->onDelete('cascade');
         });
     }
 

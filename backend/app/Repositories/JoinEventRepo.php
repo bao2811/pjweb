@@ -93,4 +93,15 @@ class JoinEventRepo
         }
         return false;
     }
+
+    public function getMyRegistrations($userId)
+    {
+        return JoinEvent::where('user_id', $userId)
+                        ->with(['event' => function($query) {
+                            $query->with('author:id,name,avatar');
+                        }])
+                        ->whereHas('event') // Only get registrations where event still exists
+                        ->orderBy('created_at', 'desc')
+                        ->get();
+    }
 }
