@@ -1,0 +1,27 @@
+[00:00:18.008] Server  LOG     
+[00:00:18.009] Server  LOG        We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+[00:00:18.010] Server  LOG        The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+[00:00:18.011] Server  LOG        	- include was updated to add '.next/dev/types/**/*.ts'
+[00:00:18.012] Server  LOG     
+[00:00:18.012] Server  LOG        The following mandatory changes were made to your tsconfig.json:
+
+[00:00:18.013] Server  LOG        	- jsx was set to react-jsx (next.js uses the React automatic runtime)
+[00:00:18.013] Server  LOG     
+[00:00:21.001] Server  LOG      ✓ Ready in 14.5s
+[00:01:59.065] Server  LOG      ○ Compiling / ...
+[00:02:14.168] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:02:15.478] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:02:15.478] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/","route":"/"}
+[00:02:15.478] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3000/ color: rgb(120, 120, 120) color: inherit {"dp":"/","o":"http://localhost:3000/","r":"","sdkn":"@vercel/analytics/next","sdkv":"1.5.0","sv":"0.1.3","ts":1764223352673}
+[00:03:10.847] Server  ERROR   E:\v0-event-management-ui-v1-main\.next\dev\server\chunks\node_modules_c31cf40a._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:03:10.850] Server  ERROR   E:\v0-event-management-ui-v1-main\.next\dev\server\chunks\[root-of-the-server]__ea783b8c._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:03:10.885] Server  ERROR   E:\v0-event-management-ui-v1-main\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:03:10.908] Server  ERROR   E:\v0-event-management-ui-v1-main\.next\dev\server\chunks\node_modules_next_09ff02cc._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:03:10.920] Server  ERROR   E:\v0-event-management-ui-v1-main\node_modules\next\dist\server\base-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:03:10.928] Server  ERROR   E:\v0-event-management-ui-v1-main\node_modules\next\dist\server\next-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:03:10.933] Server  ERROR   E:\v0-event-management-ui-v1-main\node_modules\next\dist\server\dev\next-dev-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:03:10.936] Server  ERROR   E:\v0-event-management-ui-v1-main\node_modules\next\dist\trace\trace.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:03:10.942] Server  ERROR   E:\v0-event-management-ui-v1-main\node_modules\next\dist\server\lib\router-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:03:10.944] Server  ERROR   E:\v0-event-management-ui-v1-main\node_modules\next\dist\server\lib\start-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:03:10.949] Server  ERROR   Upload error: Error: Vercel Blob: No token found. Either configure the `BLOB_READ_WRITE_TOKEN` environment variable, or pass a `token` option to your calls.
