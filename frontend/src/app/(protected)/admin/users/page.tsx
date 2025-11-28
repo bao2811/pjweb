@@ -121,6 +121,10 @@ export default function UserManagementPage() {
     }
   }, [authLoading, hasRole, router]);
 
+  const jwt_token = localStorage.getItem("jwt_token")
+    ? localStorage.getItem("jwt_token")
+    : null;
+
   // Fetch users from API
   useEffect(() => {
     fetchUsers();
@@ -129,11 +133,11 @@ export default function UserManagementPage() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/admin/users`, {
+      const response = await authFetch(`/admin/getAllUsers`, {
         headers: {
           "Content-Type": "application/json",
           // Add authorization header if needed
-          // "Authorization": `Bearer ${token}`
+          Authorization: `Bearer ${jwt_token}`,
         },
       });
 
@@ -535,7 +539,7 @@ export default function UserManagementPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Welcome Banner */}
-      {currentUser && (
+      {/* {currentUser && (
         <div className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-4">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div>
@@ -547,8 +551,8 @@ export default function UserManagementPage() {
               <p className="font-semibold uppercase">{currentUser.role}</p>
             </div>
           </div>
-        </div>
-      )}
+        </div> */}
+      {/* )} */}
 
       {/* Header */}
       <div className="bg-white border-b border-blue-100 shadow-sm sticky top-0 z-40">

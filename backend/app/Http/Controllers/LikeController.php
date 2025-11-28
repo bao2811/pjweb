@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use App\Models\Like;
 use App\Services\LikeService;
 
@@ -15,15 +16,24 @@ class LikeController extends Controller
         $this->likeService = $likeService;
     }
 
-    public function likePost(Request $request, $id): JsonResponse
+
+    public function getAllLikes(): JsonResponse
+    {
+        $likes = $this->likeService->all();
+        return response()->json(['likes' => $likes]);
+    }
+    
+    public function likePost(Request $request, $id)
     {
         try {
             $user_id = $request->user()->id;
             $liked = $this->likeService->likePost($user_id, $id);
+
             if (!$liked) {
-                return response()->json(['error' => 'Post not found'], 404);
+                return response()->json(['error' => 'Posts Not Found'], 404);
             }
-            return response()->json(['message' => 'Post liked successfully'], 200);
+
+            return response()->json(['message' => 'Post liked successfully', 'post' => $liked], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Server error',
@@ -32,12 +42,14 @@ class LikeController extends Controller
         }
     }
 
-    public function unlikePost(Request $request, $id): JsonResponse
+
+    public function unlikePost(Request $request, $id)
     {
         try {
-            $unliked = $this->likeService->unlikePost($id);
+            $user_id = $request->user()->id;
+            $unliked = $this->likeService->unLikePost($user_id, $id);
             if (!$unliked) {
-                return response()->json(['error' => 'Post not found'], 404);
+                return response()->json(['error' => 'Like not found or already unliked'], 404);
             }
             return response()->json(['message' => 'Post unliked successfully'], 200);
         } catch (\Exception $e) {

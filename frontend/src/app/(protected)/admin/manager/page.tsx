@@ -65,7 +65,7 @@ type SortField =
   | "eventsManaged";
 type SortOrder = "asc" | "desc";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function ManagerManagement() {
   const { user: currentUser, isLoading: authLoading, hasRole } = useAuth();
@@ -101,16 +101,21 @@ export default function ManagerManagement() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
   const [editingManager, setEditingManager] = useState<Manager | null>(null);
-  const [newManager, setNewManager] = useState<Partial<Manager>>({
+  const [newManager, setNewManager] = useState<any>({
     username: "",
     email: "",
     phone: "",
     address: "",
+    password: "",
+    address_card: "",
+    image: "",
   });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [headerCompact, setHeaderCompact] = useState(false);
 
+  const token = localStorage.getItem("jwt_token");
   // Fetch managers from API
   useEffect(() => {
     fetchManagers();
@@ -119,11 +124,11 @@ export default function ManagerManagement() {
   const fetchManagers = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/admin/users?role=manager`, {
+      const response = await authFetch(`/admin/getAllManagers`, {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
-          // Add authorization header if needed
-          // "Authorization": `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -140,7 +145,6 @@ export default function ManagerManagement() {
       setIsLoading(false);
     }
   };
-
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -157,6 +161,18 @@ export default function ManagerManagement() {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Shrink/hide header on scroll: when user scrolls down make header compact so
+  // it can be covered by a higher-z navbar. This is a simple, conservative
+  // behavior that reduces title size and padding.
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY || window.pageYOffset;
+      setHeaderCompact(y > 80);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   // Toast notifications
@@ -329,38 +345,42 @@ export default function ManagerManagement() {
   };
 
   const handleCreateManager = async () => {
-    if (!newManager.username || !newManager.email) {
+    if (!newManager.username || !newManager.email || !newManager.password) {
       showToast("error", "Vui lòng điền đầy đủ thông tin");
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/admin/users`, {
+      // Use authFetch so it attaches tokens/handles refresh
+      const response = await authFetch(`/admin/createManager`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          ...newManager,
-          role: "manager",
-          status: "pending",
+          username: newManager.username,
+          email: newManager.email,
+          password: newManager.password,
+          phone: newManager.phone || null,
+          address: newManager.address || null,
+          address_card: newManager.address_card || null,
+          image: newManager.image || null,
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to create manager");
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        throw new Error("Failed to create manager: " + errText);
+      }
 
       const data = await response.json();
       const createdManager = data.user || data;
 
       setManagers([...managers, createdManager]);
       setShowCreateModal(false);
-      setNewManager({
-        username: "",
-        email: "",
-        phone: "",
-        address: "",
-      });
+      setNewManager({ username: "", email: "", phone: "", address: "" });
       showToast(
         "success",
         `Đã tạo manager ${createdManager.username} thành công!`
@@ -465,7 +485,7 @@ export default function ManagerManagement() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Welcome Banner */}
-      {currentUser && (
+      {/* {currentUser && (
         <div className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-4">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div>
@@ -478,18 +498,30 @@ export default function ManagerManagement() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Header */}
-      <div className="bg-white border-b border-blue-100 shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="bg-white border-b border-blue-100 shadow-sm transition-all duration-300 z-20">
+        <div
+          className={`max-w-7xl mx-auto px-6 ${
+            headerCompact ? "py-1" : "py-4"
+          }`}
+        >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent flex items-center">
+              <h1
+                className={`font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent flex items-center ${
+                  headerCompact ? "text-lg sm:text-xl" : "text-2xl sm:text-3xl"
+                }`}
+              >
                 <FaUserShield className="mr-3 text-blue-600" />
                 Quản lý Manager
               </h1>
-              <p className="text-blue-700 mt-2 text-base sm:text-lg">
+              <p
+                className={`text-blue-700 mt-2 ${
+                  headerCompact ? "text-xs" : "text-sm sm:text-base"
+                }`}
+              >
                 Quản lý tài khoản manager
               </p>
             </div>
@@ -568,7 +600,7 @@ export default function ManagerManagement() {
                 placeholder="Tìm theo tên, email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-12 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-blue-200 focus:border-blue-400 transition duration-200 placeholder:text-gray-400"
+                className="w-full pl-12 pr-12 py-3.5 text-base text-black border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-blue-200 focus:border-blue-400 transition duration-200 placeholder:text-gray-400"
               />
               {searchTerm && (
                 <button
@@ -592,7 +624,7 @@ export default function ManagerManagement() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-4 py-3 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-green-200 focus:border-green-400 transition duration-200 bg-white cursor-pointer"
+                className="w-full px-4 py-3 text-base text-black border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-green-200 focus:border-green-400 transition duration-200 bg-white cursor-pointer"
               >
                 <option value="all">Tất cả trạng thái</option>
                 <option value="active">✅ Hoạt động</option>
@@ -693,7 +725,7 @@ export default function ManagerManagement() {
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="px-4 py-2 border-2 border-gray-200 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer bg-white"
+                className="px-4 py-2 border-2 border-gray-200 rounded-lg text-base text-black focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer bg-white"
               >
                 <option value={10}>10 dòng</option>
                 <option value={20}>20 dòng</option>
@@ -1058,16 +1090,23 @@ export default function ManagerManagement() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex items-center justify-between rounded-t-2xl z-10">
-              <h2 className="text-2xl font-bold flex items-center">
-                <FaPlus className="mr-3 text-3xl" />
-                Thêm Manager Mới
-              </h2>
+        <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-gray-200">
+            <div className="sticky top-0 bg-gradient-to-r from-slate-800 to-slate-700 text-white p-5 flex items-center justify-between rounded-t-2xl z-20">
+              <div>
+                <h2 className="text-xl font-semibold flex items-center">
+                  <FaPlus className="mr-3 text-2xl" />
+                  Tạo tài khoản Manager
+                </h2>
+                <p className="text-sm opacity-80 mt-1">
+                  Vui lòng cung cấp thông tin chính xác để duyệt và quản lý tài
+                  khoản.
+                </p>
+              </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-white hover:bg-white hover:text-blue-600 p-2 rounded-lg transition duration-200 text-2xl font-bold"
+                className="text-white hover:bg-white hover:text-slate-800 p-2 rounded-lg transition duration-200 text-xl font-bold"
+                aria-label="Close create manager modal"
               >
                 ✕
               </button>
@@ -1076,7 +1115,7 @@ export default function ManagerManagement() {
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-base font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Tên đăng nhập <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1086,12 +1125,12 @@ export default function ManagerManagement() {
                       setNewManager({ ...newManager, username: e.target.value })
                     }
                     placeholder="admin123"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-base"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-sm bg-slate-50 text-black"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-base font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Email <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1101,37 +1140,70 @@ export default function ManagerManagement() {
                       setNewManager({ ...newManager, email: e.target.value })
                     }
                     placeholder="email@example.com"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-base"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-sm bg-slate-50 text-black"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-base font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Số điện thoại
                   </label>
                   <input
                     type="tel"
-                    value={newManager.phone}
+                    value={(newManager as any).phone || ""}
                     onChange={(e) =>
                       setNewManager({ ...newManager, phone: e.target.value })
                     }
                     placeholder="0901234567"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-base"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-base text-black"
                   />
                 </div>
 
                 <div>
                   <label className="block text-base font-semibold text-gray-700 mb-2">
-                    Địa chỉ
+                    CCCD / CMND
                   </label>
                   <input
                     type="text"
-                    value={newManager.address}
+                    value={(newManager as any).address_card || ""}
                     onChange={(e) =>
-                      setNewManager({ ...newManager, address: e.target.value })
+                      setNewManager({
+                        ...newManager,
+                        address_card: e.target.value,
+                      })
                     }
-                    placeholder="123 Đường ABC, Quận XYZ, Hà Nội"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-base"
+                    placeholder="123456789012"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-base text-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-base font-semibold text-gray-700 mb-2">
+                    Link Avatar
+                  </label>
+                  <input
+                    type="url"
+                    value={(newManager as any).image || ""}
+                    onChange={(e) =>
+                      setNewManager({ ...newManager, image: e.target.value })
+                    }
+                    placeholder="https://.../avatar.jpg"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-base text-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-base font-semibold text-gray-700 mb-2">
+                    Mật khẩu <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={(newManager as any).password || ""}
+                    onChange={(e) =>
+                      setNewManager({ ...newManager, password: e.target.value })
+                    }
+                    placeholder="Mật khẩu (ít nhất 6 ký tự)"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-base text-black"
                   />
                 </div>
               </div>
@@ -1149,7 +1221,7 @@ export default function ManagerManagement() {
                 disabled={isLoading}
                 className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition duration-200 text-base font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Đang xử lý..." : "✅ Tạo Manager"}
+                {isLoading ? "Đang xử lý..." : "Tạo Manager"}
               </button>
             </div>
           </div>
@@ -1188,7 +1260,7 @@ export default function ManagerManagement() {
                         username: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-base"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-base text-black"
                   />
                 </div>
 
@@ -1205,7 +1277,7 @@ export default function ManagerManagement() {
                         email: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-base"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-base text-black"
                   />
                 </div>
 
@@ -1222,7 +1294,7 @@ export default function ManagerManagement() {
                         phone: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-base"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-base text-black"
                   />
                 </div>
 
@@ -1239,7 +1311,7 @@ export default function ManagerManagement() {
                         address: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-base"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-base text-black"
                   />
                 </div>
               </div>
@@ -1256,7 +1328,7 @@ export default function ManagerManagement() {
                       status: e.target.value as "active" | "locked" | "pending",
                     })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-base cursor-pointer bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-base text-black cursor-pointer bg-white"
                 >
                   <option value="active">✅ Hoạt động</option>
                   <option value="locked">🔒 Đã khóa</option>

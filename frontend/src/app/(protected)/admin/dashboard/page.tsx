@@ -1,6 +1,5 @@
 // app/admin/layout.tsx
 "use client";
-import { AuthProvider } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";

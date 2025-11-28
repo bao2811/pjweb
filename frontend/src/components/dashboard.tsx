@@ -1,6 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { authFetch, decodeToken } from "@/utils/auth";
 import Image from "next/image";
+import CreatePost from "@/components/CreatePost";
 import {
   FaHeart,
   FaRegHeart,
@@ -13,89 +15,8 @@ import {
   FaPaperPlane,
   FaSmile,
   FaImage,
+  FaPlus,
 } from "react-icons/fa";
-
-// Mock data for volunteer events
-// const mockPosts = [
-//   {
-//     id: 1,
-//     author: {
-//       name: "Nguyễn Văn An",
-//       avatar:
-//         "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-//       role: "Tình nguyện viên",
-//     },
-//     timestamp: "2 giờ trước",
-//     content:
-//       "🌱 Cùng nhau trồng cây xanh tại Công viên Tao Đàn! Hãy tham gia với chúng mình để góp phần làm xanh thành phố. Mỗi cái cây nhỏ hôm nay sẽ là tấm bóng mát cho tương lai! 🌳",
-//     event: {
-//       title: "Trồng cây xanh - Vì môi trường sạch",
-//       date: "15/10/2025",
-//       time: "7:00 - 11:00",
-//       location: "Công viên Tao Đàn, Q.1",
-//       participants: 45,
-//       maxParticipants: 100,
-//     },
-//     image:
-//       "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop",
-//     likes: 128,
-//     comments: 23,
-//     shares: 12,
-//     isLiked: false,
-//   },
-//   {
-//     id: 2,
-//     author: {
-//       name: "Trần Thị Bình",
-//       avatar:
-//         "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
-//       role: "Trưởng nhóm",
-//     },
-//     timestamp: "5 giờ trước",
-//     content:
-//       "📚 Chương trình dạy học miễn phí cho trẻ em vùng cao đang cần thêm tình nguyện viên! Nếu bạn có kiến thức và tình yêu với trẻ em, hãy tham gia cùng chúng mình nhé! ❤️",
-//     event: {
-//       title: "Dạy học cho trẻ em vùng cao",
-//       date: "20-22/10/2025",
-//       time: "Cả ngày",
-//       location: "Sapa, Lào Cai",
-//       participants: 12,
-//       maxParticipants: 20,
-//     },
-//     image:
-//       "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop",
-//     likes: 89,
-//     comments: 15,
-//     shares: 8,
-//     isLiked: true,
-//   },
-//   {
-//     id: 3,
-//     author: {
-//       name: "Lê Minh Châu",
-//       avatar:
-//         "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-//       role: "Tình nguyện viên",
-//     },
-//     timestamp: "1 ngày trước",
-//     content:
-//       "🍲 Nấu cơm từ thiện cho người vô gia cư! Cùng nhau mang đến những bữa ăn ấm áp và tình người đến với những hoàn cảnh khó khăn trong thành phố. Mọi người hãy tham gia nhé! 🤝",
-//     event: {
-//       title: "Nấu cơm từ thiện cuối tuần",
-//       date: "14/10/2025",
-//       time: "16:00 - 20:00",
-//       location: "Chùa Vĩnh Nghiêm, Q.3",
-//       participants: 67,
-//       maxParticipants: 80,
-//     },
-//     image:
-//       "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&h=400&fit=crop",
-//     likes: 156,
-//     comments: 31,
-//     shares: 19,
-//     isLiked: false,
-//   },
-// ];
 
 export default function Dashboard() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -111,37 +32,123 @@ export default function Dashboard() {
   }>({});
 
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
-  async function fetchPosts() {
-    const res = await fetch("http://localhost:8000/api/posts/getAllPosts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ id: 4 }),
-    });
-    const data = await res.json();
-    if (data.posts) {
-      setPosts(data.posts);
-      console.log(data.posts);
+  const token = localStorage.getItem("jwt_token") || null;
+
+  // Decode current user from token
+  useEffect(() => {
+    if (token) {
+      try {
+        const payload = decodeToken(token);
+        setCurrentUser(payload);
+      } catch (e) {
+        console.error("Failed to decode token:", e);
+      }
     }
-    setLoading(false);
+  }, [token]);
+
+  // Fetch posts from backend. Uses cursor-based pagination by index (id) instead of offset.
+  // Server should accept { last_id?: number, limit?: number } and return next N posts where id < last_id.
+  // SQL example (MySQL/Postgres):
+  // SELECT * FROM posts WHERE id < :last_id ORDER BY id DESC LIMIT :limit;
+  // For initial load, omit last_id and return newest posts: ORDER BY id DESC LIMIT :limit
+  async function fetchPosts(lastId?: number, limit: number = 20) {
+    try {
+      if (lastId) setLoadingMore(true);
+      else setLoading(true);
+
+      const res = await authFetch("/api/posts/getAllPosts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ last_id: lastId || null, limit: limit }),
+      });
+
+      if (!res.ok) {
+        console.error("Failed to fetch posts", res.status);
+        return;
+      }
+
+      const data = await res.json();
+      const fetched = data.posts || data;
+
+      console.log("Fetched posts:", fetched);
+
+      if (Array.isArray(fetched)) {
+        // Normalize each post so the UI expects `isLiked` (0/1) and `likes`/`comments` fields
+        const normalized = fetched.map((p: any) => {
+          const isLikedVal =
+            typeof p.isLiked !== "undefined"
+              ? Number(p.isLiked)
+              : typeof p.isliked !== "undefined"
+              ? Number(p.isliked)
+              : typeof p.liked !== "undefined"
+              ? Number(p.liked)
+              : 0;
+
+          return {
+            ...p,
+            // provide both camelCase and lowercase variants used across the app
+            isLiked: isLikedVal,
+            isliked: isLikedVal,
+            // ensure likes/comments exist (backend uses `likes` and `comments`)
+            likes: Number(
+              typeof p.likes !== "undefined" ? p.likes : p.like || 0
+            ),
+            comments: Number(
+              typeof p.comments !== "undefined" ? p.comments : p.comment || 0
+            ),
+          };
+        });
+
+        if (lastId) {
+          // Append
+          setPosts((prev) => [...prev, ...normalized]);
+        } else {
+          // Initial load / refresh
+          setPosts(normalized);
+        }
+
+        // If fewer than limit returned, no more posts
+        if (normalized.length < limit) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
   }
 
-  // if (loading === false && posts.length === 0) {
-  //   setLoading(true);
-  //   fetchPosts();
-  // }
+  // Initial load is handled in useEffect to avoid duplicate calls
 
   const handleLike = async (postId: number) => {
-    // Optimistic update: toggle like locally
+    // Optimistic update: toggle like locally (use numeric 0/1 and set both variants)
     const previousPosts = posts;
+    const prev = previousPosts.find((p) => p.id === postId);
+    const wasLiked = prev ? Number(prev.isLiked ?? prev.isliked ?? 0) : 0;
+    const newLiked = wasLiked === 1 ? 0 : 1;
+
     const updatedPosts = posts.map((post) =>
       post.id === postId
         ? {
             ...post,
-            isLiked: !post.isLiked,
-            likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+            isLiked: newLiked,
+            isliked: newLiked,
+            likes:
+              newLiked === 1
+                ? Number(post.likes || 0) + 1
+                : Number(post.likes || 0) - 1,
           }
         : post
     );
@@ -149,12 +156,30 @@ export default function Dashboard() {
     setPosts(updatedPosts);
 
     try {
-      const res = await fetch("http://localhost:8000/api/posts/likePost", {
+      // Decide which API to call based on previous state (wasLiked)
+      const wasLikedNumeric = Number(
+        previousPosts.find((p) => p.id === postId)?.isLiked ??
+          previousPosts.find((p) => p.id === postId)?.isliked ??
+          0
+      );
+
+      // If it was liked, we need to call the unlike endpoint; otherwise call like
+      const endpoint =
+        wasLikedNumeric === 1
+          ? `/api/likes/unlike/${postId}`
+          : `/api/likes/like/${postId}`;
+
+      // Use authFetch to automatically include JWT token
+      const res = await authFetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ postId }),
+        body: JSON.stringify({
+          postId,
+          total_likes: updatedPosts.find((p) => p.id === postId)?.likes || 0,
+        }),
       });
 
       if (!res.ok) {
@@ -189,15 +214,13 @@ export default function Dashboard() {
 
     setLoadingComments((prev) => ({ ...prev, [postId]: true }));
     try {
-      const res = await fetch(
-        `http://localhost:8000/api/posts/getCommentsOfPost/${postId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const res = await authFetch(`/api/posts/getCommentsOfPost/${postId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const data = await res.json();
       if (data.comments) {
         setComments((prev) => ({ ...prev, [postId]: data.comments }));
@@ -212,19 +235,40 @@ export default function Dashboard() {
   const handleCommentSubmit = async (postId: number) => {
     if (!commentInputs[postId]?.trim()) return;
 
-    // Create new comment object from frontend data
-    const newComment = {
-      id: Date.now(), // Use timestamp as unique ID
+    const commentText = commentInputs[postId].trim();
+
+    // Try to extract user info from token for optimistic UI
+    let userId: any = null;
+    let userName = "Bạn";
+    let userImage =
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face";
+
+    try {
+      const payload = token ? decodeToken(token) : null;
+      if (payload) {
+        userId = payload.sub || payload.id || null;
+        userName =
+          payload.username || payload.name || payload.email || userName;
+        if (payload.image) userImage = payload.image;
+      }
+    } catch (e) {
+      // ignore decode errors, we'll still allow anonymous optimistic comment
+    }
+
+    const tempId = `temp-${Date.now()}`;
+
+    const newComment: any = {
+      id: tempId, // temporary id until backend returns real id
       postId: postId,
-      userId: 4, // TODO: Replace with actual logged-in user ID
-      userName: "Bạn", // TODO: Replace with actual user name from auth
-      userImage:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face", // TODO: Replace with actual user avatar
-      content: commentInputs[postId].trim(),
+      userId: userId,
+      userName: userName,
+      userImage: userImage,
+      content: commentText,
       created_at: new Date().toISOString(),
+      _optimistic: true,
     };
 
-    // Add comment to UI immediately
+    // Add comment to UI immediately (optimistic)
     setComments((prev) => ({
       ...prev,
       [postId]: [...(prev[postId] || []), newComment],
@@ -233,60 +277,81 @@ export default function Dashboard() {
     // Update comment count in post
     setPosts((prev) =>
       prev.map((p) =>
-        p.id === postId ? { ...p, comments: p.comments + 1 } : p
+        p.id === postId ? { ...p, comments: (p.comments || 0) + 1 } : p
       )
     );
-
-    // Store comment text for potential rollback
-    const commentText = commentInputs[postId];
 
     // Clear input immediately
     setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
 
-    // Send to backend in background (only for saving to database)
+    // Send to backend
     try {
-      // const res = await fetch(
-      //   "http://localhost:8000/api/posts/addCommentOfPost",
-      //   {
-      //     method: "POST",
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //     body: JSON.stringify({
-      //       postId: postId,
-      //       userId: 4, // TODO: Replace with actual logged-in user ID
-      //       content: commentText,
-      //     }),
-      //   }
-      // );
+      const res = await authFetch("/api/posts/addCommentOfPost", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          postId: postId,
+          content: commentText,
+        }),
+      });
 
-      if (0) {
-        // Backend save failed - revert the UI changes
-        console.error("Failed to save comment to backend");
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Failed to save comment to backend", res.status, text);
+        // revert optimistic UI
         setComments((prev) => ({
           ...prev,
-          [postId]: (prev[postId] || []).filter((c) => c.id !== newComment.id),
+          [postId]: (prev[postId] || []).filter((c) => c.id !== tempId),
         }));
         setPosts((prev) =>
           prev.map((p) =>
-            p.id === postId ? { ...p, comments: p.comments - 1 } : p
+            p.id === postId ? { ...p, comments: (p.comments || 1) - 1 } : p
           )
         );
-        // Restore input so user can try again
         setCommentInputs((prev) => ({ ...prev, [postId]: commentText }));
         alert("Không thể lưu bình luận. Vui lòng thử lại!");
+        return;
       }
-      // If successful, do nothing - comment already in UI
+
+      // parse response and replace optimistic comment with server one (if provided)
+      try {
+        const data = await res.json();
+        const serverComment = data.comment;
+        console.log("Server comment:", serverComment);
+        if (serverComment) {
+          setComments((prev) => ({
+            ...prev,
+            [postId]: (prev[postId] || []).map((c) =>
+              c.id === tempId
+                ? { ...c, ...serverComment, _optimistic: false }
+                : c
+            ),
+          }));
+        } else {
+          // no server comment returned; just remove optimistic flag
+          setComments((prev) => ({
+            ...prev,
+            [postId]: (prev[postId] || []).map((c) =>
+              c.id === tempId ? { ...c, _optimistic: false } : c
+            ),
+          }));
+        }
+      } catch (err) {
+        // ignore parse errors
+      }
     } catch (error) {
       console.error("Error saving comment:", error);
       // Network error - revert the UI changes
       setComments((prev) => ({
         ...prev,
-        [postId]: (prev[postId] || []).filter((c) => c.id !== newComment.id),
+        [postId]: (prev[postId] || []).filter((c) => c.id !== tempId),
       }));
       setPosts((prev) =>
         prev.map((p) =>
-          p.id === postId ? { ...p, comments: p.comments - 1 } : p
+          p.id === postId ? { ...p, comments: (p.comments || 1) - 1 } : p
         )
       );
       setCommentInputs((prev) => ({ ...prev, [postId]: commentText }));
@@ -308,7 +373,12 @@ export default function Dashboard() {
     return timestamp;
   };
 
+  // Guard to avoid double-fetch in React Strict Mode (dev) or duplicate mounts
+  const hasFetchedRef = useRef(false);
+
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
     fetchPosts();
   }, []);
 
@@ -327,38 +397,75 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Create Post Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        {/* Create Post Quick Access */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
           <div className="p-4">
             <div className="flex items-center space-x-4">
-              <Image
-                src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face"
-                alt="Your Avatar"
-                width={40}
-                height={40}
-                className="rounded-full"
-                unoptimized
-              />
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                {currentUser?.username?.charAt(0).toUpperCase() || "U"}
+              </div>
               <div className="flex-1">
-                <input
-                  type="text"
-                  placeholder="Chia sẻ hoạt động tình nguyện của bạn..."
-                  className="w-full bg-gray-100 rounded-full px-4 py-3 text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition duration-200"
-                />
+                <button
+                  onClick={() => setShowCreatePost(true)}
+                  className="w-full bg-gray-100 hover:bg-gray-200 rounded-full px-6 py-3 text-gray-600 text-left transition duration-200 font-medium"
+                >
+                  Chia sẻ hoạt động tình nguyện của bạn...
+                </button>
               </div>
             </div>
-            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
-              <button className="flex items-center space-x-2 text-gray-600 hover:bg-gray-100 px-4 py-2 rounded-lg transition duration-200">
-                <FaImage className="text-green-500" />
-                <span>Ảnh/Video</span>
+            <div className="flex items-center justify-around mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowCreatePost(true)}
+                className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 rounded-lg transition text-gray-700 font-medium"
+              >
+                <FaImage className="text-green-600 text-xl" />
+                <span>Hình ảnh</span>
               </button>
-              <button className="flex items-center space-x-2 text-gray-600 hover:bg-gray-100 px-4 py-2 rounded-lg transition duration-200">
-                <FaCalendarAlt className="text-blue-500" />
+              <button
+                onClick={() => setShowCreatePost(true)}
+                className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 rounded-lg transition text-gray-700 font-medium"
+              >
+                <FaCalendarAlt className="text-blue-600 text-xl" />
                 <span>Sự kiện</span>
+              </button>
+              <button
+                onClick={() => setShowCreatePost(true)}
+                className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 rounded-lg transition text-gray-700 font-medium"
+              >
+                <FaUsers className="text-purple-600 text-xl" />
+                <span>Nhóm</span>
               </button>
             </div>
           </div>
         </div>
+
+        {/* Create Post Modal */}
+        {showCreatePost && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="max-w-2xl w-full">
+              <CreatePost
+                currentUser={currentUser}
+                onPostCreated={(newPost) => {
+                  // Add new post to the top of the feed
+                  setPosts((prev) => [
+                    {
+                      ...newPost,
+                      likes: 0,
+                      comments: 0,
+                      isLiked: 0,
+                      author: currentUser?.username || "Bạn",
+                      author_image: currentUser?.image || "",
+                      created_at: new Date().toISOString(),
+                    },
+                    ...prev,
+                  ]);
+                  setShowCreatePost(false);
+                }}
+                onClose={() => setShowCreatePost(false)}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Posts Feed */}
         <div className="space-y-6">
@@ -473,12 +580,12 @@ export default function Dashboard() {
                   <button
                     onClick={() => handleLike(post.id)}
                     className={`flex items-center justify-center space-x-2 py-3 rounded-lg transition duration-200 ${
-                      post.isLiked
+                      post.isliked == 1
                         ? "text-red-500 bg-red-50 hover:bg-red-100"
                         : "text-gray-600 hover:bg-gray-100"
                     }`}
                   >
-                    {post.isLiked ? <FaHeart /> : <FaRegHeart />}
+                    {post.isliked == 0 ? <FaHeart /> : <FaRegHeart />}
                     <span className="font-medium">Thích</span>
                   </button>
                   <button
@@ -599,9 +706,24 @@ export default function Dashboard() {
 
         {/* Load More Button */}
         <div className="text-center mt-8">
-          <button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 px-8 rounded-full transition duration-200 transform hover:scale-105 shadow-lg">
-            Tải thêm bài viết
-          </button>
+          {hasMore ? (
+            <button
+              onClick={() => {
+                const lastId = posts.length
+                  ? posts[posts.length - 1].id
+                  : undefined;
+                fetchPosts(lastId, 20);
+              }}
+              disabled={loadingMore}
+              className={`bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 px-8 rounded-full transition duration-200 transform hover:scale-105 shadow-lg ${
+                loadingMore ? "opacity-60 cursor-wait" : ""
+              }`}
+            >
+              {loadingMore ? "Đang tải..." : "Tải thêm bài viết"}
+            </button>
+          ) : (
+            <div className="text-gray-500">Không còn bài viết nào</div>
+          )}
         </div>
       </div>
     </div>

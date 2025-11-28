@@ -18,12 +18,14 @@ Route::get('/dispatch-job', function () {
     return 'Job dispatched!';
 });
 
+Route::get('getAllLikes', [LikeController::class, 'getAllLikes']);
+Route::get('getPostById/{id}', [PostController::class, 'getPostById']);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/logout', [AuthController::class, 'logout']);
 Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail']);
-Route::post('/refresh', [AuthController::class, 'refreshToken']);
+Route::post('/refresh', [AuthController::class, 'refreshToken'])->middleware('jwt');
 Route::get('/me', [AuthController::class, 'getCurrentUser'])->middleware('jwt');
 
 Route::get('/dashboard', function () {
@@ -47,7 +49,7 @@ Route::post('/groups/{id}/message', function (Request $request, $id) {
 
 
 // post
-Route::group(['prefix' => 'posts'], function () {
+Route::group(['prefix' => 'posts', 'middleware' => 'jwt'], function () {
     Route::post('/getAllPosts', [PostController::class, 'getAllPosts']);
     Route::get('/getPostDetails/{id}', [PostController::class, 'getPostDetails']);
     Route::post('/createPost', [PostController::class, 'createPost']);
@@ -57,18 +59,18 @@ Route::group(['prefix' => 'posts'], function () {
     Route::post('/addCommentOfPost', [PostController::class, 'addCommentOfPost']);
     Route::post('/getCommentsOfPost/{postId}', [PostController::class, 'getCommentsOfPost']);
     Route::post('/getPostsByEventId', [PostController::class, 'getPostsByEventId']);
-    Route::post('/getPostsByUserId', [PostController::class, 'getPostsByUserId']);
+    Route::post('/getPostsByUserId/{userId}', [PostController::class, 'getPostsByUserId']);
 });
 
 // like
-Route::group(['prefix' => 'likes'], function () {
+Route::group(['prefix' => 'likes', 'middleware' => 'jwt'], function () {
     Route::post('/like/{id}', [LikeController::class, 'likePost']);
     Route::post('/unlike/{id}', [LikeController::class, 'unlikePost']);
-    Route::get('/likes/{postId}', [LikeController::class, 'getListLikeOfPost']);
+    Route::get('/listlike/{postId}', [LikeController::class, 'getListLikeOfPost']);
 });
 
 // Event
-Route::group(['prefix' => 'events'], function () {
+Route::group(['prefix' => 'events', 'middleware' => 'jwt'], function () {
     Route::get('/getAllEvents', [EventController::class, 'getAllEvents']);
     Route::get('/getEventDetails/{id}', [EventController::class, 'getEventDetails']);
     Route::post('/createEvent', [EventController::class, 'createEvent']);

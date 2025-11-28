@@ -19,46 +19,73 @@ class LikeService
         $this->postService = $postService;
     }
 
-    public function likePost($userId, $postId)
+    public function all()
     {
         try {
-            DB::beginTransaction();
-
-            try {
-                $like = $this->likeRepo->getLikeByUserAndPost($userId, $postId);
-
-                if ($like) {
-                    $like->status = !$like->status;
-                    $this->likeRepo->updateLike($like);
-                }
-                else {
-                    $like = $this->likeRepo->createLike([
-                        'user_id' => $userId,
-                        'post_id' => $postId,
-                        'status' => 1
-                    ]);
-                }
-
-                $this->postService->updateLikeOfPost($postId, $like->status ? 1 : -1);
-            } catch (Exception $e) {
-                DB::rollBack();
-                throw $e;
-            }
+            return $this->likeRepo->all();
         } catch (Exception $e) {
-            Log::error('Error liking post: ' . $e->getMessage());
-            return null;
+            Log::error('Error fetching all likes: ' . $e->getMessage());
+            return [];
         }
     }
 
-    public function unLikePost($userId, $postId)
+   public function likePost($userId, $postId) : bool
     {
-        try {
 
-            DB::beginTransaction();
-            $result = $this->likeRepo->unLike(['user_id' => $userId, 'post_id' => $postId, 'status' => 0]);
-            $this->postService->getPostById($postId, 0);
+        // $post = $this->postService->updateLikeOfPost($postId, 1);
+        // if (!$post) {
+        //     return null;
+        // }
+        // return $post;
+        DB::beginTransaction();
+        try {
+            // Kiểm tra user đã like chưa
+            $like = $this->likeRepo->getLikeByUserAndPost($userId, $postId);
+
+            if ($like) {
+                // Đã like → bật status
+                $like->status = 1;
+                $this->likeRepo->updateLike($like);
+            } else {
+                // Chưa like → tạo mới
+                $this->likeRepo->createLike([
+                    'user_id' => $userId,
+                    'post_id' => $postId,
+                    'status' => 1
+                ]);
+            }
+
+            // Cập nhật like count của post
+            $result = $this->postService->updateLikeOfPost($postId, 1);
+                if (!$result) {
+                    throw new Exception('Failed to update post likes');
+                }
+
+            DB::commit(); // commit nếu mọi thứ OK
+            return true;
+
+        } catch (\Exception $e) {
+            DB::rollBack(); // rollback nếu có lỗi
+            Log::error('Error in likePost: ' . $e->getMessage());
+            return false;  // báo lỗi cho controller xử lý
+        }
+    }
+
+    public function unLikePost($userId, $postId) : bool
+    {
+        DB::beginTransaction();
+        try {
+            // Update like status to 0 (unliked)
+            $unlike = $this->likeRepo->unLike(['user_id' => $userId, 'post_id' => $postId, 'status' => 0]);
+            
+            // Update post like count (decrease by 1)
+            $result = $this->postService->updateLikeOfPost($postId, -1);
+            if (!$result) {
+                throw new Exception('Failed to update post likes');
+            }
+
             DB::commit();
-            return $result;
+            return true;
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error unliking post: ' . $e->getMessage());

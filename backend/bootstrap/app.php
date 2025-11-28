@@ -72,8 +72,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias middleware
         if (method_exists($middleware, 'alias')) {
             $middleware->alias([
-                'checkRoleAdmin' => \App\Http\Middleware\CheckRole::class . ':handleCheckAdmin',
-                'checkRoleManager' => \App\Http\Middleware\CheckRole::class . ':handleCheckManager',
+                'check.role' => \App\Http\Middleware\CheckRole::class,
                 'jwt' => \App\Http\Middleware\JwtMiddleware::class,
                 'auth' => \App\Http\Middleware\Authenticate::class,
                 'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,

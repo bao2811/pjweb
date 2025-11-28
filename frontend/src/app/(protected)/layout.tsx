@@ -1,6 +1,5 @@
 "use client";
 
-import { AuthProvider } from "@/context/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -25,10 +24,6 @@ export default function ProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <AuthProvider>
-      <Inner>{children}</Inner>
-    </AuthProvider>
-  );
-  // return <>{children}</>;
+  // AuthProvider is provided at the app root (Providers), so just use Inner
+  return <Inner>{children}</Inner>;
 }

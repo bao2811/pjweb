@@ -7,6 +7,7 @@ use Exception;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Services\EventService;
+use App\Models\User;
 
 class AdminService
 {
@@ -21,7 +22,7 @@ class AdminService
 
     public function getAllUsers()
     {
-        return $this->userRepo->all();
+        return $this->userRepo->getAllUsers();
     }
 
     public function getAllEvents()

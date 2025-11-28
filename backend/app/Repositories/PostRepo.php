@@ -8,9 +8,18 @@ use Exception;
 
 class PostRepo
 {
-    public function getPostById($id)
+    public function getPostById($id) : ?Post
     {
-        return Post::find($id);
+        // $post = DB::table('posts')->where('id', 4)->first();
+        // dd($post);
+        $post = Post::find($id);
+        return $post;
+    }
+
+    // Backwards-compatible alias used by some services
+    public function find($id) : ?Post
+    {
+        return $this->getPostById($id);
     }
 
     public function createPost($data) : Post
@@ -28,55 +37,54 @@ class PostRepo
         return $post;
     }
 
-    public function all($currentUserId)
+    public function all($currentUserId, $lastId = null, $limit = 20)
     {
-
         // $posts = DB::table('posts')
-        // ->join('users', 'posts.author_id', '=', 'users.id')
-        // ->where('posts.status', 'active')
-        // ->select(
-        //     'posts.*',
-        //     'users.username as name',
-        //     'users.image as avatar',
-        //     'users.role as role',
-        // )
-        // ->get();
+        //     ->join('users', 'posts.author_id', '=', 'users.id')
+        //     ->leftJoin(DB::raw("(SELECT * FROM likes WHERE user_id = $currentUserId AND status = '1') AS l"), 
+        //         'posts.id', '=', 'l.post_id'
+        //     )
+        //     ->where('posts.status', 'active')
+        //     ->select(
+        //         'posts.*',
+        //         'users.username as name',
+        //         'users.image as avatar',
+        //         'users.role as role',
+        //         DB::raw('CASE WHEN l.id IS NULL THEN 0 ELSE 1 END AS isLiked')
+        //     )
+        //     ->get();
 
-        // $posts = Post::with('author')
-        //              ->where('status', 'active')
-        //              ->get();
 
-        // foreach ($posts as $post) {
-        //     $authorName = $post->author ? $post->author->name : 'No Author';
-        //     echo "Post: {$post->title}, Author: {$authorName} <br>";
-        // }
+       $posts = DB::table('posts')
+            ->join('users', 'posts.author_id', '=', 'users.id')
 
-        // $posts = DB::table('posts')
-        // ->join('users', 'posts.author_id', '=', 'users.id')
-        // ->where('posts.status', 'active')
-        // ->select(
-        //     'posts.*',
-        //     'users.name as name',
-        //     'users.image as avatar',
-        //     'users.role as role',
-        // )
-        // ->get();
+            ->leftJoin('likes', function ($join) use ($currentUserId) {
+                $join->on('posts.id', '=', 'likes.post_id')
+                    ->where('likes.user_id', '=', $currentUserId)
+                    ->where('likes.status', '=', 1);   // nếu bạn có status
+            })
 
-        $posts = DB::table('posts')
-        ->join('users', 'posts.author_id', '=', 'users.id')
-        ->leftJoin('likes', function($join) use ($currentUserId) {
-            $join->on('posts.id', '=', 'likes.post_id')
-                ->where('likes.user_id', '=', $currentUserId);
-        })
-        ->where('posts.status', 'active')
-        ->select(
-            'posts.*',
-            'users.username as name',
-            'users.image as avatar',
-            'users.role as role',
-            DB::raw('CASE WHEN likes.id IS NULL THEN 0 ELSE 1 END as liked')
-        )
-        ->get();
+            ->where('posts.status', 'active')
+
+            // Nếu có lastId thì thêm điều kiện
+            ->when($lastId, function($query) use ($lastId) {
+                return $query->where('posts.id', '<', $lastId);
+            })
+
+            ->orderBy('posts.id', 'desc')
+            ->limit($limit ?? 20)
+
+            ->select(
+                'posts.*',
+                'users.username as name',
+                'users.image as avatar',
+                'users.role as role',
+                DB::raw('CASE WHEN likes.id IS NULL THEN 0 ELSE 1 END AS isLiked')
+            )
+
+            ->get();
+
+
 
         return $posts;
 
@@ -120,5 +128,14 @@ class PostRepo
     public function getPostsByEventId($eventId)
     {
         return Post::where('event_id', $eventId)->get();
+    }
+
+    public function updateLikeOfPost($postId, $status, $totalLikes)
+    {
+        $like = $totalLikes + ($status == 1 ? 1 : -1);
+        $post = DB::table('posts')
+            ->where('id', $postId)
+            ->update(['likes' => $like]);
+        return $post;
     }
 }

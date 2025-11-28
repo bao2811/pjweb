@@ -14,8 +14,20 @@ class JwtMiddleware
         try {
             $token = JWTUtil::extractToken($request);
             $decoded = JWTUtil::validateToken($token);
+            $user = (object) [
+                'id' => $decoded->sub,
+                'email' => $decoded->email,
+                'username' => $decoded->username,
+                'role' => $decoded->role,
+            ];
+
+            // Gán userResolver để request->user() trả về user này
+            $request->setUserResolver(function () use ($user) {
+                return $user;
+            });
             $request->attributes->set('userId', $decoded->sub);
             $request->attributes->set('jwtPayload', $decoded);
+            
         } catch (Exception $e) {
            return response()->json([
                 'error' => 'Invalid token: ' . $e->getMessage()

@@ -40,7 +40,7 @@ class ManagerController extends Controller
     public function acceptUserJoinEvent(Request $request, $id): JsonResponse
     {
         try {
-            $userId = $request->userId;
+            $userId = $request->get('userId');
             $event = $this->managerService->acceptUserJoinEvent($userId, $id, $request->managerId);
             return response()->json($event, Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
@@ -54,7 +54,7 @@ class ManagerController extends Controller
     public function rejectUserJoinEvent(Request $request, $id): JsonResponse
     {
         try {
-            $userId = $request->userId;
+            $userId = $request->get('userId');
             $event = $this->managerService->rejectUserJoinEvent($id, $userId, $request->managerId);
             return response()->json($event, Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {

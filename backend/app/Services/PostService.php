@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Repositories\CommentRepo;
+use App\Models\Post;
 
 class PostService
 {
@@ -53,10 +54,10 @@ class PostService
         }
     }
 
-    public function getAllPosts($currentUserId)
+    public function getAllPosts($currentUserId, $lastId = null, $limit = 20)
     {
         try {
-            return $this->postRepo->all($currentUserId);
+            return $this->postRepo->all($currentUserId, $lastId, $limit);
         } catch (Exception $e) {
             // Handle exception
             return [];
@@ -106,51 +107,65 @@ class PostService
         }
     }
 
-    public function updateLikeOfPost($postId, $status)
+    public function updateLikeOfPost($postId, $status = 1): bool
     {   
         try {
-            $post = $this->postRepo->find($postId);
+
+            $post = $this->getPostById($postId);
             if (!$post) {
                 throw new Exception('Post not found');
             }
-            $post->like_count += $status;
+            $post->likes = ($post->likes ?? 0) + $status;
             $post->save();
-
-            return $post;
+            return true;
         } catch (Exception $e) {
             // Handle exception
-            return null;
+            return false;
         }
     }
 
-    public function addCommentOfPost($postId, $data)
+    public function addCommentOfPost($postId, $userId, $content)
     {
+        $content = trim($content);
+        if ($content === '') {
+            throw new Exception('Content cannot be empty');
+        }
+        // $comment = $this->commentRepo->addCommentOfPost([
+        //         'post_id' => $postId,
+        //         'author_id' => $userId,
+        //         'content'  => $content
+        //     ]);
+        // return $comment;
+        DB::beginTransaction();
         try {
-            $data->validate([
-                'user_id' => 'required|integer|exists:users,id',
-                'content' => 'required|string',
+            $comment = $this->commentRepo->addCommentOfPost([
+                'post_id' => $postId,
+                'author_id' => $userId,
+                'content'  => $content
             ]);
-            DB::beginTransaction();
-            $comment = $this->commentRepo->addCommentOfPost(array_merge($data, ['post_id' => $postId]));
-            $post = $this->postRepo->find($postId);
+
+            $post = $this->getPostById($postId);
             if (!$post) {
                 throw new Exception('Post not found');
             }
-            $post->comment_count += 1;
+
+            $post->comments += 1;
             $post->save();
+
             DB::commit();
-            return $post;
+
+            return $comment; // Sửa đúng biến
         } catch (Exception $e) {
             DB::rollBack();
-            // Handle exception
             return null;
         }
     }
+
 
     public function getCommentsOfPost($postId)
     {
         try {
-            return $this->commentRepo->getCommentsByPostId($postId);
+            return $this->commentRepo->getCommentsOfPost($postId);
         } catch (Exception $e) {
             // Handle exception
             return [];

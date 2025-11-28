@@ -20,8 +20,8 @@ class Post extends Model
         'author_id',
         'image', 
         'published_at',
-        'like',
-        'comment',
+        'likes',
+        'comments',
         'event_id',
         'status',
     ];
@@ -29,5 +29,11 @@ class Post extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'author_id'); // nếu cột khóa ngoại là author_id
+    }
+
+    // Backwards-compatible helper: some templates/services expect `author` relation
+    public function author()
+    {
+        return $this->user();
     }
 }

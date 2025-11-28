@@ -1,5 +1,11 @@
 "use client";
-import React, { createContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   API_URL,
@@ -52,6 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const route = useRouter();
+  // Ref to dedupe profile fetches for the same token
+  const lastFetchedTokenRef = useRef<string | null>(null);
+  const fetchingProfileRef = useRef<boolean>(false);
   // Refresh token wrapper - sử dụng function từ auth.ts
   const refreshToken = useCallback(async (): Promise<boolean> => {
     try {
@@ -80,6 +89,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Fetch user profile
   const fetchUserProfile = useCallback(async (authToken: string) => {
     if (!authToken) return;
+    // Deduplicate: if we've already fetched for this token, skip
+    if (lastFetchedTokenRef.current === authToken) {
+      // If a fetch is already in progress, wait for it to finish
+      if (fetchingProfileRef.current) {
+        // another call is in-flight; skip starting a duplicate
+        console.log(
+          "fetchUserProfile: fetch already in progress for this token, skipping duplicate"
+        );
+        return;
+      }
+      // already fetched for this token previously
+      console.log(
+        "fetchUserProfile: profile already fetched for this token, skipping"
+      );
+      return;
+    }
+    // mark which token we're fetching for
+    lastFetchedTokenRef.current = authToken;
+    fetchingProfileRef.current = true;
+    // Debug: log the token being used to fetch profile (masked)
+    try {
+      const masked = authToken
+        ? `${authToken.slice(0, 8)}...${authToken.slice(-8)}`
+        : "no-token";
+      console.log("fetchUserProfile: using token", masked);
+    } catch (e) {
+      console.log("fetchUserProfile: token present");
+    }
     try {
       const response = await fetch(`${API_URL}/api/me`, {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -93,8 +130,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserData(userObj);
 
       console.log("Fetched user profile:", userObj);
+      fetchingProfileRef.current = false;
     } catch (err) {
       console.error("Error fetching user profile:", err);
+      fetchingProfileRef.current = false;
     }
   }, []);
 
@@ -133,8 +172,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         try {
-          localStorage.setItem("jwt_token", access);
-          if (refresh) localStorage.setItem("refresh_token", refresh);
+          // Save tokens using utils (keeps keys consistent)
+          if (access) {
+            saveToken(access);
+            setToken(access); // update React state so isAuthenticated becomes true
+          }
+          if (refresh) {
+            saveRefreshToken(refresh);
+          }
         } catch (err) {
           console.error("Error saving tokens to localStorage:", err);
         }
@@ -144,8 +189,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const role = data.user?.role || "user";
         console.log("Login successful, user role:", role);
 
-        // Fetch user profile
-        await fetchUserProfile(data.access_token);
+        // Fetch user profile (use the resolved access variable)
+        await fetchUserProfile(access as string);
 
         // Redirect
         route.push(`/${role}/dashboard`);
@@ -217,15 +262,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Token is still valid
           setToken(storedToken);
 
-          // Load user from localStorage first
+          // Load user from localStorage first (avoid an extra network call if we already have user data)
           if (storedUser) {
             setUser(storedUser);
+          } else {
+            // Only fetch profile if we don't have a cached user
+            try {
+              await fetchUserProfile(storedToken);
+            } catch (error) {
+              console.error("Error fetching user profile on init:", error);
+            }
           }
-
-          // Fetch fresh user data in background
-          fetchUserProfile(storedToken).catch((error) => {
-            console.error("Error fetching user profile on init:", error);
-          });
         }
       } catch (error) {
         console.error("Error initializing auth:", error);

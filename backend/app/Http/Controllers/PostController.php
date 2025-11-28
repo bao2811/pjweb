@@ -17,11 +17,33 @@ class PostController extends Controller
         $this->postService = $postService;
     }
 
+    public function getPostById(Request $request, $id): JsonResponse
+    {
+        try {
+            $post = $this->postService->updateLikeOfPost($id);
+            if (!$post) {
+                return response()->json(['error' => 'Post not found'], 404);
+            }
+            return response()->json(['post' => $post], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getAllPosts(Request $request): JsonResponse
     {
         try {
-            $currentUserId = $request->id;
-            $posts = $this->postService->getAllPosts($currentUserId);
+            $lastId = $request->input('last_id');
+            $limit = $request->input('limit', 20);
+            $currentUserId = $request->get('userId');
+            $posts = $this->postService->getAllPosts($currentUserId, $lastId, $limit);
+
+            if($currentUserId === null){
+                return response()->json(['error' => 'Not found'], 404);
+            }
 
             if (empty($posts)) {
                 return response()->json(['message' => 'No posts found'], 404);
@@ -138,12 +160,17 @@ class PostController extends Controller
         }
     }
 
-    public function addCommentOfPost(Request $request, $postId): JsonResponse
+    public function addCommentOfPost(Request $request): JsonResponse
     {
-        $commentData = $request->only(['user_id', 'content']);
+        $userId = $request->get('userId');
+        $comment = $request->input('content');
+        $postId = $request->input('postId');
 
         try {
-            $comment = $this->postService->addCommentOfPost($postId, $commentData);
+            $comment = $this->postService->addCommentOfPost($postId, $userId, $comment);
+            if (!$comment) {
+                return response()->json(['error' => 'Failed to add comment'], 400);
+            }
             return response()->json(['comment' => $comment], 201);
         } catch (\Exception $e) {
             return response()->json([

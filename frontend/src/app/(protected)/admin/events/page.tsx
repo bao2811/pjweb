@@ -210,20 +210,20 @@ export default function AdminEventsPage() {
   const [showMembersModal, setShowMembersModal] = useState(false);
 
   // TODO: Fetch events from API
-  // useEffect(() => {
-  //   const fetchEvents = async () => {
-  //     try {
-  //       const response = await authFetch("/admin/events");
-  //       const data = await response.json();
-  //       setEvents(data);
-  //     } catch (error) {
-  //       console.error("Error fetching events:", error);
-  //     }
-  //   };
-  //   if (currentUser) {
-  //     fetchEvents();
-  //   }
-  // }, [currentUser]);
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await authFetch("/admin/getAllEvents");
+        const data = await response.json();
+        setEvents(data);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+      }
+    };
+    if (currentUser) {
+      fetchEvents();
+    }
+  }, [currentUser]);
 
   // Filter events
   const filteredEvents = events.filter((event) => {
@@ -322,7 +322,7 @@ export default function AdminEventsPage() {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/api/admin/acceptEvent/${eventId}`,
+        `http://localhost:8000/admin/acceptEvent/${eventId}`,
         {
           method: "DELETE",
           headers: {

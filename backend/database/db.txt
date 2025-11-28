@@ -43,6 +43,8 @@ CREATE TABLE posts (
     end_time TIMESTAMP,
     author_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     status VARCHAR(50) DEFAULT 'active',
+    likes INT,
+    comments INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

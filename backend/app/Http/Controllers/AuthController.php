@@ -40,14 +40,24 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
-            $token = JWTUtil::generateToken($user);
-            $refresh_token = JWTUtil::generateToken($user, 43200); // 30 days
-            return response()->json([
-                'message' => 'Đăng nhập thành công!',
-                'user' => $user,
-                'access_token' => $token,
-                'refresh_token' => $refresh_token,
-            ])->cookie('user', json_encode($user), 120, '/', 'localhost', false, false, 'lax');
+                try {
+                    $token = JWTUtil::generateToken($user);
+                    $refresh_token = JWTUtil::generateToken($user, 43200); // 30 days
+                } catch (\Exception $e) {
+                    // Log full exception for debugging and return a JSON error so the frontend can surface it
+                    Log::error('JWT token generation failed: ' . $e->getMessage(), ['exception' => $e]);
+                    return response()->json([
+                        'error' => 'Server error while generating auth token',
+                        'details' => $e->getMessage()
+                    ], 500);
+                }
+
+                return response()->json([
+                    'message' => 'Đăng nhập thành công!',
+                    'user' => $user,
+                    'access_token' => $token,
+                    'refresh_token' => $refresh_token,
+                ])->cookie('user', json_encode($user), 120, '/', 'localhost', false, false, 'lax');
 
         }
 
@@ -55,19 +65,75 @@ class AuthController extends Controller
 
     }
 
+    // public function refreshToken(Request $request)
+    // {
+    //     $refresh_token = $request->input('refresh_token');
+
+    //     if (!$refresh_token) {
+    //         return response()->json(['error' => 'Refresh token is required'], 401);
+    //     }
+
+    //     try {
+    //         // Giải mã refresh token
+    //         $payload = JWTUtil::validateToken($refresh_token); // decode sẽ throw exception nếu không hợp lệ
+    //         $userId = $payload->sub ?? null;
+
+    //         if (!$userId) {
+    //             return response()->json(['error' => 'Invalid refresh token'], 401);
+    //         }
+
+    //         // Lấy user từ database
+    //         // $user = User::find($userId);
+    //         $user = (object) [
+    //             'id' => $payload->sub,
+    //             'email' => $payload->email,
+    //             'username' => $payload->username,
+    //             'role' => $payload->role,
+    //         ];
+
+    //         if (!$user) {
+    //             return response()->json(['error' => 'User not found'], 401);
+    //         }
+
+    //         // Tạo access token mới
+    //         $accessToken = JWTUtil::generateToken($user->id);
+
+    //         // (Tùy chọn) tạo refresh token mới nếu muốn vòng đời xoay vòng
+    //         // $newRefreshToken = JWTUtil::generateToken($user->id, 43200); // 30 ngày
+
+    //         return response()->json([
+    //             'message' => 'Token refreshed successfully',
+    //             'access_token' => $accessToken,
+    //             // 'refresh_token' => $newRefreshToken, 
+    //         ], 200);
+
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'error' => 'Refresh token invalid or expired',
+    //             'message' => $e->getMessage()
+    //         ], 401);
+    //     }
+    // }
+
     public function refreshToken(Request $request)
     {
         $refresh_token = $request->refresh_token;
-        if (!$refresh_token || !JWTUtil::validateToken($refresh_token)) {
+        if (!$refresh_token) {
+            return response()->json(['error' => 'Invalid refresh token'], 401);
+           
+        }
+
+        if (JWTUtil::validateToken($refresh_token) === false) {
             return response()->json(['error' => 'Invalid refresh token'], 401);
         }
+
         $user = $request->user();
         $token = JWTUtil::generateToken($user->id);
-        $refresh_token = JWTUtil::generateToken($user->id, 43200); // 30 days
+        // $refresh_token = JWTUtil::generateToken($user->id, 43200); // 30 days
         return response()->json([
             'message' => 'Token refreshed successfully',
             'access_token' => $token,
-            'refresh_token' => $refresh_token,
+            // 'refresh_token' => $refresh_token,
         ]);
     }
 

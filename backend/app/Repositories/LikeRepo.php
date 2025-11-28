@@ -21,14 +21,15 @@ class LikeRepo
 
     public function unLike($data) : bool
     {
-        $like = Like::where('user_id', $data['user_id'])
-                     ->where('post_id', $data['post_id'])
-                     ->first();
-        if (!$like) {
+        $updated = Like::where('user_id', $data['user_id'])
+               ->where('post_id', $data['post_id'])
+               ->update([
+                   'status' => $data['status']
+               ]);
+        if (!$updated) {
             throw new Exception('Like not found');
         }
-        $like->status = $data['status'];
-        return $like->save();
+        return true;
     }
 
     public function all()
@@ -59,5 +60,11 @@ class LikeRepo
         return $listike;
     }
 
+    public function getLikeByUserAndPost($userId, $postId)
+    {
+        return Like::where('user_id', $userId)
+                    ->where('post_id', $postId)
+                    ->first();
+    }
 }
 

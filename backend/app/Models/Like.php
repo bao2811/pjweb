@@ -10,6 +10,20 @@ class Like extends Model
     use HasFactory;
 
     /**
+     * Indicates if the model should be timestamped.
+     *
+     * @var bool
+     */
+    public $timestamps = true;
+
+    /**
+     * The name of the "updated at" column.
+     *
+     * @var string|null
+     */
+    const UPDATED_AT = null;
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

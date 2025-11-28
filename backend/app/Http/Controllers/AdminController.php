@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Services\AdminService;
+use Illuminate\Validation\ValidationException;
 
 
 class AdminController {
@@ -129,12 +131,16 @@ class AdminController {
         } 
     }
 
-    public function createMangerEvent(Request $request) {
+    public function createManagerEvent(Request $request) {
         try {
-            $data = validate($request->all(), [
+            $data = $request->validate([
                 'username' => 'required|string|max:16|min:3|unique:users',
                 'password' => 'required|string|min:8',
                 'email' => 'required|email|max:255',
+                'phone' => 'nullable|string|max:20',
+                'address' => 'nullable|string|max:255',
+                'image' => 'nullable|url|max:255',
+                'address_card' => 'nullable|url|max:255',
             ]);
             $data['role'] = 'manager';
             $user = $this->adminService->createUser($data);
@@ -142,10 +148,15 @@ class AdminController {
                 'message' => 'complete create manager event',
                 'user' => $user
             ], 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation error',
+                'message' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Server error',
-                'message' => $e->getMessage()
+                'message' => "lỗi tạo manager: " . $e->getMessage()
             ], 500);
         }
     }
