@@ -85,4 +85,32 @@ class UserController extends Controller
         return response()->json(['message' => 'Left event successfully']);
     }
    
+     public function getEventHistory(Request $request)
+   {
+       try {
+           $userId = $request->input('user_id') ?? auth()->id();
+           
+           if (!$userId) {
+               return response()->json([
+                   'success' => false,
+                   'message' => 'User ID is required'
+               ], 400);
+           }
+
+           $history = $this->userService->getEventHistory($userId);
+
+           return response()->json([
+               'success' => true,
+               'history' => $history
+           ]);
+
+       } catch (\Exception $e) {
+           \Log::error('Error getting event history: ' . $e->getMessage());
+           return response()->json([
+               'success' => false,
+               'message' => 'Failed to get event history',
+               'error' => $e->getMessage()
+           ], 500);
+       }
+   }
 }

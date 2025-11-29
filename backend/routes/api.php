@@ -24,13 +24,10 @@ Route::get('getPostById/{id}', [PostController::class, 'getPostById']);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/logout', [AuthController::class, 'logout']);
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('jwt');
 Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail']);
 Route::post('/refresh', [AuthController::class, 'refreshToken']);
 Route::get('/me', [AuthController::class, 'getCurrentUser'])->middleware('jwt');
-
-Route::get('/dashboard', function () {
-})->middleware(['auth', 'verified']);
 
 // Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])
 //     ->middleware(['signed', 'throttle:6,1'])
@@ -59,8 +56,10 @@ Route::group(['prefix' => 'posts', 'middleware' => 'jwt'], function () {
     Route::post('/searchPosts', [PostController::class, 'searchPosts']);
     Route::post('/addCommentOfPost', [PostController::class, 'addCommentOfPost']);
     Route::post('/getCommentsOfPost/{postId}', [PostController::class, 'getCommentsOfPost']);
-    Route::post('/getPostsByEventId', [PostController::class, 'getPostsByEventId']);
+    Route::post('/getPostsByChannel/{channelId}', [PostController::class, 'getPostsByChannel']);
     Route::post('/getPostsByUserId/{userId}', [PostController::class, 'getPostsByUserId']);
+
+    Route::post('/channel', [PostController::class, 'addPostToChannel']);
 });
 
 // like
@@ -78,6 +77,20 @@ Route::group(['prefix' => 'events', 'middleware' => 'jwt'], function () {
     Route::put('/updateEventById/{id}', [EventController::class, 'updateEventById']);
     Route::delete('/deleteEventById/{id}', [EventController::class, 'deleteEventById']);
     Route::post('/searchEvents', [EventController::class, 'searchEvents']);
+});
+
+ // Likes - Event
+Route::group(['prefix' => 'likes/event', 'middleware' => 'jwt'], function () {
+    Route::post('/like/{id}', [LikeController::class, 'likeEvent']);
+    Route::post('/unlike/{id}', [LikeController::class, 'unlikeEvent']);
+    Route::get('/{eventId}', [LikeController::class, 'getListLikeOfEvent']);
+});
+
+ // Messages (Chat)
+Route::group(['prefix' => 'messages', 'middleware' => 'jwt'], function () {
+    Route::get('/channel/{channelId}', [MessageController::class, 'getMessagesByChannel']);
+    Route::post('/send', [MessageController::class, 'sendMessage']);
+    Route::delete('/{id}', [MessageController::class, 'deleteMessage']);
 });
 
 // Notifications

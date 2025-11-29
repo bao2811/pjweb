@@ -192,13 +192,52 @@ class PostService
         }
     }
 
-    public function getPostsByEventId($eventId)
+    public function getPostsByChannel($channelId)
     {
         try {
-            return $this->postRepo->getPostsByEventId($eventId);
+            return $this->postRepo->getPostsByChannel($channelId);
         } catch (Exception $e) {
             // Handle exception
             return [];
         }
     }
+
+    // Thêm comment vào post
+    // public function addCommentOfPost(array $data)
+    // {
+    //     try {
+    //         // Validate required fields
+    //         if (!isset($data['post_id']) || !isset($data['content'])) {
+    //             throw new \Exception('Missing required fields: post_id and content');
+    //         }
+
+    //         // Get author_id from auth or request
+    //         $authorId = $data['author_id'] ?? auth()->id();
+            
+    //         if (!$authorId) {
+    //             throw new \Exception('Author ID is required');
+    //         }
+
+    //         $comment = $this->commentRepo->createComment([
+    //             'post_id' => $data['post_id'],
+    //             'author_id' => $authorId,
+    //             'content' => $data['content'],
+    //             'parent_id' => $data['parent_id'] ?? null,
+    //         ]);
+
+    //         // Load author relationship
+    //         $comment->load('author:id,name,avatar,role');
+
+    //         \Log::info('Comment created successfully:', [
+    //             'comment_id' => $comment->id,
+    //             'post_id' => $comment->post_id,
+    //             'author' => $comment->author->name ?? 'Unknown'
+    //         ]);
+
+    //         return $comment;
+    //     } catch (\Exception $e) {
+    //         \Log::error('Error creating comment: ' . $e->getMessage());
+    //         throw $e;
+    //     }
+    // }
 }

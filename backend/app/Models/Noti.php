@@ -16,7 +16,7 @@ class Noti extends Model implements ShouldQueue  {
 
     protected $table = 'notis';
 
-    
+
 
     protected $fillable = [
         'title',
@@ -66,17 +66,67 @@ class Noti extends Model implements ShouldQueue  {
     }                                                                                         
 
     /**
-     * Tạo thông báo và gửi push notification qua queue
+     * Tạo thông báo và gửi push notification qua queue cho nhiều users
+     * 
+     * @param array $data Dữ liệu notification
+     * @param array|null $userIds Danh sách user IDs để gửi (null = gửi cho tất cả users đăng ký web push)
      */
-    public static function dispatchCreateAndPush(array $data)
+    public static function dispatchCreateAndPush(array $data, array $userIds = null)
     {
         try {
-            dispatch(function() use ($data) {
-                $notification = self::create($data);
+            dispatch(function() use ($data, $userIds) {
+                // Lấy danh sách user IDs đã đăng ký web push
+                $query = PushSubscription::query();
                 
-                if (isset($data['receiver_id'])) {
-                    $notification->sendPush();
+                if ($userIds !== null && !empty($userIds)) {
+                    // Gửi cho các user cụ thể
+                    $query->whereIn('user_id', $userIds);
                 }
+                
+                $subscriptions = $query->get();
+                
+                if ($subscriptions->isEmpty()) {
+                    Log::info("No push subscriptions found for sending notification");
+                    return;
+                }
+
+                // Lấy danh sách unique user IDs
+                $receiverIds = $subscriptions->pluck('user_id')->unique();
+                
+                Log::info("Dispatching notification to " . $receiverIds->count() . " users with " . $subscriptions->count() . " devices");
+
+                // Chuẩn bị URL dựa vào loại thông báo
+                $url = $data['data']['url'] ?? '/notifications';
+                $title = $data['title'];
+                $message = $data['message'];
+
+                // Gửi push notification cho từng subscription
+                foreach ($subscriptions as $sub) {
+                    try {
+                        WebPushApi::sendNotification($sub, $title, $message, $url);
+                    } catch (\Exception $e) {
+                        Log::error("Failed to send push to subscription {$sub->id}: " . $e->getMessage());
+                    }
+                }
+
+                // Lưu notification vào database cho từng receiver
+                foreach ($receiverIds as $receiverId) {
+                    try {
+                        self::create([
+                            'title' => $title,
+                            'message' => $message,
+                            'sender_id' => $data['sender_id'] ?? null,
+                            'receiver_id' => $receiverId,
+                            'type' => $data['type'] ?? 'system',
+                            'data' => $data['data'] ?? [],
+                            'is_read' => false,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error("Failed to save notification for user {$receiverId}: " . $e->getMessage());
+                    }
+                }
+
+                Log::info("Notification dispatched successfully to {$receiverIds->count()} users");
             })->onQueue('notifications');
             
             return true;

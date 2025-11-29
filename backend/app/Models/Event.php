@@ -73,4 +73,37 @@ class Event extends Model
     {
         return $this->belongsToMany(User::class, 'joinevent', 'event_id', 'user_id');
     }
+
+    /**
+     * Get all likes for this event
+     */
+    public function likes()
+    {
+        return $this->hasMany(Like::class, 'event_id');
+    }
+
+    /**
+     * Get users who liked this event
+     */
+    public function likedByUsers()
+    {
+        return $this->belongsToMany(User::class, 'likes', 'event_id', 'user_id')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Get the author of the event
+     */
+    public function author()
+    {
+        return $this->belongsTo(User::class, 'author_id');
+    }
+
+    /**
+     * Get co-managers of the event
+     */
+    public function comanagers()
+    {
+        return $this->belongsToMany(User::class, 'event_management', 'event_id', 'user_id');
+    }
 }

@@ -76,16 +76,26 @@ class UserService
             // }
 
             // Hash password and create user
-            $data['password'] = Hash::make($data['password']);
-            $result =  $this->userRepo->createUser($data);
-        if ($result) {
+         try {
+            // Hash password
+            if (isset($data['password'])) {
+                $data['password'] = Hash::make($data['password']);
+            }
+
+            // Tạo user qua repository
+            $user = $this->userRepo->createUser($data);
+            
             return [
                 'success' => true,
                 'message' => 'User created successfully',
-                'data' => $result
+                'data' => $user
             ];
-        } else {
-            throw new Exception('Failed to create user');
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Failed to create user: ' . $e->getMessage(),
+                'data' => null
+            ];
         }
     }
 
@@ -224,5 +234,66 @@ class UserService
         }
     }
 
+    /**
+     * Get user's event history
+     */
+    public function getEventHistory($userId)
+    {
+        try {
+            $history = DB::table('join_events')
+                ->join('events', 'join_events.event_id', '=', 'events.id')
+                ->join('users as author', 'events.author_id', '=', 'author.id')
+                ->where('join_events.user_id', $userId)
+                ->where('join_events.status', 'accepted')
+                ->where('events.end_time', '<', now()) // Only past events
+                ->select(
+                    'events.id',
+                    'events.title',
+                    'events.content as description',
+                    'events.image',
+                    'events.address as location',
+                    'events.start_time',
+                    'events.end_time',
+                    'join_events.created_at as joined_at',
+                    'author.name as organizer_name',
+                    'author.avatar as organizer_avatar'
+                )
+                ->orderBy('events.end_time', 'desc')
+                ->get()
+                ->map(function ($event) {
+                    // Calculate hours
+                    $startTime = new \DateTime($event->start_time);
+                    $endTime = new \DateTime($event->end_time);
+                    $interval = $startTime->diff($endTime);
+                    $hours = ($interval->days * 24) + $interval->h + ($interval->i / 60);
+
+                    // Get participant count
+                    $participants = DB::table('join_events')
+                        ->where('event_id', $event->id)
+                        ->where('status', 'accepted')
+                        ->count();
+
+                    return [
+                        'id' => $event->id,
+                        'title' => $event->title,
+                        'description' => $event->description,
+                        'image' => $event->image,
+                        'location' => $event->location,
+                        'completedAt' => $event->end_time,
+                        'hours' => round($hours, 1),
+                        'participants' => $participants,
+                        'organizer' => [
+                            'name' => $event->organizer_name,
+                            'avatar' => $event->organizer_avatar
+                        ]
+                    ];
+                });
+
+            return $history;
+        } catch (\Exception $e) {
+            \Log::error('Error in UserService::getEventHistory: ' . $e->getMessage());
+            throw $e;
+        }
+    } 
 
 }

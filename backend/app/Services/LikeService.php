@@ -29,6 +29,75 @@ class LikeService
         }
     }
 
+    /**
+     * Toggle like cho POST hoặc EVENT
+     * - Nếu đã like → xóa like (unlike)
+     * - Nếu chưa like → tạo like mới
+     * 
+     * @param int $userId - ID user
+     * @param int $itemId - ID của post hoặc event
+     * @param string $type - 'post' hoặc 'event'
+     * @return bool
+     */
+    public function toggleLike($userId, $itemId, $type = 'post')
+    {
+        try {
+            DB::beginTransaction();
+
+            // 1. Tìm item (post hoặc event)
+            $item = $type === 'post' ? Post::find($itemId) : Event::find($itemId);
+            if (!$item) {
+                throw new Exception(ucfirst($type) . ' not found: ID ' . $itemId);
+            }
+
+            // 2. Tìm like hiện có - tùy theo type
+            $likeQuery = Like::where('user_id', $userId);
+            if ($type === 'post') {
+                $likeQuery->where('post_id', $itemId);
+            } else {
+                $likeQuery->where('event_id', $itemId);
+            }
+            $like = $likeQuery->first();
+
+            // 3. Toggle like
+            if ($like) {
+                // Đã like → Unlike (xóa)
+                $like->delete();
+                $isLiked = false;
+            } else {
+                // Chưa like → Like (tạo mới)
+                $data = [
+                    'user_id' => $userId,
+                    'status' => 1
+                ];
+                
+                if ($type === 'post') {
+                    $data['post_id'] = $itemId;
+                } else {
+                    $data['event_id'] = $itemId;
+                }
+                
+                Like::create($data);
+                $isLiked = true;
+            }
+
+            // 4. Cập nhật số lượng like
+            $likeColumn = $type === 'post' ? 'like_count' : 'likes';
+            if (isset($item->{$likeColumn})) {
+                $item->{$likeColumn} = max(0, ($item->{$likeColumn} ?? 0) + ($isLiked ? 1 : -1));
+                $item->save();
+            }
+
+            DB::commit();
+            return true;
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error("Error toggling like for {$type}: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
    public function likePost($userId, $postId) : bool
     {
 
@@ -106,7 +175,7 @@ class LikeService
     public function getListLikeOfPost($postId)
     {
         try {
-            return $this->likeRepo->getListLikeOfPost($postId);
+            return $this->likeRepo->getListLikeByPost($postId);
         } catch (Exception $e) {
             Log::error('Error fetching likes for post: ' . $e->getMessage());
             return [];

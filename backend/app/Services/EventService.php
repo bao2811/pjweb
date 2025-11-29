@@ -35,14 +35,19 @@ class EventService
         $this->notiService = $notiService;
     }
 
-    public function getAllEvents()
+    public function getAllEvents($userId = null)
     {
-        return $this->eventRepo->getAllEvents();
+        return $this->eventRepo->getAllEvents($userId);
     }
 
-    public function createEvent(array $data, array $comanager = [])
+    public function createEvent(array $data, array $comanager = [], $authorId = null)
     {
         try {
+            $data['likes'] = 0;
+            $data['status'] = 'pending';
+            $data['created_at'] = Carbon::now();
+            $data['current_participants'] = 0;
+            $data['author_id'] = $authorId;
             DB::beginTransaction();
             $event = $this->eventRepo->createEvent($data);
             $this->eventManagementRepo->addComanagerByEventId($event->id, $comanager);

@@ -6,7 +6,7 @@ use App\Http\Middleware\JwtMiddleware;
 
 Route::middleware(['jwt', 'check.role:manager'])->prefix('manager')->group(function () {
     Route::get('/getListUserByEvent/{id}', [ManagerController::class, 'getListUserByEvent']);
-    Route::get('/unbanacceptUserJoinEventUser/{id}', [ManagerController::class, 'acceptUserJoinEvent']);
+    Route::get('/acceptUserJoinEvent/{id}', [ManagerController::class, 'acceptUserJoinEvent']);
     Route::get('/rejectUserJoinEvent/{id}', [ManagerController::class, 'rejectUserJoinEvent']);
     Route::post('/createEvent', [ManagerController::class, 'createEvent']);
 });

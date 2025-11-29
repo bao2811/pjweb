@@ -58,6 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 // \Illuminate\Routing\Middleware\SubstituteBindings::class,
             ],
             'admin' => [
+                \App\Http\Middleware\CheckRole::class . ':admin',
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
                 \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
             ],

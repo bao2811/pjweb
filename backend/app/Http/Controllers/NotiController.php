@@ -98,7 +98,10 @@ class NotiController extends Controller
         try {
             $user = $request->user();
             $notifications = $this->notiService->getNotificationsByUserId($user->id);
-            return response()->json($notifications);
+            return response()->json([
+                'success' => true,
+                'notifications' => $notifications
+            ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

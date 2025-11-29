@@ -40,19 +40,26 @@ class CommentRepo
     {
         // Use the provided $postId (was incorrectly using $post_id) and include
         // useful fields (id, content, author info, created_at) for the client.
-        $comments = Comment::where('comments.post_id', $postId)
-            ->leftJoin('users', 'comments.author_id', '=', 'users.id')
-            ->select(
-                'comments.id',
-                'comments.content',
-                'comments.author_id',
-                'comments.created_at',
-                'users.username as name',
-                'users.image as avatar'
-            )
-            ->orderBy('comments.created_at', 'asc')
-            ->get();
+        // $comments = Comment::where('comments.post_id', $postId)
+        //     ->leftJoin('users', 'comments.author_id', '=', 'users.id')
+        //     ->select(
+        //         'comments.id',
+        //         'comments.content',
+        //         'comments.author_id',
+        //         'comments.created_at',
+        //         'users.username as name',
+        //         'users.image as avatar'
+        //     )
+        //     ->orderBy('comments.created_at', 'asc')
+        //     ->get();
 
+        $comments = Comment::where('comments.post_id', $postId)
+            ->whereNull('parent_id') // Chỉ lấy comment gốc, không lấy replies
+            ->with('author:id,name,avatar,role')
+            ->with('replies.author:id,name,avatar,role')
+            ->orderBy('created_at', 'asc')
+            ->get();
+            
         return $comments;
     }
 }

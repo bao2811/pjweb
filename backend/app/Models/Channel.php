@@ -19,9 +19,18 @@ class Channel extends Model
         'event_id',
     ];
 
-    public function users()
+    public function event()
     {
-        return $this->belongsToMany(User::class, 'channel_user', 'channel_id', 'user_id');
+        return $this->belongsTo(Event::class, 'event_id');
     }
 
+    public function posts()
+    {
+        return $this->hasMany(Post::class, 'channel_id');
+    }
+
+    public function messages()
+    {
+        return $this->hasMany(Message::class, 'channel_id');
+    }
 }

@@ -9,10 +9,16 @@ self.addEventListener("push", function (event) {
   const title = data.title || "Thông báo mới";
   const options = {
     body: data.body || "Bạn có một thông báo mới.",
-    icon: data.icon || "/icon.png",
-    badge: "/badge.png",
+    icon: data.icon || "/icons/notification-icon.png",
+    badge: data.badge || "/icons/badge-icon.png",
+    tag: data.tag || "event-notification",
+    timestamp: data.timestamp ? Date.parse(data.timestamp) : Date.now(),
+    requireInteraction: data.requireInteraction ?? false,
+    renotify: data.renotify ?? true,
     data: {
-      url: data.url || "http://localhost:3000/notifications",
+      url: data.url || "/notifications",
+      // Bạn có thể thêm metadata khác ở đây nếu muốn
+      extra: data.extraData || null,
     },
   };
 
@@ -21,5 +27,23 @@ self.addEventListener("push", function (event) {
 
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data.url || "/"));
+
+  const url = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((windowClients) => {
+        // Nếu tab đã mở với URL → focus
+        for (let client of windowClients) {
+          if (client.url === url && "focus" in client) {
+            return client.focus();
+          }
+        }
+        // Nếu chưa mở → mở tab mới
+        if (clients.openWindow) {
+          return clients.openWindow(url);
+        }
+      })
+  );
 });

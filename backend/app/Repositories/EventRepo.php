@@ -18,9 +18,29 @@ class EventRepo
         return Event::find($id);
     }
 
-    public function getAllEvents()
+    /**
+     * Lấy tất cả events và kiểm tra user đã like hay chưa
+     * 
+     * @param int|null $userId ID của user để filter và check like status
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getAllEvents($userId = null)
     {
-        return Event::all();
+        $query = Event::query();
+
+        if ($userId) {
+            // Thêm trường is_liked: true/false nếu user đã like
+            $events = $query->withExists([
+                'likes as is_liked' => function ($q) use ($userId) {
+                    $q->where('user_id', $userId);
+                }
+            ]);
+        } else {
+            // Nếu không có userId → mặc định false
+            $events = $query->selectRaw('events.*, false as is_liked');
+        }
+
+        return $events;
     }
 
     public function deleteEventById($id) : bool

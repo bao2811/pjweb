@@ -124,11 +124,39 @@ class PostRepo
         return Post::where('user_id', $userId)->get();
     }
 
-
-    public function getPostsByEventId($eventId)
+     public function getPostsByChannel($channelId, $userId = null)
     {
-        return Post::where('event_id', $eventId)->get();
+        $currentUserId = $userId ?? auth()->id();
+        
+        $posts = Post::with([
+                'user:id,name,avatar,role',
+                'comments' => function($query) {
+                    $query->whereNull('parent_id') // Chỉ lấy comment gốc
+                          ->with(['user:id,name,avatar,role', 'replies.user:id,name,avatar,role'])
+                          ->orderBy('created_at', 'asc');
+                },
+                'likes:id,post_id,user_id'
+            ])
+            ->where('channel_id', $channelId)
+            ->where('status', 'active')
+            ->withCount(['comments', 'likes'])
+            ->orderBy('created_at', 'desc')
+            ->limit(20) // Limit để load nhanh hơn
+            ->get()
+            ->map(function ($post) use ($currentUserId) {
+                $post->is_liked = $currentUserId 
+                    ? $post->likes->contains('user_id', $currentUserId)
+                    : false;
+                    
+                // Unset likes collection to reduce response size
+                unset($post->likes);
+                
+                return $post;
+            });
+            
+        return $posts;
     }
+
 
     public function updateLikeOfPost($postId, $status, $totalLikes)
     {

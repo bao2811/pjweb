@@ -110,6 +110,8 @@ class PostController extends Controller
 
     public function updatePostById(Request $request, $id): JsonResponse
     {
+
+        //kiểm tra post có phải của user tạo không
         try {
             $postData = $request->only(['title', 'content', 'image']);
             $post = $this->postService->updatePostById($id, $postData);
@@ -148,7 +150,6 @@ class PostController extends Controller
     public function updateLikeOfPost(Request $request, $postId): JsonResponse
     {
         $status = $request->input('status'); // 1 for like, 0 for unlike
-
         try {
             $this->postService->updateLikeOfPost($postId, $status);
             return response()->json(['message' => 'Post like updated successfully'], 200);
@@ -180,19 +181,6 @@ class PostController extends Controller
         }
     }
 
-    public function getPostsByEventId(Request $request, $eventId): JsonResponse
-    {
-        try {
-            $posts = $this->postService->getPostsByEventId($eventId);
-            return response()->json(['posts' => $posts], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Server error',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
     public function getPostsByUserId(Request $request, $userId): JsonResponse
     {
         try {
@@ -205,11 +193,67 @@ class PostController extends Controller
             ], 500);
         }
     }
+
     public function getCommentsOfPost(Request $request, $postId): JsonResponse
     {
         try {
             $comments = $this->postService->getCommentsOfPost($postId);
             return response()->json(['comments' => $comments], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Lấy tất cả posts của 1 channel
+    public function getPostsByChannel(Request $request, $channelId): JsonResponse
+    {
+        try {
+            $userId = $request->query('user_id') ?? auth()->id();
+            $posts = $this->postService->getPostsByChannel($channelId, $userId);
+            return response()->json(['posts' => $posts], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Tạo post mới trong channel
+    public function addPostToChannel(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'channel_id' => 'required|exists:channels,id',
+                'title' => 'required|string|max:255',
+                'content' => 'nullable|string',
+                'image' => 'nullable|string',
+                'author_id' => 'nullable|exists:users,id', // Tạm thời cho phép gửi author_id
+            ]);
+
+            $postData = [
+                'channel_id' => $request->channel_id,
+                'title' => $request->title,
+                'content' => $request->content,
+                'image' => $request->image,
+                'author_id' => $request->author_id ?? auth()->id(), // Ưu tiên auth, fallback về request
+                'status' => 'active',
+            ];
+            
+            if (!$postData['author_id']) {
+                return response()->json(['error' => 'Author ID is required'], 400);
+            }
+
+            $post = $this->postService->createPost($postData);
+            return response()->json(['post' => $post], 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'messages' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Server error',

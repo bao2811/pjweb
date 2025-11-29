@@ -69,17 +69,22 @@ class ManagerController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'date' => 'required|date',
-            'user_id' => 'required|integer|exists:users,id',
+            'content' => 'required|string',
+            'address' => 'required|string|max:255',
+            'start_time' => 'required|date',
+            'end_time' => 'required|date|after_or_equal:start_time',
             'image' => 'nullable|image|max:2048',
             'comanager' => 'nullable|array',
             'comanager.*' => 'integer|exists:users,id',
+            'max_participants' => 'required|integer|min:1',
+            'category' => 'required|string|max:100',
         ]);
 
-        $eventData = $request->only(['title', 'description', 'date', 'user_id', 'image']);
+        $eventData = $request->only(['title', 'content', 'start_time', 'end_time', 'address', 'image', 'max_participants', 'category']);
+        $eventData['author_id'] = $request->user()->id;
         if ($request->hasFile('image')) {
             $eventData['image'] = $request->file('image')->store('events');
+        
         }
         $event = $this->managerService->createEvent($eventData, $request->input('comanager', []));
 

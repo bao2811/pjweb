@@ -328,7 +328,12 @@ export default function UserManagementPage() {
           ? `/admin/banUser/${userId}`
           : `/admin/unbanUser/${userId}`;
 
-      const response = await authFetch(endpoint);
+      const response = await authFetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) throw new Error("Failed to update user status");
 
