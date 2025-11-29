@@ -7,12 +7,20 @@ use App\Models\PushSubscription;
 class PushRepo
 {
     /**
-     * Lấy tất cả user đã đăng ký WebPush theo batch
+     * Lấy tất cả subscriptions của users đã đăng ký WebPush theo batch
+     * Callback nhận danh sách subscriptions, không phải chỉ user_id
      */
-    public function getAllUserIdsInChunk(int $chunkSize = 100, callable $callback)
+    public function getAllSubscriptionsInChunk(int $chunkSize = 100, callable $callback)
     {
-        PushSubscription::select('user_id')
-            ->distinct()
+        PushSubscription::select('*')
             ->chunk($chunkSize, $callback);
+    }
+    
+    /**
+     * Lấy tất cả subscriptions của một user cụ thể
+     */
+    public function getSubscriptionsByUserId(int $userId)
+    {
+        return PushSubscription::where('user_id', $userId)->get();
     }
 }

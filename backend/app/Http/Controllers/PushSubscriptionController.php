@@ -14,6 +14,7 @@ class PushSubscriptionController extends Controller
      */
     public function subscribe(Request $request)
     {
+        $userId = $request->user()->id;
         $validator = Validator::make($request->all(), [
             'endpoint' => 'required|string',
             'keys.p256dh' => 'required|string',
@@ -29,13 +30,11 @@ class PushSubscriptionController extends Controller
             ], 422);
         }
 
-        $user = Auth::user();
-
         try {
             // Tạo hoặc update subscription (upsert)
             $subscription = PushSubscription::updateOrCreate(
                 [
-                    'user_id' => $user->id,
+                    'user_id' => $userId,
                     'endpoint' => $request->endpoint,
                 ],
                 [
@@ -106,13 +105,13 @@ class PushSubscriptionController extends Controller
     /**
      * Lấy danh sách devices đã subscribe của user
      */
-    public function listSubscriptions()
+    public function listSubscriptions(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user();
 
         try {
             $subscriptions = PushSubscription::where('user_id', $user->id)
-                ->select('id', 'device_name', 'created_at')
+                ->select('id', 'endpoint', 'device_name', 'created_at')
                 ->get();
 
             return response()->json([
@@ -132,9 +131,9 @@ class PushSubscriptionController extends Controller
     /**
      * Xóa tất cả subscriptions của user (logout all devices)
      */
-    public function unsubscribeAll()
+    public function unsubscribeAll(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user();
 
         try {
             $deleted = PushSubscription::where('user_id', $user->id)->delete();

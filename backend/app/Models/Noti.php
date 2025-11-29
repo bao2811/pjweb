@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -8,12 +7,16 @@ use App\Utils\WebPushApi;
 use Illuminate\Support\Facades\Log;
 use App\Models\PushSubscription;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Bus\Queueable;
 
 class Noti extends Model implements ShouldQueue  {
 
-    use Queueable;
+    use Notifiable; 
 
     protected $table = 'notis';
+
+    
 
     protected $fillable = [
         'title',
@@ -41,12 +44,12 @@ class Noti extends Model implements ShouldQueue  {
     /**
      * Người nhận thông báo
      */
-    public function receiver(): BelongsTo
+    public function receiver(): BelongsTo                                                                                                   
     {
         return $this->belongsTo(User::class, 'receiver_id');
     }
 
-    /**
+    /**                                                                                                                                                                                                                                                                                                                                                                                                 
      * Tạo thông báo và tự động gửi push notification
      */
     public static function createAndPush(array $data): self
@@ -60,14 +63,27 @@ class Noti extends Model implements ShouldQueue  {
         }
         
         return $notification;
-    }
+    }                                                                                         
 
+    /**
+     * Tạo thông báo và gửi push notification qua queue
+     */
     public static function dispatchCreateAndPush(array $data)
     {
-        dispatch(function() use ($data) {
-            $notification = self::create($data);
-            $notification->sendPush();
-        });
+        try {
+            dispatch(function() use ($data) {
+                $notification = self::create($data);
+                
+                if (isset($data['receiver_id'])) {
+                    $notification->sendPush();
+                }
+            })->onQueue('notifications');
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to dispatch notification: " . $e->getMessage());
+            return false;
+        }
     }
 
 

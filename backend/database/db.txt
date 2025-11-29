@@ -47,6 +47,7 @@ CREATE TABLE posts (
     comments INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    channel_id INT REFERENCES channel(id) ON DELETE CASCADE,
 );
 
 -- 4. COMMENTS

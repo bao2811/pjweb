@@ -58,7 +58,7 @@ class EventRepo
         if (!$event) {
             throw new Exception('Event not found');
         }
-        $event->status = 'upcoming';
+        $event->status = 'accepted';
         $event->save();
         return $event;
     }
@@ -69,7 +69,7 @@ class EventRepo
         if (!$event) {
             throw new Exception('Event not found');
         }
-        $event->status = 'cancelled';
+        $event->status = 'rejected';
         $event->save();
         return $event;
     }   

@@ -58,4 +58,11 @@ class JoinEventController extends Controller
         }
         return response()->json(['message' => 'Left event successfully']);
     }
+
+    public function getMyRegistrations(Request $request)
+    {
+        $user = $request->user();
+        $registrations = $this->joinEventService->getMyRegistrations($user->id);
+        return response()->json($registrations);
+    }
 }

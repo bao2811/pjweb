@@ -25,8 +25,16 @@ class UserRepo
     }
 
     public function getAllUsers()
-    {
-        return User::where('role', 'user')->get();
+    { 
+        // return User::select('users.*', \DB::raw('COUNT(join_events.event_id) as events_count'))
+        //     ->leftJoin('join_events', 'users.id', '=', 'join_events.user_id')
+        //     ->where('users.role', 'user')
+        //     ->groupBy('users.id')
+        //     ->get();
+
+        return User::where('role', 'user')
+            ->withCount(['joinEvents as events_count']) // tính số lượng event tham gia
+            ->get();
     }
 
     public function getUsersByRole($role)
@@ -44,26 +52,22 @@ class UserRepo
         return $user;
     }
 
-    public function banUser($id) : User
+    public function banUser($id): int
     {
-        $user = $this->getUserById($id);
-        if (!$user) {
+        $result = User::where('id', $id)->update(['status' => 'locked']);
+        if (!$result) {
             throw new Exception('User not found');
         }
-        $user->is_banned = true;
-        $user->save();
-        return $user;
+        return $result;
     }
 
-    public function unbanUser($id) : User
+    public function unbanUser($id) : int
     {
-        $user = $this->getUserById($id);
-        if (!$user) {
+        $result = User::where('id', $id)->update(['status' => 'active']);
+        if (!$result) {
             throw new Exception('User not found');
         }
-        $user->is_banned = false;
-        $user->save();
-        return $user;
+        return $result;
     }
 
     public function deleteUserById($id) : bool

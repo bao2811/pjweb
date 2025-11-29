@@ -4,8 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Middleware\JwtMiddleware;
+use App\Http\Middleware\VerifyEmailMiddleware;
 
-Route::middleware('auth:sanctum')->prefix('user')->group(function () {
+Route::middleware(['jwt'])->prefix('user')->group(function () {
     Route::get('/getuser', [UserController::class, 'getUser']);
     Route::get('/getUserDetails/{id}', [UserController::class, 'getUserDetails']);
     Route::get('/updateUserProfile/{id}', [UserController::class, 'updateUserProfile']);

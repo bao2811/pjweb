@@ -110,7 +110,7 @@ const mockEvents: Event[] = [
     isLiked: false,
     likes: 128,
     status: "ongoing",
-    isHidden: false,
+    isHidden: false, // thêm vào
     approvalStatus: "approved",
     createdAt: "2025-10-01",
   },

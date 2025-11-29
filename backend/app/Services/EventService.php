@@ -7,23 +7,32 @@ use App\Repositories\EventRepo;
 use App\Repositories\EventManagementRepo;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\Event;
 use App\Models\PushSubscription;
 use App\Models\Noti;
+use App\Models\User;
 use App\Repositories\PushRepo;
+use App\Services\NotiService;
 
 class EventService
 {
     protected $eventRepo;
     protected $eventManagementRepo;
     protected $pushRepo;
+    protected $notiService;
 
-    public function __construct(EventRepo $eventRepo, EventManagementRepo $eventManagementRepo, PushRepo $pushRepo)
-    {
+    public function __construct(
+        EventRepo $eventRepo, 
+        EventManagementRepo $eventManagementRepo, 
+        PushRepo $pushRepo,
+        NotiService $notiService
+    ) {
         $this->eventRepo = $eventRepo;
         $this->eventManagementRepo = $eventManagementRepo;
         $this->pushRepo = $pushRepo;
+        $this->notiService = $notiService;
     }
 
     public function getAllEvents()
@@ -41,7 +50,7 @@ class EventService
             DB::commit();
 
             $this->notifyAllUsersNewEvent($event);
-    return $event;
+            return $event;
         } catch (Exception $e) {
             // Handle exception
             DB::rollBack();
@@ -49,24 +58,30 @@ class EventService
         }
     }
 
+    /**
+     * Gửi thông báo WebPush đến tất cả users khi có sự kiện mới
+     */
     public function notifyAllUsersNewEvent($event)
     {
-        $this->pushRepo->getAllUserIdsInChunk(100, function($subscriptions) use ($event) {
-            foreach ($subscriptions as $sub) {
-                // Queue gửi WebPush để không block request
+        $this->pushRepo->getAllSubscriptionsInChunk(100, function($subscriptions) use ($event) {
+            foreach ($subscriptions as $subscription) {
+                // Dispatch notification job cho từng user
                 Noti::dispatchCreateAndPush([
                     'title' => 'Sự kiện mới: ' . $event->name,
                     'message' => "Một sự kiện mới đã được tạo, hãy tham gia ngay!",
                     'sender_id' => auth()->id() ?? null,
-                    'receiver_id' => $sub->user_id,
+                    'receiver_id' => $subscription->user_id,
                     'type' => 'event_new',
                     'data' => [
                         'event_id' => $event->id,
+                        'event_name' => $event->name,
                         'url' => "/events/{$event->id}"
                     ]
                 ]);
             }
         });
+        
+        Log::info("Dispatched new event notifications for event: {$event->name} (ID: {$event->id})");
     }
 
     public function updateEvent($id, array $data)

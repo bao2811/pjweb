@@ -67,6 +67,36 @@ class AdminService
         return $result;
     }
 
+    public function bulkLockUsers(array $userIds)
+    {
+        $affected = 0;
+        foreach ($userIds as $id) {
+            try {
+                $this->userRepo->banUser($id);
+                $affected++;
+            } catch (\Exception $e) {
+                // Log error but continue with other users
+                \Log::error("Failed to lock user {$id}: " . $e->getMessage());
+            }
+        }
+        return $affected;
+    }
+
+    public function bulkUnlockUsers(array $userIds)
+    {
+        $affected = 0;
+        foreach ($userIds as $id) {
+            try {
+                $this->userRepo->unbanUser($id);
+                $affected++;
+            } catch (\Exception $e) {
+                // Log error but continue with other users
+                \Log::error("Failed to unlock user {$id}: " . $e->getMessage());
+            }
+        }
+        return $affected;
+    }
+
     public function acceptEvent($id)
     {
         $result = $this->eventService->acceptEvent($id);

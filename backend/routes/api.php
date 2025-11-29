@@ -9,6 +9,7 @@ use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\JoinEventController;
+use App\Http\Controllers\NotiController;
 use App\Events\ChatMessage;
 use Illuminate\Http\Request;
 use App\Jobs\ExampleJob;
@@ -25,7 +26,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/logout', [AuthController::class, 'logout']);
 Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail']);
-Route::post('/refresh', [AuthController::class, 'refreshToken'])->middleware('jwt');
+Route::post('/refresh', [AuthController::class, 'refreshToken']);
 Route::get('/me', [AuthController::class, 'getCurrentUser'])->middleware('jwt');
 
 Route::get('/dashboard', function () {
@@ -77,6 +78,22 @@ Route::group(['prefix' => 'events', 'middleware' => 'jwt'], function () {
     Route::put('/updateEventById/{id}', [EventController::class, 'updateEventById']);
     Route::delete('/deleteEventById/{id}', [EventController::class, 'deleteEventById']);
     Route::post('/searchEvents', [EventController::class, 'searchEvents']);
+});
+
+// Notifications
+Route::group(['prefix' => 'notifications', 'middleware' => 'jwt'], function () {
+    // User notifications (lấy, đọc, xóa notifications của user hiện tại)
+    Route::get('/', [NotiController::class, 'getUserNotifications']);
+    Route::get('/unread-count', [NotiController::class, 'getUnreadCount']);
+    Route::put('/{id}/read', [NotiController::class, 'markAsRead']);
+    Route::put('/mark-all-read', [NotiController::class, 'markAllAsRead']);
+    Route::delete('/{id}', [NotiController::class, 'deleteNotification']);
+    
+    // Admin/Manager: Gửi notifications (cần thêm middleware admin/manager nếu cần)
+    Route::post('/send-test', [NotiController::class, 'sendNotification']); // Test gửi push
+    Route::post('/send-to-all', [NotiController::class, 'sendToAllUsers']); // Gửi cho tất cả users
+    Route::post('/send-to-event-participants', [NotiController::class, 'sendToEventParticipants']); // Gửi cho participants
+    Route::post('/send-to-users', [NotiController::class, 'sendToSpecificUsers']); // Gửi cho users cụ thể
 });
 
 Route::options('{any}', function (Request $request) {

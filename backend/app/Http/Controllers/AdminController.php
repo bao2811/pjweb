@@ -160,4 +160,68 @@ class AdminController {
             ], 500);
         }
     }
+
+    public function deleteUser($id) {
+        try {
+            $res = $this->adminService->deleteUser($id);
+            return response()->json([
+                'message' => 'complete delete user'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'something wrong',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function bulkLockUsers(Request $request) {
+        try {
+            $data = $request->validate([
+                'user_ids' => 'required|array',
+                'user_ids.*' => 'required|integer|exists:users,id'
+            ]);
+            
+            $result = $this->adminService->bulkLockUsers($data['user_ids']);
+            return response()->json([
+                'message' => 'complete bulk lock users',
+                'affected' => $result
+            ], 200);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation error',
+                'message' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'something wrong',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function bulkUnlockUsers(Request $request) {
+        try {
+            $data = $request->validate([
+                'user_ids' => 'required|array',
+                'user_ids.*' => 'required|integer|exists:users,id'
+            ]);
+            
+            $result = $this->adminService->bulkUnlockUsers($data['user_ids']);
+            return response()->json([
+                'message' => 'complete bulk unlock users',
+                'affected' => $result
+            ], 200);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation error',
+                'message' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'something wrong',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

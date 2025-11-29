@@ -63,11 +63,10 @@ class JWTUtil
             return self::decodeToken($token);
         } catch (ExpiredException $e) {
             throw new \Exception('Token has expired');
-        }
-         catch (SignatureInvalidException $e) {
-            throw new \Exception('Invalid signature');
+        } catch (SignatureInvalidException $e) {
+            throw new \Exception('Invalid token');
         } catch (\Exception $e) {
-            throw new \Exception('Invalid token: ' . $e->getMessage());
+            throw new \Exception('Invalid token');
         }
     }
 }

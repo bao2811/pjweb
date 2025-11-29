@@ -9,37 +9,61 @@ use Carbon\Carbon;
 
 class NotiRepo
 {
-    public function getEventManagementById($id) : ?EventManagement
+    /**
+     * Tìm notification theo ID
+     */
+    public function findById($id): ?Noti
     {
-        return EventManagement::find($id);
+        return Noti::find($id);
     }
 
-    public function getAllEventManagements()
+    /**
+     * Lấy tất cả notifications của một user
+     */
+    public function findByUserId($userId)
     {
-        return EventManagement::all();
+        return Noti::where('receiver_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
-    public function deleteEventManagementById($id) : bool
+    /**
+     * Tạo notification mới
+     */
+    public function create($data): Noti
     {
-        $eventManagement = $this->getEventManagementById($id);
-        if (!$eventManagement) {
-            throw new Exception('EventManagement not found');
+        return Noti::create($data);
+    }
+
+    /**
+     * Đánh dấu tất cả notifications của user là đã đọc
+     */
+    public function markAllAsReadByUserId($userId): bool
+    {
+        return Noti::where('receiver_id', $userId)
+            ->where('is_read', false)
+            ->update(['is_read' => true]) !== false;
+    }
+
+    /**
+     * Xóa notification theo ID
+     */
+    public function deleteById($id): bool
+    {
+        $noti = $this->findById($id);
+        if (!$noti) {
+            return false;
         }
-        return $eventManagement->delete();
+        return $noti->delete();
     }
 
-    public function createEventManagement($data) : EventManagement
+    /**
+     * Lấy số lượng notifications chưa đọc của user
+     */
+    public function getUnreadCountByUserId($userId): int
     {
-        return EventManagement::create($data);
-    }
-
-    public function updateEventManagementById($id, $data) : EventManagement
-    {
-        $eventManagement = $this->getEventManagementById($id);
-        if (!$eventManagement) {
-            throw new Exception('EventManagement not found');
-        }
-        $eventManagement->update($data);
-        return $eventManagement;
+        return Noti::where('receiver_id', $userId)
+            ->where('is_read', false)
+            ->count();
     }
 }

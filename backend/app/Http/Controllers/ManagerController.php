@@ -86,4 +86,41 @@ class ManagerController extends Controller
         return response()->json(['event' => $event], 201);
     }
 
+    //  public function createEvent(Request $request)
+    // {
+    //     $request->validate([
+    //         'title' => 'required|string|max:255',
+    //         'description' => 'nullable|string',
+    //         'location' => 'required|string|max:255',
+    //         'start_time' => 'required|date',
+    //         'end_time' => 'required|date|after_or_equal:start_time',
+    //         'max_participants' => 'required|integer|min:1',
+    //         'points' => 'nullable|integer|min:0',
+    //         'category' => 'required|string|max:100',
+    //         'image' => 'nullable|string',
+    //         'status' => 'nullable|string|in:pending,approved,rejected',
+    //     ]);
+
+    //     // Lấy user_id từ JWT token
+    //     $userId = auth()->id();
+        
+    //     $eventData = $request->only([
+    //         'title', 'description', 'location', 'start_time', 'end_time',
+    //         'max_participants', 'points', 'category', 'image', 'status'
+    //     ]);
+        
+    //     // Set default values
+    //     $eventData['status'] = $eventData['status'] ?? 'pending';
+    //     $eventData['points'] = $eventData['points'] ?? 100;
+    //     $eventData['current_participants'] = 0;
+    //     $eventData['creator_id'] = $userId;
+        
+    //     $event = $this->managerService->createEvent($eventData, []);
+
+    //     return response()->json([
+    //         'message' => 'Event created successfully',
+    //         'event' => $event
+    //     ], 201);
+    // }
+
 }

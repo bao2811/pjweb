@@ -101,7 +101,7 @@ class EventController extends Controller
         return response()->json(['event' => $event]);
     }
 
-    public function deleteEvent(Request $request, $id)
+    public function deleteEventById(Request $request, $id)
     {
         $event = $this->eventService->getEventById($id);
         if (!$event) {
@@ -111,6 +111,36 @@ class EventController extends Controller
         $this->eventService->deleteEvent($event);
 
         return response()->json(['message' => 'Event deleted successfully']);
+    }
+
+    public function searchEvents(Request $request)
+    {
+        $query = $request->input('query', '');
+        $events = $this->eventService->searchEvents($query);
+        return response()->json(['events' => $events]);
+    }
+
+    public function getEventChannel($id)
+    {
+        try {
+            $event = $this->eventService->getEventById($id);
+            if (!$event) {
+                return response()->json(['error' => 'Event not found'], 404);
+            }
+
+            $channel = $event->channel;
+            if (!$channel) {
+                // Create channel if it doesn't exist
+                $channel = \App\Models\Channel::create([
+                    'title' => 'Channel - ' . $event->title,
+                    'event_id' => $event->id,
+                ]);
+            }
+
+            return response()->json(['channel' => $channel]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
 }

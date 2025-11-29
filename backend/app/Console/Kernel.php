@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         // Đăng ký command của bạn ở đây
         \App\Console\Commands\ExpireJoinEvent::class,
+        \App\Console\Commands\ExpireEvents::class,
     ];
 
     /**

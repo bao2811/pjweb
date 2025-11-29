@@ -3,10 +3,16 @@ import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { authFetch } from "@/utils/auth";
 import React, { useState, useEffect, useRef } from "react";
 
 import { IoIosNotifications } from "react-icons/io";
-import { FaUserCircle, FaChevronDown } from "react-icons/fa";
+import {
+  FaUserCircle,
+  FaChevronDown,
+  FaBell,
+  FaBellSlash,
+} from "react-icons/fa";
 import { RiSettings4Fill, RiLogoutBoxLine } from "react-icons/ri";
 import { MdDashboard, MdEvent } from "react-icons/md";
 
@@ -15,7 +21,382 @@ export default function NavbarUser() {
   const router = useRouter();
   const { user } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoadingState, setIsLoadingState] = useState(true);
+  const [subscriptionEndpoint, setSubscriptionEndpoint] = useState<
+    string | null
+  >(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Check và sync push notification state khi component mount
+  useEffect(() => {
+    initializePushState();
+  }, []);
+
+  const initializePushState = async () => {
+    setIsLoadingState(true);
+    try {
+      console.log("[Web Push] Initializing push state...");
+
+      // Check browser permission
+      const hasPermission =
+        "Notification" in window && Notification.permission === "granted";
+
+      console.log("[Web Push] Browser permission:", Notification.permission);
+
+      // Check service worker subscription
+      let subscription = null;
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          subscription = await registration.pushManager.getSubscription();
+          console.log(
+            "[Web Push] Local subscription found:",
+            subscription ? "Yes" : "No"
+          );
+        }
+      }
+
+      // Sync với backend
+      if (subscription) {
+        console.log("[Web Push] Verifying subscription with backend...");
+        const isValid = await verifySubscriptionWithBackend(
+          subscription.endpoint
+        );
+
+        if (isValid) {
+          console.log(
+            "[Web Push] ✅ Subscription verified - Setting state to ENABLED"
+          );
+          setIsPushEnabled(true);
+          setSubscriptionEndpoint(subscription.endpoint);
+        } else {
+          console.log(
+            "[Web Push] ❌ Subscription NOT found in backend - Unsubscribing local"
+          );
+          // Backend không có subscription này, unsubscribe local
+          await subscription.unsubscribe();
+          setIsPushEnabled(false);
+          setSubscriptionEndpoint(null);
+        }
+      } else {
+        console.log("[Web Push] No local subscription found");
+        setIsPushEnabled(false);
+        setSubscriptionEndpoint(null);
+      }
+    } catch (error) {
+      console.error("[Web Push] Error initializing state:", error);
+      setIsPushEnabled(false);
+      setSubscriptionEndpoint(null);
+    } finally {
+      setIsLoadingState(false);
+    }
+  };
+
+  // Verify subscription với backend
+  const verifySubscriptionWithBackend = async (
+    endpoint: string
+  ): Promise<boolean> => {
+    try {
+      const response = await authFetch("/user/push/subscriptions");
+      if (response.ok) {
+        const result = await response.json();
+        const subscriptions = result.data || [];
+
+        // Kiểm tra subscription có tồn tại trong backend không
+        const exists = subscriptions.some(
+          (sub: any) => sub.endpoint === endpoint
+        );
+
+        console.log("[Web Push] Backend verification:", {
+          endpoint: endpoint.substring(0, 50) + "...",
+          totalSubscriptions: subscriptions.length,
+          exists: exists,
+        });
+
+        return exists;
+      }
+      return false;
+    } catch (error) {
+      console.error("[Web Push] Error verifying subscription:", error);
+      return false;
+    }
+  };
+
+  // Show notification (có thể thay bằng toast library)
+  const showNotification = (
+    type: "success" | "error" | "warning" | "info",
+    title: string,
+    message: string
+  ) => {
+    const icon =
+      type === "success"
+        ? "✅"
+        : type === "error"
+        ? "❌"
+        : type === "warning"
+        ? "⚠️"
+        : "ℹ️";
+    alert(`${icon} ${title}\n\n${message}`);
+  };
+
+  // Register for web push notifications
+  const handleRegisterPush = async () => {
+    // Validate browser support
+    if (!("Notification" in window)) {
+      showNotification(
+        "error",
+        "Trình duyệt không hỗ trợ",
+        "Trình duyệt của bạn không hỗ trợ thông báo push"
+      );
+      return;
+    }
+
+    if (!("serviceWorker" in navigator)) {
+      showNotification(
+        "error",
+        "Không hỗ trợ Service Worker",
+        "Trình duyệt của bạn không hỗ trợ Service Worker"
+      );
+      return;
+    }
+
+    setIsRegistering(true);
+
+    try {
+      // Step 1: Request notification permission
+      const permission = await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        showNotification(
+          "warning",
+          "Quyền bị từ chối",
+          "Bạn cần cho phép thông báo để nhận cập nhật"
+        );
+        setIsRegistering(false);
+        return;
+      }
+
+      // Step 2: Register service worker
+      let registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) {
+        registration = await navigator.serviceWorker.register("/sw.js");
+        console.log("[Web Push] Service Worker registered");
+      }
+      await navigator.serviceWorker.ready;
+
+      // Step 3: Check existing subscription
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (subscription) {
+        // Đã có subscription, kiểm tra với backend
+        const isValid = await verifySubscriptionWithBackend(
+          subscription.endpoint
+        );
+        if (isValid) {
+          setIsPushEnabled(true);
+          setSubscriptionEndpoint(subscription.endpoint);
+          showNotification(
+            "success",
+            "Đã bật thông báo",
+            "Bạn đã đăng ký nhận thông báo trước đó"
+          );
+          setIsRegistering(false);
+          return;
+        } else {
+          // Backend không có, unsubscribe và tạo mới
+          await subscription.unsubscribe();
+          subscription = null;
+        }
+      }
+
+      // Step 4: Create new subscription
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+      if (!vapidPublicKey) {
+        throw new Error("VAPID public key not configured");
+      }
+
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      });
+
+      console.log("[Web Push] New push subscription created");
+
+      // Step 5: Send to backend
+      const subscriptionJson = subscription.toJSON();
+
+      console.log("[Web Push] Sending to backend:", {
+        endpoint: subscriptionJson.endpoint?.substring(0, 50) + "...",
+        device: getBrowserInfo(),
+      });
+
+      const response = await authFetch("/user/push/subscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          endpoint: subscriptionJson.endpoint,
+          keys: {
+            p256dh: subscriptionJson.keys?.p256dh,
+            auth: subscriptionJson.keys?.auth,
+          },
+          device_name: getBrowserInfo(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Không thể lưu đăng ký");
+      }
+
+      const result = await response.json();
+      console.log("[Web Push] Backend response:", result);
+
+      if (result.success) {
+        setIsPushEnabled(true);
+        setSubscriptionEndpoint(subscriptionJson.endpoint || null);
+        showNotification(
+          "success",
+          "Đăng ký thành công!",
+          "Bạn sẽ nhận được thông báo về các sự kiện mới"
+        );
+      } else {
+        throw new Error(result.message || "Đăng ký thất bại");
+      }
+    } catch (error) {
+      console.error("[Web Push] Registration error:", error);
+      showNotification(
+        "error",
+        "Đăng ký thất bại",
+        error instanceof Error ? error.message : "Có lỗi xảy ra"
+      );
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  // Unsubscribe from push notifications
+  const handleUnsubscribePush = async () => {
+    if (!subscriptionEndpoint) {
+      showNotification(
+        "warning",
+        "Không tìm thấy đăng ký",
+        "Không tìm thấy thông tin đăng ký thông báo"
+      );
+      return;
+    }
+
+    // Confirm before unsubscribe
+    const confirmed = confirm(
+      "Bạn có chắc muốn tắt thông báo?\n\nBạn sẽ không nhận được thông báo về các sự kiện mới và cập nhật quan trọng."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsRegistering(true);
+
+    try {
+      // Step 1: Unsubscribe from service worker
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription) {
+            const unsubscribed = await subscription.unsubscribe();
+            if (unsubscribed) {
+              console.log("[Web Push] Unsubscribed from push manager");
+            }
+          }
+        }
+      }
+
+      // Step 2: Remove from backend
+      const response = await authFetch("/user/push/unsubscribe", {
+        method: "POST",
+        body: JSON.stringify({
+          endpoint: subscriptionEndpoint,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Không thể hủy đăng ký");
+      }
+
+      const result = await response.json();
+      console.log("[Web Push] Unsubscribe response:", result);
+
+      if (result.success) {
+        setIsPushEnabled(false);
+        setSubscriptionEndpoint(null);
+        showNotification(
+          "success",
+          "Đã tắt thông báo",
+          "Bạn sẽ không nhận được thông báo push nữa"
+        );
+      } else {
+        throw new Error(result.message || "Hủy đăng ký thất bại");
+      }
+    } catch (error) {
+      console.error("[Web Push] Unsubscribe error:", error);
+      showNotification(
+        "error",
+        "Không thể tắt thông báo",
+        error instanceof Error ? error.message : "Có lỗi xảy ra"
+      );
+
+      // Nếu lỗi, vẫn reset state local (vì có thể backend đã xóa)
+      setIsPushEnabled(false);
+      setSubscriptionEndpoint(null);
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  // Get browser info for device_name
+  const getBrowserInfo = (): string => {
+    const ua = navigator.userAgent;
+    let browserName = "Unknown Browser";
+    let osName = "Unknown OS";
+
+    // Detect browser
+    if (ua.indexOf("Chrome") > -1) browserName = "Chrome";
+    else if (ua.indexOf("Safari") > -1) browserName = "Safari";
+    else if (ua.indexOf("Firefox") > -1) browserName = "Firefox";
+    else if (ua.indexOf("Edge") > -1) browserName = "Edge";
+
+    // Detect OS
+    if (ua.indexOf("Win") > -1) osName = "Windows";
+    else if (ua.indexOf("Mac") > -1) osName = "MacOS";
+    else if (ua.indexOf("Linux") > -1) osName = "Linux";
+    else if (ua.indexOf("Android") > -1) osName = "Android";
+    else if (ua.indexOf("iOS") > -1) osName = "iOS";
+
+    return `${browserName} on ${osName}`;
+  };
+
+  // Helper function to convert VAPID key
+  function urlBase64ToUint8Array(base64String: string) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, "+")
+      .replace(/_/g, "/");
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -120,70 +501,159 @@ export default function NavbarUser() {
 
           {/* Dropdown Menu */}
           {isDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-2 z-50 border border-gray-200">
-              {/* User Info */}
-              <div className="px-4 py-3 border-b border-gray-200">
-                <p className="text-sm font-semibold text-gray-900">
-                  {user?.username || "User"}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {user?.email || "user@example.com"}
-                </p>
+            <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl py-2 z-50 border border-gray-100">
+              {/* User Info Card */}
+              <div className="px-4 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-green-50">
+                <div className="flex items-center space-x-3">
+                  {user?.image ? (
+                    <Image
+                      src={user.image}
+                      alt="Profile"
+                      width={56}
+                      height={56}
+                      className="rounded-full border-3 border-white shadow-md object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-400 to-green-400 flex items-center justify-center shadow-md">
+                      <FaUserCircle className="text-white h-8 w-8" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-bold text-gray-900 truncate">
+                      {user?.username || "User"}
+                    </p>
+                    <p className="text-sm text-gray-600 truncate">
+                      {user?.email || "user@example.com"}
+                    </p>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                      {user?.role || "Volunteer"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Push Notification Toggle */}
+              <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50">
+                {isLoadingState ? (
+                  // Loading skeleton
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-10 bg-gray-200 rounded-lg"></div>
+                    <div className="h-4 bg-gray-100 rounded w-3/4"></div>
+                  </div>
+                ) : isPushEnabled ? (
+                  // Đã bật thông báo - Hiển thị trạng thái và nút tắt
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-green-100 text-green-700">
+                      <div className="flex items-center space-x-2">
+                        <FaBell className="h-5 w-5 animate-pulse" />
+                        <span className="text-sm font-medium">
+                          Đã bật thông báo
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold">✓</span>
+                    </div>
+                    <button
+                      onClick={handleUnsubscribePush}
+                      disabled={isRegistering}
+                      className="flex items-center justify-center w-full px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isRegistering ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent mr-2"></div>
+                          <span className="text-sm font-medium">
+                            Đang xử lý...
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <FaBellSlash className="h-4 w-4 mr-2" />
+                          <span className="text-sm font-medium">
+                            Tắt thông báo
+                          </span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-xs text-gray-500 px-3">
+                      Bạn đang nhận thông báo về sự kiện mới và cập nhật quan
+                      trọng
+                    </p>
+                  </div>
+                ) : (
+                  // Chưa bật thông báo - Hiển thị nút đăng ký
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleRegisterPush}
+                      disabled={isRegistering}
+                      className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex items-center space-x-2">
+                        {isRegistering ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-purple-700 border-t-transparent"></div>
+                        ) : (
+                          <FaBellSlash className="h-5 w-5" />
+                        )}
+                        <span className="text-sm font-medium">
+                          {isRegistering ? "Đang đăng ký..." : "Bật thông báo"}
+                        </span>
+                      </div>
+                      {!isRegistering && (
+                        <span className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full font-medium">
+                          Mới
+                        </span>
+                      )}
+                    </button>
+                    <p className="text-xs text-gray-500 px-3">
+                      Nhận thông báo về sự kiện mới và cập nhật quan trọng
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Menu Items */}
               <div className="py-1">
                 <Link
                   href="/user/profile"
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                  className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-green-50 transition-colors"
                   onClick={() => setIsDropdownOpen(false)}
                 >
-                  <FaUserCircle className="mr-3 h-5 w-5 text-gray-400" />
-                  Hồ sơ của tôi
+                  <FaUserCircle className="mr-3 h-5 w-5 text-blue-500" />
+                  <span className="font-medium">Hồ sơ của tôi</span>
                 </Link>
 
                 <Link
                   href="/user/dashboard"
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                  className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-green-50 transition-colors"
                   onClick={() => setIsDropdownOpen(false)}
                 >
-                  <MdDashboard className="mr-3 h-5 w-5 text-gray-400" />
-                  Dashboard
+                  <MdDashboard className="mr-3 h-5 w-5 text-green-500" />
+                  <span className="font-medium">Dashboard</span>
                 </Link>
 
                 <Link
                   href="/user/events"
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                  className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-green-50 transition-colors"
                   onClick={() => setIsDropdownOpen(false)}
                 >
-                  <MdEvent className="mr-3 h-5 w-5 text-gray-400" />
-                  Sự kiện
+                  <MdEvent className="mr-3 h-5 w-5 text-purple-500" />
+                  <span className="font-medium">Sự kiện</span>
                 </Link>
 
                 <Link
                   href="/user/settings"
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                  className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-green-50 transition-colors"
                   onClick={() => setIsDropdownOpen(false)}
                 >
-                  <RiSettings4Fill className="mr-3 h-5 w-5 text-gray-400" />
-                  Cài đặt
-                </Link>
-
-                <Link
-                  href="/user/notifications-settings"
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
-                  onClick={() => setIsDropdownOpen(false)}
-                >
-                  <IoIosNotifications className="mr-3 h-5 w-5 text-gray-400" />
-                  Cài đặt thông báo
+                  <RiSettings4Fill className="mr-3 h-5 w-5 text-gray-500" />
+                  <span className="font-medium">Cài đặt</span>
                 </Link>
               </div>
 
               {/* Logout */}
-              <div className="border-t border-gray-200 py-1">
+              <div className="border-t border-gray-100 py-1">
                 <button
                   onClick={handleLogout}
-                  className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  className="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
                 >
                   <RiLogoutBoxLine className="mr-3 h-5 w-5" />
                   Đăng xuất

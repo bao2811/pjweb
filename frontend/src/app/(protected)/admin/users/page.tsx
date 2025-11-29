@@ -5,6 +5,19 @@ import { authFetch } from "@/utils/auth";
 import { useRouter } from "next/dist/client/components/navigation";
 import Image from "next/image";
 import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from "chart.js";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
+import {
   FaUsers,
   FaSearch,
   FaFilter,
@@ -40,7 +53,23 @@ import {
   FaCheckSquare,
   FaSquare,
   FaCog,
+  FaBell,
+  FaPaperPlane,
+  FaInfoCircle,
 } from "react-icons/fa";
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 interface User {
   id: number;
@@ -77,22 +106,19 @@ interface Toast {
   message: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-
 export default function UserManagementPage() {
   const router = useRouter();
   const { user: currentUser, isLoading: authLoading, hasRole } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [filterRole, setFilterRole] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [eventsRange, setEventsRange] = useState<[number, number]>([0, 50]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     type:
       | "lock"
@@ -111,6 +137,18 @@ export default function UserManagementPage() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [notificationForm, setNotificationForm] = useState({
+    title: "",
+    message: "",
+    type: "announcement",
+    url: "",
+  });
+  const [notificationMode, setNotificationMode] = useState<"webpush" | "inapp">(
+    "webpush"
+  );
+  const [isSendingNotification, setIsSendingNotification] = useState(false);
+
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     if (!authLoading) {
@@ -121,10 +159,6 @@ export default function UserManagementPage() {
     }
   }, [authLoading, hasRole, router]);
 
-  const jwt_token = localStorage.getItem("jwt_token")
-    ? localStorage.getItem("jwt_token")
-    : null;
-
   // Fetch users from API
   useEffect(() => {
     fetchUsers();
@@ -133,13 +167,7 @@ export default function UserManagementPage() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await authFetch(`/admin/getAllUsers`, {
-        headers: {
-          "Content-Type": "application/json",
-          // Add authorization header if needed
-          Authorization: `Bearer ${jwt_token}`,
-        },
-      });
+      const response = await authFetch(`/admin/getAllUsers`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch users");
@@ -196,14 +224,10 @@ export default function UserManagementPage() {
           e.title.toLowerCase().includes(debouncedSearch.toLowerCase())
         );
 
-      const matchRole = filterRole === "all" || user.role === filterRole;
       const matchStatus =
         filterStatus === "all" || user.status === filterStatus;
-      const matchEvents =
-        (user.eventsJoined || 0) >= eventsRange[0] &&
-        (user.eventsJoined || 0) <= eventsRange[1];
 
-      return matchSearch && matchRole && matchStatus && matchEvents;
+      return matchSearch && matchStatus;
     });
 
     // Sort
@@ -230,15 +254,7 @@ export default function UserManagementPage() {
     });
 
     return filtered;
-  }, [
-    users,
-    debouncedSearch,
-    filterRole,
-    filterStatus,
-    eventsRange,
-    sortField,
-    sortOrder,
-  ]);
+  }, [users, debouncedSearch, filterStatus, sortField, sortOrder]);
 
   // Pagination
   const paginatedUsers = useMemo(() => {
@@ -282,95 +298,13 @@ export default function UserManagementPage() {
     setIsLoading(true);
 
     try {
-      if (confirmAction.type === "lock" || confirmAction.type === "unlock") {
-        const response = await fetch(
-          `${API_URL}/admin/users/${confirmAction.userId}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              status: confirmAction.type === "lock" ? "locked" : "active",
-            }),
-          }
-        );
-
-        if (!response.ok) throw new Error("Failed to update user status");
-
-        setUsers(
-          users.map((user) =>
-            user.id === confirmAction.userId
-              ? {
-                  ...user,
-                  status: confirmAction.type === "lock" ? "locked" : "active",
-                }
-              : user
-          )
-        );
-        showToast(
-          "success",
-          `Tài khoản đã ${
-            confirmAction.type === "lock" ? "khóa" : "mở khóa"
-          } thành công!`
-        );
-      } else if (confirmAction.type === "delete") {
-        const response = await fetch(
-          `${API_URL}/admin/users/${confirmAction.userId}`,
-          {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-
-        if (!response.ok) throw new Error("Failed to delete user");
-
-        setUsers(users.filter((u) => u.id !== confirmAction.userId));
-        showToast("success", "Xóa tài khoản thành công!");
-      } else if (
-        confirmAction.type === "bulk-lock" ||
-        confirmAction.type === "bulk-unlock"
-      ) {
-        const newStatus =
-          confirmAction.type === "bulk-lock" ? "locked" : "active";
-
-        // Update all selected users
-        await Promise.all(
-          selectedUsers.map((userId) =>
-            fetch(`${API_URL}/admin/users/${userId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: newStatus }),
-            })
-          )
-        );
-
-        setUsers(
-          users.map((user) =>
-            selectedUsers.includes(user.id)
-              ? { ...user, status: newStatus }
-              : user
-          )
-        );
-        showToast(
-          "success",
-          `Đã ${confirmAction.type === "bulk-lock" ? "khóa" : "mở khóa"} ${
-            selectedUsers.length
-          } tài khoản!`
-        );
-        setSelectedUsers([]);
-      } else if (confirmAction.type === "bulk-delete") {
-        // Delete all selected users
-        await Promise.all(
-          selectedUsers.map((userId) =>
-            fetch(`${API_URL}/admin/users/${userId}`, {
-              method: "DELETE",
-              headers: { "Content-Type": "application/json" },
-            })
-          )
-        );
-
-        setUsers(users.filter((u) => !selectedUsers.includes(u.id)));
-        showToast("success", `Đã xóa ${selectedUsers.length} tài khoản!`);
-        setSelectedUsers([]);
+      // Single user operations (by ID)
+      if (confirmAction.userId) {
+        await executeSingleUserAction(confirmAction.type, confirmAction.userId);
+      }
+      // Bulk operations (by array of IDs)
+      else {
+        await executeBulkAction(confirmAction.type, selectedUsers);
       }
 
       setShowConfirmModal(false);
@@ -380,6 +314,102 @@ export default function UserManagementPage() {
       showToast("error", "Có lỗi xảy ra, vui lòng thử lại");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Execute single user action (ban/unban/delete by ID)
+  const executeSingleUserAction = async (
+    type: string,
+    userId: number
+  ): Promise<void> => {
+    if (type === "lock" || type === "unlock") {
+      const endpoint =
+        type === "lock"
+          ? `/admin/banUser/${userId}`
+          : `/admin/unbanUser/${userId}`;
+
+      const response = await authFetch(endpoint);
+
+      if (!response.ok) throw new Error("Failed to update user status");
+
+      setUsers(
+        users.map((user) =>
+          user.id === userId
+            ? {
+                ...user,
+                status: type === "lock" ? "locked" : "active",
+              }
+            : user
+        )
+      );
+      showToast(
+        "success",
+        `Tài khoản đã ${type === "lock" ? "khóa" : "mở khóa"} thành công!`
+      );
+    } else if (type === "delete") {
+      const response = await authFetch(`/admin/deleteUser/${userId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Failed to delete user");
+
+      setUsers(users.filter((user) => user.id !== userId));
+      showToast("success", "Tài khoản đã xóa thành công!");
+    }
+  };
+
+  // Execute bulk action (ban/unban/delete by array of IDs)
+  const executeBulkAction = async (
+    type: string,
+    userIds: number[]
+  ): Promise<void> => {
+    if (type === "bulk-lock" || type === "bulk-unlock") {
+      const endpoint =
+        type === "bulk-lock"
+          ? "/admin/bulkLockUsers"
+          : "/admin/bulkUnlockUsers";
+
+      const response = await authFetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ user_ids: userIds }),
+      });
+
+      if (!response.ok) throw new Error("Failed to bulk update users");
+
+      const data = await response.json();
+      const newStatus = type === "bulk-lock" ? "locked" : "active";
+
+      setUsers(
+        users.map((user) =>
+          userIds.includes(user.id) ? { ...user, status: newStatus } : user
+        )
+      );
+      showToast(
+        "success",
+        `Đã ${type === "bulk-lock" ? "khóa" : "mở khóa"} ${
+          data.affected || userIds.length
+        } tài khoản!`
+      );
+      setSelectedUsers([]);
+    } else if (type === "bulk-delete") {
+      const promises = userIds.map((userId) =>
+        authFetch(`/admin/deleteUser/${userId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+      );
+
+      await Promise.all(promises);
+
+      setUsers(users.filter((user) => !userIds.includes(user.id)));
+      showToast("success", `Đã xóa ${userIds.length} tài khoản!`);
+      setSelectedUsers([]);
     }
   };
 
@@ -406,9 +436,7 @@ export default function UserManagementPage() {
 
     setTimeout(() => {
       const dataToExport =
-        filterStatus === "all" && filterRole === "all"
-          ? users
-          : filteredAndSortedUsers;
+        filterStatus === "all" ? users : filteredAndSortedUsers;
 
       if (format === "csv") {
         const headers = [
@@ -468,6 +496,74 @@ export default function UserManagementPage() {
     setShowDetailModal(true);
   };
 
+  // Send notification to all users
+  const handleSendNotification = async () => {
+    if (!notificationForm.title.trim() || !notificationForm.message.trim()) {
+      showToast("error", "Vui lòng nhập đầy đủ tiêu đề và nội dung thông báo");
+      return;
+    }
+
+    setIsSendingNotification(true);
+
+    try {
+      // Chọn endpoint dựa vào notificationMode
+      const endpoint =
+        notificationMode === "webpush"
+          ? "/api/notifications/send-test"
+          : "/api/notifications/send-to-all";
+
+      const response = await authFetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: notificationForm.title,
+          message: notificationForm.message,
+          type: notificationForm.type,
+          url: notificationForm.url || "/notifications",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send notification");
+      }
+
+      const data = await response.json();
+
+      if (notificationMode === "webpush") {
+        showToast(
+          "success",
+          `✅ Đã gửi Web Push đến ${data.stats?.total_users || 0} users (${
+            data.stats?.total_devices || 0
+          } devices)!`
+        );
+      } else {
+        showToast(
+          "success",
+          `✅ Đã gửi thông báo đến ${
+            data.stats?.total || stats.total
+          } người dùng!`
+        );
+      }
+
+      // Reset form and close modal
+      setNotificationForm({
+        title: "",
+        message: "",
+        type: "announcement",
+        url: "",
+      });
+      setShowNotificationModal(false);
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      showToast("error", "❌ Không thể gửi thông báo. Vui lòng thử lại!");
+    } finally {
+      setIsSendingNotification(false);
+    }
+  };
+
   const stats = {
     total: users.length,
     active: users.filter((u) => u.status === "active").length,
@@ -477,6 +573,91 @@ export default function UserManagementPage() {
     managers: users.filter((u) => u.role === "manager").length,
     volunteers: users.filter((u) => u.role === "volunteer").length,
   };
+
+  // Debug: Log user statuses
+  useEffect(() => {
+    if (users.length > 0) {
+      const statusCount = users.reduce((acc, user) => {
+        acc[user.status] = (acc[user.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log("👥 User Status Distribution:", statusCount);
+      console.log("🔒 Locked Users:", stats.locked);
+    }
+  }, [users, stats.locked]);
+
+  // Chart data - Calculate from actual users data
+  const chartData = useMemo(() => {
+    // Get last 12 months
+    const months = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        label: `T${date.getMonth() + 1}`,
+        year: date.getFullYear(),
+        month: date.getMonth(),
+      });
+    }
+
+    // Count new users registered per month
+    const newUsersByMonth = months.map((m) => {
+      return users.filter((user) => {
+        const createdDate = new Date(user.created_at);
+        return (
+          createdDate.getFullYear() === m.year &&
+          createdDate.getMonth() === m.month
+        );
+      }).length;
+    });
+
+    // Count users who joined events per month (based on event date)
+    const usersJoinedEventsByMonth = months.map((m) => {
+      // Count unique users who have events in this month
+      const usersWithEventsInMonth = new Set<number>();
+      users.forEach((user) => {
+        const hasEventInMonth = user.events?.some((event) => {
+          const eventDate = new Date(event.date);
+          return (
+            eventDate.getFullYear() === m.year &&
+            eventDate.getMonth() === m.month
+          );
+        });
+        if (hasEventInMonth) {
+          usersWithEventsInMonth.add(user.id);
+        }
+      });
+      return usersWithEventsInMonth.size;
+    });
+
+    // Count users banned per month (cumulative count of locked users up to that month)
+    // Since we don't have banned_at timestamp, we show cumulative banned users
+    const usersBannedByMonth = months.map((m, index) => {
+      // Count all locked users created up to this month
+      return users.filter((user) => {
+        if (user.status !== "locked") return false;
+        const createdDate = new Date(user.created_at);
+        const monthDate = new Date(m.year, m.month + 1, 0); // Last day of the month
+        return createdDate <= monthDate;
+      }).length;
+    });
+
+    const chartResult = {
+      labels: months.map((m) => m.label),
+      newUsers: newUsersByMonth,
+      usersJoinedEvents: usersJoinedEventsByMonth,
+      usersBanned: usersBannedByMonth,
+    };
+
+    // Debug: Log chart data
+    console.log("📊 Chart Data:", {
+      lockedUsersCount: users.filter((u) => u.status === "locked").length,
+      usersBanned: chartResult.usersBanned,
+      totalUsers: users.length,
+    });
+
+    return chartResult;
+  }, [users]);
 
   // Category helpers
   const getCategoryLabel = (category: string) => {
@@ -555,32 +736,33 @@ export default function UserManagementPage() {
       {/* )} */}
 
       {/* Header */}
-      <div className="bg-white border-b border-blue-100 shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-white border-b border-blue-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent flex items-center">
-                <FaUsers className="mr-3 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent flex items-center">
+                <FaUsers className="mr-2 text-blue-600" />
                 Quản lý người dùng
               </h1>
-              <p className="text-blue-700 mt-2 text-base sm:text-lg">
+              <p className="text-blue-700 mt-1 text-sm sm:text-base">
                 Quản lý tài khoản và phân quyền người dùng
               </p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowNotificationModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl transition duration-200 shadow-md hover:shadow-lg text-sm font-medium"
+              >
+                <FaBell />
+                <span className="hidden sm:inline">Gửi thông báo</span>
+              </button>
               <button
                 onClick={() => setShowExportModal(true)}
-                className="flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-xl transition duration-200 shadow-md hover:shadow-lg text-base font-medium"
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-xl transition duration-200 shadow-md hover:shadow-lg text-sm font-medium"
               >
-                <FaDownload className="text-lg" />
-                <span>Xuất dữ liệu</span>
+                <FaDownload />
+                <span className="hidden sm:inline">Xuất dữ liệu</span>
               </button>
-              <div className="text-right bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-4 border border-blue-100">
-                <p className="text-sm text-gray-600">Tổng người dùng</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-                  {stats.total}
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -602,10 +784,18 @@ export default function UserManagementPage() {
             </p>
           </div>
           <div className="bg-white rounded-xl p-5 border-l-4 border-red-500 shadow-md hover:shadow-lg transition duration-200">
-            <p className="text-sm sm:text-base text-gray-600 mb-1">Đã khóa</p>
+            <p className="text-sm sm:text-base text-gray-600 mb-1 flex items-center">
+              <FaLock className="mr-1.5 text-red-500" />
+              Đã khóa (Bị ban)
+            </p>
             <p className="text-2xl sm:text-3xl font-bold text-red-600">
               {stats.locked}
             </p>
+            {stats.locked > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {((stats.locked / stats.total) * 100).toFixed(1)}% tổng số
+              </p>
+            )}
           </div>
           <div className="bg-white rounded-xl p-5 border-l-4 border-yellow-500 shadow-md hover:shadow-lg transition duration-200">
             <p className="text-sm sm:text-base text-gray-600 mb-1">Chờ duyệt</p>
@@ -613,6 +803,150 @@ export default function UserManagementPage() {
               {stats.pending}
             </p>
           </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* User Registration Trend */}
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-md border border-blue-100 p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <FaUsers className="mr-2 text-blue-600" />
+              Xu hướng đăng ký người dùng
+            </h3>
+            <Line
+              data={{
+                labels: chartData.labels,
+                datasets: [
+                  {
+                    label: "Người dùng mới",
+                    data: chartData.newUsers,
+                    borderColor: "rgb(59, 130, 246)",
+                    backgroundColor: "rgba(59, 130, 246, 0.1)",
+                    tension: 0.4,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: "top" as const,
+                  },
+                  title: {
+                    display: false,
+                  },
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                  },
+                },
+              }}
+            />
+          </div>
+
+          {/* User Distribution by Status */}
+          <div className="bg-white rounded-xl shadow-md border border-blue-100 p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <FaCheckCircle className="mr-2 text-green-600" />
+              Phân bố trạng thái
+            </h3>
+            <Doughnut
+              data={{
+                labels: ["Hoạt động", "Đã khóa", "Chờ duyệt"],
+                datasets: [
+                  {
+                    data: [stats.active, stats.locked, stats.pending],
+                    backgroundColor: [
+                      "rgba(34, 197, 94, 0.8)",
+                      "rgba(239, 68, 68, 0.8)",
+                      "rgba(251, 191, 36, 0.8)",
+                    ],
+                    borderColor: [
+                      "rgb(34, 197, 94)",
+                      "rgb(239, 68, 68)",
+                      "rgb(251, 191, 36)",
+                    ],
+                    borderWidth: 2,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: "bottom" as const,
+                  },
+                },
+              }}
+            />
+          </div>
+        </div>
+
+        {/* User Statistics Chart */}
+        <div className="bg-white rounded-xl shadow-md border border-blue-100 p-6 mb-8">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+            <FaUsers className="mr-2 text-blue-600" />
+            Thống kê người dùng theo tháng
+          </h3>
+          <Bar
+            data={{
+              labels: chartData.labels,
+              datasets: [
+                {
+                  label: "Người dùng mới",
+                  data: chartData.newUsers,
+                  backgroundColor: "rgba(59, 130, 246, 0.8)",
+                  borderColor: "rgb(59, 130, 246)",
+                  borderWidth: 1,
+                },
+                {
+                  label: "Tham gia sự kiện",
+                  data: chartData.usersJoinedEvents,
+                  backgroundColor: "rgba(147, 51, 234, 0.8)",
+                  borderColor: "rgb(147, 51, 234)",
+                  borderWidth: 1,
+                },
+                {
+                  label: "Người dùng bị ban",
+                  data: chartData.usersBanned,
+                  backgroundColor: "rgba(239, 68, 68, 0.8)",
+                  borderColor: "rgb(239, 68, 68)",
+                  borderWidth: 1,
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: "top" as const,
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function (context) {
+                      let label = context.dataset.label || "";
+                      if (label) {
+                        label += ": ";
+                      }
+                      if (context.parsed.y !== null) {
+                        label += context.parsed.y + " người";
+                      }
+                      return label;
+                    },
+                  },
+                },
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    stepSize: 1,
+                  },
+                },
+              },
+            }}
+          />
         </div>
 
         {/* Search and Filter */}
@@ -629,7 +963,7 @@ export default function UserManagementPage() {
                 placeholder="Tìm theo tên, email, số điện thoại..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-12 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-blue-200 focus:border-blue-400 transition duration-200 placeholder:text-gray-400"
+                className="w-full pl-12 pr-12 py-3.5 text-base text-gray-900 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-blue-200 focus:border-blue-400 transition duration-200 placeholder:text-gray-400"
               />
               {searchTerm && (
                 <button
@@ -653,7 +987,7 @@ export default function UserManagementPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-4 py-3 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-green-200 focus:border-green-400 transition duration-200 bg-white cursor-pointer"
+                className="w-full px-4 py-3 text-base text-gray-900 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-green-200 focus:border-green-400 transition duration-200 bg-white cursor-pointer"
               >
                 <option value="all">Tất cả trạng thái</option>
                 <option value="active">✅ Hoạt động</option>
@@ -697,8 +1031,51 @@ export default function UserManagementPage() {
               <span className="px-3 py-1 bg-blue-500 text-white rounded-full text-sm font-medium">
                 {paginatedUsers.length} người
               </span>
+              {selectedUsers.length > 0 && (
+                <span className="px-3 py-1 bg-purple-500 text-white rounded-full text-sm font-medium animate-pulse">
+                  Đã chọn: {selectedUsers.length}
+                </span>
+              )}
             </div>
             <div className="flex items-center space-x-3">
+              {/* Bulk Actions */}
+              {selectedUsers.length > 0 && (
+                <div className="flex items-center space-x-2 mr-4 border-r border-gray-300 pr-4">
+                  <span className="text-sm font-medium text-gray-700">
+                    Thao tác hàng loạt:
+                  </span>
+                  <button
+                    onClick={() => {
+                      setConfirmAction({ type: "bulk-lock" });
+                      setShowConfirmModal(true);
+                    }}
+                    className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition duration-200 flex items-center space-x-1"
+                  >
+                    <FaLock className="text-xs" />
+                    <span>Khóa ({selectedUsers.length})</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setConfirmAction({ type: "bulk-unlock" });
+                      setShowConfirmModal(true);
+                    }}
+                    className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition duration-200 flex items-center space-x-1"
+                  >
+                    <FaUnlock className="text-xs" />
+                    <span>Mở khóa ({selectedUsers.length})</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setConfirmAction({ type: "bulk-delete" });
+                      setShowConfirmModal(true);
+                    }}
+                    className="px-3 py-1.5 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition duration-200 flex items-center space-x-1"
+                  >
+                    <FaTrash className="text-xs" />
+                    <span>Xóa ({selectedUsers.length})</span>
+                  </button>
+                </div>
+              )}
               <label className="text-base text-gray-700 font-medium">
                 Hiển thị:
               </label>
@@ -708,7 +1085,7 @@ export default function UserManagementPage() {
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="px-4 py-2 border-2 border-gray-200 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer bg-white"
+                className="px-4 py-2 border-2 border-gray-200 rounded-lg text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer bg-white"
               >
                 <option value={10}>10 dòng</option>
                 <option value={20}>20 dòng</option>
@@ -721,6 +1098,17 @@ export default function UserManagementPage() {
             <table className="w-full">
               <thead className="bg-gradient-to-r from-blue-100 to-green-100 sticky top-0 z-10">
                 <tr>
+                  <th className="px-6 py-4 text-center text-base font-bold text-blue-900">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedUsers.length === paginatedUsers.length &&
+                        paginatedUsers.length > 0
+                      }
+                      onChange={handleSelectAll}
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-6 py-4 text-left text-base font-bold text-blue-900">
                     Người dùng
                   </th>
@@ -743,8 +1131,20 @@ export default function UserManagementPage() {
                   return (
                     <tr
                       key={user.id}
-                      className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-green-50 transition duration-200"
+                      className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-green-50 transition duration-200 ${
+                        selectedUsers.includes(user.id)
+                          ? "bg-blue-50 border-l-4 border-blue-500"
+                          : ""
+                      }`}
                     >
+                      <td className="px-6 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedUsers.includes(user.id)}
+                          onChange={() => handleSelectUser(user.id)}
+                          className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-4">
                           <Image
@@ -1112,10 +1512,11 @@ export default function UserManagementPage() {
                     </span>{" "}
                     người dùng sẽ được xuất
                   </p>
-                  <p className="text-sm text-blue-700">
-                    {filterRole !== "all" && `Vai trò: ${filterRole} • `}
-                    {filterStatus !== "all" && `Trạng thái: ${filterStatus}`}
-                  </p>
+                  {filterStatus !== "all" && (
+                    <p className="text-sm text-blue-700">
+                      Trạng thái: {filterStatus}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1287,6 +1688,407 @@ export default function UserManagementPage() {
                   <>
                     <FaCheck />
                     <span>Xác nhận</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Notification Modal - Redesigned */}
+      {showNotificationModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl transform transition-all my-8 max-h-[95vh] flex flex-col">
+            {/* Modal Header - Fixed */}
+            <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 text-white p-6 rounded-t-3xl flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl shadow-lg">
+                    <FaBell className="text-3xl animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold tracking-tight">
+                      Gửi Thông Báo
+                    </h3>
+                    <p className="text-purple-100 text-sm mt-1 flex items-center space-x-2">
+                      <span>📊 {stats.total} người dùng</span>
+                      <span>•</span>
+                      <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold">
+                        {notificationMode === "webpush"
+                          ? "🔔 Web Push"
+                          : "📱 In-App"}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowNotificationModal(false);
+                    setNotificationForm({
+                      title: "",
+                      message: "",
+                      type: "announcement",
+                      url: "",
+                    });
+                  }}
+                  disabled={isSendingNotification}
+                  className="text-white hover:bg-white/20 p-2.5 rounded-xl transition duration-200 disabled:opacity-50 hover:rotate-90 transform"
+                >
+                  <FaTimes className="text-xl" />
+                </button>
+              </div>
+
+              {/* Mode Tabs */}
+              <div className="mt-6 flex space-x-2 bg-white/10 backdrop-blur-sm p-1.5 rounded-xl">
+                <button
+                  onClick={() => setNotificationMode("webpush")}
+                  className={`flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center justify-center space-x-2 ${
+                    notificationMode === "webpush"
+                      ? "bg-white text-purple-600 shadow-lg"
+                      : "text-white hover:bg-white/10"
+                  }`}
+                >
+                  <FaBell
+                    className={
+                      notificationMode === "webpush" ? "animate-bounce" : ""
+                    }
+                  />
+                  <span>Web Push API</span>
+                  <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
+                    Đã đăng ký
+                  </span>
+                </button>
+                <button
+                  onClick={() => setNotificationMode("inapp")}
+                  className={`flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center justify-center space-x-2 ${
+                    notificationMode === "inapp"
+                      ? "bg-white text-purple-600 shadow-lg"
+                      : "text-white hover:bg-white/10"
+                  }`}
+                >
+                  <FaInfoCircle
+                    className={
+                      notificationMode === "inapp" ? "animate-bounce" : ""
+                    }
+                  />
+                  <span>In-App (Tất cả Users)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Info Banner */}
+              <div
+                className={`border-l-4 p-4 rounded-xl shadow-sm ${
+                  notificationMode === "webpush"
+                    ? "bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-500"
+                    : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-500"
+                }`}
+              >
+                <div className="flex items-start space-x-3">
+                  {notificationMode === "webpush" ? (
+                    <FaBell className="text-blue-600 text-2xl flex-shrink-0 mt-0.5 animate-pulse" />
+                  ) : (
+                    <FaInfoCircle className="text-green-600 text-2xl flex-shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <p
+                      className={`font-bold mb-2 flex items-center space-x-2 ${
+                        notificationMode === "webpush"
+                          ? "text-blue-900"
+                          : "text-green-900"
+                      }`}
+                    >
+                      <span>
+                        {notificationMode === "webpush"
+                          ? "🔔 Web Push Notification"
+                          : "📱 In-App Notification"}
+                      </span>
+                    </p>
+                    {notificationMode === "webpush" ? (
+                      <ul className="text-blue-800 text-sm space-y-1.5">
+                        <li className="flex items-start">
+                          <span className="mr-2">✅</span>
+                          <span>
+                            Gửi đến <strong>users đã đăng ký Web Push</strong>{" "}
+                            (browser notification)
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="mr-2">🌐</span>
+                          <span>
+                            Hiển thị ngay cả khi user{" "}
+                            <strong>không online</strong> trên website
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="mr-2">📲</span>
+                          <span>
+                            Thông báo xuất hiện trên{" "}
+                            <strong>desktop/mobile browser</strong>
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="mr-2">⚡</span>
+                          <span>
+                            Endpoint:{" "}
+                            <code className="bg-blue-200 px-1.5 py-0.5 rounded text-xs">
+                              /api/notifications/send-test
+                            </code>
+                          </span>
+                        </li>
+                      </ul>
+                    ) : (
+                      <ul className="text-green-800 text-sm space-y-1.5">
+                        <li className="flex items-start">
+                          <span className="mr-2">✅</span>
+                          <span>
+                            Gửi đến <strong>TẤT CẢ {stats.total} users</strong>{" "}
+                            trong hệ thống
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="mr-2">💾</span>
+                          <span>
+                            Lưu vào database, user xem trong{" "}
+                            <strong>trang notifications</strong>
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="mr-2">🔔</span>
+                          <span>
+                            Users có Web Push cũng nhận{" "}
+                            <strong>push notification</strong>
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="mr-2">⚡</span>
+                          <span>
+                            Endpoint:{" "}
+                            <code className="bg-green-200 px-1.5 py-0.5 rounded text-xs">
+                              /api/notifications/send-to-all
+                            </code>
+                          </span>
+                        </li>
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Notification Type */}
+              <div>
+                <label className="block text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
+                  <span>📋</span>
+                  <span>Loại thông báo</span>
+                </label>
+                <select
+                  value={notificationForm.type}
+                  onChange={(e) =>
+                    setNotificationForm({
+                      ...notificationForm,
+                      type: e.target.value,
+                    })
+                  }
+                  disabled={isSendingNotification}
+                  className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-purple-200 focus:border-purple-500 transition duration-200 text-base text-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-white hover:border-gray-300"
+                >
+                  <option value="announcement">📢 Thông báo chung</option>
+                  <option value="event_update">📅 Cập nhật sự kiện</option>
+                  <option value="system">⚙️ Thông báo hệ thống</option>
+                  <option value="important">⚠️ Thông báo quan trọng</option>
+                  <option value="reminder">🔔 Nhắc nhở</option>
+                </select>
+              </div>
+
+              {/* Title Input */}
+              <div>
+                <label className="block text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
+                  <span>✏️</span>
+                  <span>Tiêu đề thông báo</span>
+                  <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={notificationForm.title}
+                  onChange={(e) =>
+                    setNotificationForm({
+                      ...notificationForm,
+                      title: e.target.value,
+                    })
+                  }
+                  disabled={isSendingNotification}
+                  placeholder="Ví dụ: 🎉 Thông báo bảo trì hệ thống"
+                  maxLength={100}
+                  className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-purple-200 focus:border-purple-500 transition duration-200 text-base text-gray-900 placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed font-medium bg-white hover:border-gray-300"
+                />
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-sm text-gray-500 flex items-center space-x-1">
+                    <span>💡</span>
+                    <span>Tiêu đề ngắn gọn, thu hút sự chú ý</span>
+                  </p>
+                  <p
+                    className={`text-sm font-semibold ${
+                      notificationForm.title.length > 80
+                        ? "text-red-500"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {notificationForm.title.length}/100
+                  </p>
+                </div>
+              </div>
+
+              {/* URL Input (Web Push only) */}
+              {notificationMode === "webpush" && (
+                <div>
+                  <label className="block text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
+                    <span>🔗</span>
+                    <span>URL đích (khi click notification)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={notificationForm.url}
+                    onChange={(e) =>
+                      setNotificationForm({
+                        ...notificationForm,
+                        url: e.target.value,
+                      })
+                    }
+                    disabled={isSendingNotification}
+                    placeholder="/notifications, /events/123, https://..."
+                    className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-purple-200 focus:border-purple-500 transition duration-200 text-base text-gray-900 placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed font-mono bg-white hover:border-gray-300"
+                  />
+                  <p className="text-sm text-gray-500 mt-2 flex items-center space-x-1">
+                    <span>ℹ️</span>
+                    <span>
+                      Để trống sẽ mặc định là{" "}
+                      <code className="bg-gray-100 px-1.5 py-0.5 rounded">
+                        /notifications
+                      </code>
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              {/* Message Textarea */}
+              <div>
+                <label className="block text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
+                  <span>�</span>
+                  <span>Nội dung thông báo</span>
+                  <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={notificationForm.message}
+                  onChange={(e) =>
+                    setNotificationForm({
+                      ...notificationForm,
+                      message: e.target.value,
+                    })
+                  }
+                  disabled={isSendingNotification}
+                  placeholder="Nhập nội dung chi tiết, rõ ràng và súc tích..."
+                  rows={6}
+                  maxLength={500}
+                  className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-purple-200 focus:border-purple-500 transition duration-200 text-base text-gray-900 placeholder:text-gray-400 resize-none disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed bg-white hover:border-gray-300"
+                />
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-sm text-gray-500 flex items-center space-x-1">
+                    <span>📝</span>
+                    <span>Nội dung rõ ràng, chính xác</span>
+                  </p>
+                  <p
+                    className={`text-sm font-semibold ${
+                      notificationForm.message.length > 400
+                        ? "text-red-500"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {notificationForm.message.length}/500
+                  </p>
+                </div>
+              </div>
+
+              {/* Live Preview */}
+              {(notificationForm.title || notificationForm.message) && (
+                <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-2xl p-6 border-2 border-purple-200 shadow-inner">
+                  <p className="text-sm font-bold text-purple-700 mb-4 flex items-center space-x-2">
+                    <FaEye className="text-lg" />
+                    <span>👁️ Xem trước thông báo</span>
+                  </p>
+                  <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-200">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 rounded-lg">
+                        <FaBell className="text-white text-lg" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {notificationForm.title && (
+                          <h4 className="font-bold text-gray-900 mb-1.5 text-base leading-tight">
+                            {notificationForm.title}
+                          </h4>
+                        )}
+                        {notificationForm.message && (
+                          <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                            {notificationForm.message}
+                          </p>
+                        )}
+                        {notificationMode === "webpush" &&
+                          notificationForm.url && (
+                            <p className="text-xs text-blue-600 mt-2 font-mono">
+                              🔗 {notificationForm.url}
+                            </p>
+                          )}
+                        <p className="text-xs text-gray-400 mt-2">
+                          ⏰ {new Date().toLocaleTimeString("vi-VN")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer - Fixed */}
+            <div className="border-t-2 border-gray-100 p-6 flex justify-end space-x-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-b-3xl flex-shrink-0">
+              <button
+                onClick={() => {
+                  setShowNotificationModal(false);
+                  setNotificationForm({
+                    title: "",
+                    message: "",
+                    type: "announcement",
+                    url: "",
+                  });
+                }}
+                disabled={isSendingNotification}
+                className="px-6 py-3.5 text-base bg-white hover:bg-gray-50 text-gray-700 rounded-xl font-semibold transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-gray-200 hover:border-gray-300 shadow-sm"
+              >
+                ❌ Hủy bỏ
+              </button>
+              <button
+                onClick={handleSendNotification}
+                disabled={
+                  isSendingNotification ||
+                  !notificationForm.title.trim() ||
+                  !notificationForm.message.trim()
+                }
+                className="px-8 py-3.5 text-base bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 hover:from-purple-700 hover:via-pink-600 hover:to-rose-600 text-white rounded-xl font-bold transition duration-200 flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl transform hover:scale-105"
+              >
+                {isSendingNotification ? (
+                  <>
+                    <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Đang gửi...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaPaperPlane className="text-lg" />
+                    <span>
+                      {notificationMode === "webpush"
+                        ? "🔔 Gửi Web Push"
+                        : `📱 Gửi đến ${stats.total} users`}
+                    </span>
                   </>
                 )}
               </button>

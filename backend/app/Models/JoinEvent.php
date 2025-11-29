@@ -9,6 +9,8 @@ class JoinEvent extends Model
     /** @use HasFactory<\Database\Factories\JoinEventFactory> */
     use HasFactory;
 
+    public $timestamps = false;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -21,4 +23,10 @@ class JoinEvent extends Model
         'joined_at',
         'created_at',
     ];
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class, 'event_id');
+    }
+
 }

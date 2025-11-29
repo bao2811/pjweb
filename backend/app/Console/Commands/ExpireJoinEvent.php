@@ -27,12 +27,12 @@ class ExpireJoinEvent extends Command
     {
         $now = Carbon::now();
 
-        $updated = JointEvent::where('status', 'pending')
+        $updated = JoinEvent::where('status', 'pending')
             ->whereHas('event', function ($query) use ($now) {
-                $query->where('start_time', '<=', $now);
+                $query->where('start_time', '<', $now);
             })
             ->update(['status' => 'expired']);
 
-        $this->info("Expired $updated pending registrations in JointEvent.");
+        $this->info("Expired $updated pending registrations in JoinEvent.");
     }
 }

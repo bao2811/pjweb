@@ -67,53 +67,34 @@ class AuthController extends Controller
 
     // public function refreshToken(Request $request)
     // {
-    //     $refresh_token = $request->input('refresh_token');
+    //     $refresh_token = $request->refresh_token;
 
     //     if (!$refresh_token) {
     //         return response()->json(['error' => 'Refresh token is required'], 401);
     //     }
 
     //     try {
-    //         // Giải mã refresh token
-    //         $payload = JWTUtil::validateToken($refresh_token); // decode sẽ throw exception nếu không hợp lệ
-    //         $userId = $payload->sub ?? null;
-
-    //         if (!$userId) {
-    //             return response()->json(['error' => 'Invalid refresh token'], 401);
-    //         }
-
-    //         // Lấy user từ database
-    //         // $user = User::find($userId);
-    //         $user = (object) [
-    //             'id' => $payload->sub,
-    //             'email' => $payload->email,
-    //             'username' => $payload->username,
-    //             'role' => $payload->role,
-    //         ];
-
-    //         if (!$user) {
-    //             return response()->json(['error' => 'User not found'], 401);
-    //         }
-
-    //         // Tạo access token mới
-    //         $accessToken = JWTUtil::generateToken($user->id);
-
-    //         // (Tùy chọn) tạo refresh token mới nếu muốn vòng đời xoay vòng
-    //         // $newRefreshToken = JWTUtil::generateToken($user->id, 43200); // 30 ngày
-
-    //         return response()->json([
-    //             'message' => 'Token refreshed successfully',
-    //             'access_token' => $accessToken,
-    //             // 'refresh_token' => $newRefreshToken, 
-    //         ], 200);
-
+    //         // Kiểm tra refresh token hợp lệ
+    //         $payload = JWTUtil::validateToken($refresh_token);
     //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'error' => 'Refresh token invalid or expired',
-    //             'message' => $e->getMessage()
-    //         ], 401);
+    //         // Nếu token hết hạn hoặc invalid → logout
+    //         return response()->json(['error' => 'Invalid or expired refresh token'], 401);
     //     }
+
+    //     // Lấy user từ payload hoặc request
+    //     $user = $request->user();
+
+    //     // Tạo access token mới
+    //     $access_token = JWTUtil::generateToken($user->id, 60); // 60 phút
+
+    //     return response()->json([
+    //         'message' => 'Token refreshed successfully',
+    //         'access_token' => $access_token,
+    //         'token_type' => 'Bearer',
+    //         'expires_in' => 3600,
+    //     ]);
     // }
+
 
     public function refreshToken(Request $request)
     {
@@ -140,19 +121,23 @@ class AuthController extends Controller
 
     public function getCurrentUser(Request $request)
     {
-        $payload = $request->attributes->get('jwtPayload');
+        $userId = $request->attributes->get('userId');
+        $user = User::find($userId);
 
-        if (!$payload) {
-            return response()->json(['error' => 'No user info'], 401);
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
         }
 
-        // Nếu payload chỉ có userId, bạn có thể query DB nếu muốn thông tin chi tiết
-        // Hoặc trả thẳng payload nếu đủ
         return response()->json([
-            'id' => $payload->sub,
-            'email' => $payload->email ?? null,
-            'username' => $payload->username ?? null,
-            'role' => $payload->role ?? 'user',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'avatar' => $user->avatar,
+                'phone' => $user->phone,
+                'address' => $user->address,
+            ]
         ]);
     }
 
@@ -192,6 +177,7 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        $request->user()->currentAccessToken()->delete();
         Auth::logout();
         session()->flush();
         return response()->json(['message' => 'Logged out successfully']);
