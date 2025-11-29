@@ -11,6 +11,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\JoinEventController;
 use App\Http\Controllers\NotiController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\PushSubscriptionController;
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -87,4 +88,8 @@ Route::middleware(['jwt.auth'])->group(function () {
     // Push Notifications
     Route::post('/sendEventNotification', [JoinEventController::class, 'sendEventNotification']);
     Route::post('/sendEventNotificationToAll', [JoinEventController::class, 'sendEventNotificationToAll']);
+    
+    // Push Subscription
+    Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe']);
+    Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe']);
 });
