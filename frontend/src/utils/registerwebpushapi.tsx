@@ -1,5 +1,9 @@
 import api from "./api";
 
+// Default VAPID public key (can be overridden via environment variable)
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 
+  "BGfcgEChdEI-iDX_RwDlob6AVdLxnGIxsd6iERT9PxFm-P8RGwQFDbQnt7-z0mN0wZfVF6m3w5JYuihH_2pG5qQ";
+
 export default async function registerWebPushAPI() {
   if (!("serviceWorker" in navigator)) {
     console.warn("Service Workers are not supported in this browser.");
@@ -29,9 +33,7 @@ export default async function registerWebPushAPI() {
     // Subscribe to push notifications
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(
-        "BGfcgEChdEI-iDX_RwDlob6AVdLxnGIxsd6iERT9PxFm-P8RGwQFDbQnt7-z0mN0wZfVF6m3w5JYuihH_2pG5qQ" // Replace with your VAPID public key
-      ),
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
 
     console.log("Push Subscription:", JSON.stringify(subscription));

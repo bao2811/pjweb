@@ -71,7 +71,16 @@ class WebPushApi
             );
         }
 
-        $webPush->flush();
+        $results = $webPush->flush();
+        
+        // Process results to remove invalid subscriptions
+        foreach ($results as $report) {
+            if (!$report->isSuccess()) {
+                $endpoint = $report->getRequest()->getUri()->__toString();
+                // Remove invalid subscription from database
+                PushSubscription::where('endpoint', $endpoint)->delete();
+            }
+        }
         
         return true;
     }

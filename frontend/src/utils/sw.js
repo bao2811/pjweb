@@ -12,7 +12,7 @@ self.addEventListener("push", function (event) {
     icon: data.icon || "/icon.png",
     badge: "/badge.png",
     data: {
-      url: data.url || "http://localhost:3000",
+      url: data.url || "/",
     },
   };
 
