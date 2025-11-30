@@ -14,6 +14,9 @@ use App\Events\ChatMessage;
 use Illuminate\Http\Request;
 use App\Jobs\ExampleJob;
 
+// Broadcasting auth route đã được chuyển sang routes/web.php
+// để có URL /broadcasting/auth thay vì /api/broadcasting/auth
+
 Route::get('/dispatch-job', function () {
     ExampleJob::dispatch(['user_id' => 123, 'action' => 'test']);
     return 'Job dispatched!';

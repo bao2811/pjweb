@@ -1,7 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController; 
+use App\Http\Controllers\AuthController;
+
+// Broadcasting auth route được tự động đăng ký trong routes/channels.php
+// thông qua Broadcast::routes(['middleware' => ['jwt']])
 
 Auth::routes(['verify' => true]);
 

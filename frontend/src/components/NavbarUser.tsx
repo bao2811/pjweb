@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { authFetch } from "@/utils/auth";
 import React, { useState, useEffect, useRef } from "react";
+import NotificationIcon from "./NotificationIcon";
 
 import { IoIosNotifications } from "react-icons/io";
 import {
@@ -464,13 +465,8 @@ export default function NavbarUser() {
       </div>
 
       <div className="relative ml-auto mr-10 flex items-center space-x-6">
-        {/* Notifications Icon */}
-        <Link href="/notifications" className="relative">
-          <IoIosNotifications className="text-white h-8 w-8 hover:text-gray-200 transition-colors cursor-pointer" />
-          <span className="absolute -top-1 -right-1 text-white bg-red-500 rounded-full px-1.5 py-0.5 text-xs font-bold">
-            3
-          </span>
-        </Link>
+        {/* Real-time Notification Icon with WebSocket */}
+        <NotificationIcon />
 
         {/* Profile Dropdown */}
         <div className="relative" ref={dropdownRef}>

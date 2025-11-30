@@ -50,18 +50,29 @@ class Noti extends Model implements ShouldQueue  {
     }
 
     /**                                                                                                                                                                                                                                                                                                                                                                                                 
-     * Tạo thông báo và tự động gửi push notification
+     * Tạo thông báo và tự động gửi push notification + broadcast
      */
     public static function createAndPush(array $data): self
     {
+        \Log::info("=== 🚀 Noti::createAndPush START ===");
+        \Log::info("Data:", $data);
+        
         // Tạo notification record
         $notification = self::create($data);
+        \Log::info("✅ Notification created with ID:", ['id' => $notification->id]);
         
         // Gửi push notification cho receiver
         if (isset($data['receiver_id'])) {
+            \Log::info("📤 Sending push notification to user:", ['user_id' => $data['receiver_id']]);
             $notification->sendPush();
+            
+            // Broadcast notification qua WebSocket
+            \Log::info("📡 Broadcasting notification via WebSocket to user:", ['user_id' => $data['receiver_id']]);
+            broadcast(new \App\Events\NotificationSent($notification, $data['receiver_id']))->toOthers();
+            \Log::info("✅ Broadcast dispatched successfully");
         }
         
+        \Log::info("=== 🚀 Noti::createAndPush END ===");
         return $notification;
     }                                                                                         
 

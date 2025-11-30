@@ -25,9 +25,9 @@ class AdminService
         return $this->userRepo->getAllUsers();
     }
 
-    public function getAllEvents()
+    public function getAllEvents($userId = null)
     {
-        return $this->eventService->getAllEvents();
+        return $this->eventService->getAllEvents($userId);
     }
 
     public function getAllManagers()

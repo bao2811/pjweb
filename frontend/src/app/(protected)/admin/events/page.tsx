@@ -147,10 +147,13 @@ export default function AdminEventsPage() {
       }
 
       const data = await response.json();
-      setEvents(data.events || data || []);
+      // Ensure events is always an array
+      const eventsData = data.events || data;
+      setEvents(Array.isArray(eventsData) ? eventsData : []);
     } catch (error) {
       console.error("Error fetching events:", error);
       showToast("error", "Không thể tải danh sách sự kiện");
+      setEvents([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }
@@ -193,6 +196,11 @@ export default function AdminEventsPage() {
 
   // Filter events
   const filteredEvents = useMemo(() => {
+    // Ensure events is an array before filtering
+    if (!Array.isArray(events)) {
+      return [];
+    }
+
     return events.filter((event) => {
       const matchSearch =
         event.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
@@ -216,6 +224,19 @@ export default function AdminEventsPage() {
 
   // Stats
   const stats = useMemo(() => {
+    // Ensure events is an array before calculating stats
+    if (!Array.isArray(events)) {
+      return {
+        total: 0,
+        pending: 0,
+        expired: 0,
+        upcoming: 0,
+        ongoing: 0,
+        completed: 0,
+        totalParticipants: 0,
+      };
+    }
+
     return {
       total: events.length,
       pending: events.filter((e) => e.status === "pending").length,

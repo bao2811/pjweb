@@ -32,9 +32,11 @@ class AdminController {
         }
     }
 
-    public function getAllEvents() {
+    public function getAllEvents(Request $request) {
         try{
-            $listEvent = $this->adminService->getAllEvents();
+            // Lấy userId từ authenticated user
+            $userId = $request->user() ? $request->user()->id : null;
+            $listEvent = $this->adminService->getAllEvents($userId);
             return response()->json($listEvent, 200);
         } catch (\Exception $e) {
             return response()->json([

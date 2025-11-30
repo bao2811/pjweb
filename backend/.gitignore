@@ -22,3 +22,10 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+test-send-notification.php
+
+$user->isMemberOfEvent(2); 
+er->isMemberOfEvent(2);
+restart-all.sh
+start-services.sh

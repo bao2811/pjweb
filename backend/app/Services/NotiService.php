@@ -123,10 +123,10 @@ class NotiService
                 Log::warning("[NotiService] Web push sending failed");
             }
 
-            // 2. Lưu notification vào database cho từng user
+            // 2. Lưu notification vào database cho từng user VÀ broadcast
             foreach ($userIds as $userId) {
                 try {
-                    Noti::create([
+                    $notification = Noti::create([
                         'title' => $payload['title'],
                         'message' => $payload['body'],
                         'sender_id' => $payload['sender_id'] ?? null,
@@ -138,8 +138,11 @@ class NotiService
                         ],
                     ]);
                     
+                    // Broadcast notification qua WebSocket
+                    broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
+                    
                     $result['db_saved']++;
-                    Log::info("[NotiService] Notification saved to DB for user {$userId}");
+                    Log::info("[NotiService] Notification saved to DB and broadcasted for user {$userId}");
                 } catch (Exception $e) {
                     $result['failed']++;
                     Log::error("[NotiService] Failed to save notification for user {$userId}: " . $e->getMessage());

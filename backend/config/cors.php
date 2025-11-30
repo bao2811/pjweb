@@ -2,11 +2,21 @@
 
 return [
 
-    'paths' => ['api/*', 'admin/*', 'sanctum/csrf-cookie', 'user/*'],
+    'paths' => [
+        'api/*', 
+        'admin/*', 
+        'sanctum/csrf-cookie', 
+        'user/*',
+        'broadcasting/auth',  // Thêm endpoint cho WebSocket authentication
+    ],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3000', 'http://tinhnguyen.com'],
+    'allowed_origins' => [
+        'http://localhost:3000', 
+        'http://localhost:3001',  // Frontend dev server alternative port
+        'http://tinhnguyen.com'
+    ],
 
     'allowed_origins_patterns' => [],
 

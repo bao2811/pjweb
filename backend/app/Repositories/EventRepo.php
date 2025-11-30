@@ -24,21 +24,66 @@ class EventRepo
      * @param int|null $userId ID của user để filter và check like status
      * @return \Illuminate\Database\Eloquent\Collection
      */
+    // public function getAllEvents($userId)
+    // {
+    //     $query = Event::query();
+
+    //     if ($userId) {
+    //         // Thêm trường is_liked: true/false nếu user đã like
+    //         $events = $query->withExists([
+    //             'likes as is_liked' => function ($q) use ($userId) {
+    //                 $q->where('user_id', $userId);
+    //             }
+    //         ]);
+    //     } else {
+    //         // Nếu không có userId → mặc định false
+    //         $events = $query->selectRaw('events.*, false as is_liked');
+    //     }
+
+    //     return $events;
+    // }
+
     public function getAllEvents($userId = null)
     {
-        $query = Event::query();
+        $query = Event::with('author:id,username,email,image'); // Eager load author info
 
         if ($userId) {
-            // Thêm trường is_liked: true/false nếu user đã like
-            $events = $query->withExists([
+            // Thêm trường is_liked: 1 nếu user đã like, 0 nếu chưa
+            $query->withExists([
                 'likes as is_liked' => function ($q) use ($userId) {
                     $q->where('user_id', $userId);
                 }
             ]);
         } else {
             // Nếu không có userId → mặc định false
-            $events = $query->selectRaw('events.*, false as is_liked');
+            $query->selectRaw('events.*, false as is_liked');
         }
+
+        $events = $query->get();
+
+        // // Thêm computed_status dựa trên thời gian
+        // $events = $query->get()->map(function ($event) {
+        //     $now = Carbon::now();
+        //     $startTime = Carbon::parse($event->start_time);
+        //     $endTime = Carbon::parse($event->end_time);
+
+        //     // Tính toán computed_status
+        //     if ($event->status === 'pending' && $endTime->isPast()) {
+        //         $event->computed_status = 'expired';
+        //     } elseif ($event->status === 'accepted' || $event->status === 'completed') {
+        //         if ($now->lt($startTime)) {
+        //             $event->computed_status = 'upcoming';
+        //         } elseif ($now->between($startTime, $endTime)) {
+        //             $event->computed_status = 'ongoing';
+        //         } elseif ($now->gt($endTime)) {
+        //             $event->computed_status = 'completed';
+        //         }
+        //     } else {
+        //         $event->computed_status = $event->status;
+        //     }
+
+        //     return $event;
+        // });
 
         return $events;
     }

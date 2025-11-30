@@ -16,7 +16,8 @@ class JWTUtil
     public static function getSecretKey()
     {
         if (!self::$secretKey) {
-            self::$secretKey = env('JWT_SECRET');
+            // Sử dụng config() thay vì env() để support config caching
+            self::$secretKey = config('app.jwt_secret');
         }
         return self::$secretKey;
     }

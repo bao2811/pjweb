@@ -110,8 +110,13 @@ class NotiController extends Controller
     public function markAsRead(Request $request, $id)
     {
         try {
+            $user = $request->user();
             $noti = $this->notiService->markAsRead($id);
+            
             if ($noti) {
+                // Broadcast notification read event
+                broadcast(new \App\Events\NotificationRead($id, $user->id))->toOthers();
+                
                 return response()->json(['success' => true, 'notification' => $noti]);
             }
             return response()->json(['error' => 'Notification not found'], 404);
