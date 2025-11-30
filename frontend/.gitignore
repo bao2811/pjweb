@@ -43,6 +43,8 @@ AUTH_SETUP.md
 AUTHENTICATION.md
 EVENT_GROUP_SYSTEM.md
 IMPROVEMENTS.md
+DEBUG_WEBSOCKET_NOTIFICATION.md
+
 # local env files
 .env.local
 .env.development.local

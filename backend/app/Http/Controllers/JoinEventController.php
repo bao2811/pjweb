@@ -43,8 +43,8 @@ class JoinEventController extends Controller
     {
         $user = $request->user();
         $data = $this->joinEventService->joinEvent($user->id, $eventId);
-        if(!$data){
-            return response()->json(['error' => 'Event not found'], 404);
+        if(!$data['success']){
+            return response()->json(['error' => $data['message']], 404);
         }
         return response()->json(['message' => 'Joined event successfully']);
     }
@@ -53,8 +53,8 @@ class JoinEventController extends Controller
     {
         $user = $request->user();
         $data = $this->joinEventService->leaveEvent($user->id, $eventId);
-        if(!$data){
-            return response()->json(['error' => 'Event not found'], 404);
+        if(!$data['success']){
+            return response()->json(['error' => $data['message']], 404);
         }
         return response()->json(['message' => 'Left event successfully']);
     }

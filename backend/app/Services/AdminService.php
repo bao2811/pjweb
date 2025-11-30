@@ -97,15 +97,15 @@ class AdminService
         return $affected;
     }
 
-    public function acceptEvent($id)
+    public function acceptEvent($id, $senderId)
     {
-        $result = $this->eventService->acceptEvent($id);
+        $result = $this->eventService->acceptEvent($id, $senderId);
         return $result;
     }
 
-    public function rejectEvent($id)
+    public function rejectEvent($id, $senderId)
     {
-        $result = $this->eventService->rejectEvent($id);
+        $result = $this->eventService->rejectEvent($id, $senderId);
         return $result;
     }
 

@@ -105,7 +105,8 @@ class AdminController {
 
     public function acceptEvent($id) {
         try {
-        $res = $this->adminService->acceptEvent($id);
+            $senderId = request()->user()->id;
+            $res = $this->adminService->acceptEvent($id, $senderId);
             return response()->json([
                 'message' => 'complete accept event'
             ], 200);
@@ -120,7 +121,8 @@ class AdminController {
 
     public function rejectEvent($id) {
         try {
-        $res = $this->adminService->rejectEvent($id);
+            $senderId = request()->user()->id;
+            $res = $this->adminService->rejectEvent($id, $senderId);
             return response()->json([
                 'message' => 'complete reject event'
             ], 200);

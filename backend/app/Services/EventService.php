@@ -113,6 +113,7 @@ class EventService
         if (!$result) {
             throw new Exception('Failed to accept event');
         }
+        Noti::sendPush();
         return $result;
     }
 

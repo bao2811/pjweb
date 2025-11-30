@@ -117,7 +117,7 @@ class EventRepo
         return $event;
     }
 
-    public function acceptEvent($id) : Event
+    public function acceptEvent($id, $senderId) : Event
     {
         $event = $this->getEventById($id);
         if (!$event) {
@@ -125,10 +125,26 @@ class EventRepo
         }
         $event->status = 'accepted';
         $event->save();
+        $notification = Noti::create([
+            'title' => 'Event Accepted',
+            'message' => 'Your event has been accepted.',
+            'sender_id' => $senderId,
+            'receiver_id' => $event->author_id,
+            'type' => 'webpush',
+            'data' => [
+                'url' => '/events/' . $event->id,
+                'icon' => '/icons/event-accepted.png',
+            ],
+        ]);
+
+        // Broadcast notification qua WebSocket
+        broadcast(new \App\Events\NotificationSent($notification, $event->author_id))->toOthers();
+        $notification->sendPush();
+
         return $event;
     }
 
-    public function rejectEvent($id) : Event
+    public function rejectEvent($id, $senderId) : Event
     {
         $event = $this->getEventById($id);
         if (!$event) {
@@ -136,6 +152,22 @@ class EventRepo
         }
         $event->status = 'rejected';
         $event->save();
+
+        $notification = Noti::create([
+            'title' => 'Event Rejected',
+            'message' => 'Your event has been rejected.',
+            'sender_id' => $senderId,
+            'receiver_id' => $event->author_id,
+            'type' => 'webpush',
+            'data' => [
+                'url' => '/events/' . $event->id,
+                'icon' => '/icons/event-rejected.png',
+            ],
+        ]);
+
+        // Broadcast notification qua WebSocket
+        broadcast(new \App\Events\NotificationSent($notification, $event->author_id))->toOthers();
+        $notification->sendPush();
         return $event;
     }   
 }
