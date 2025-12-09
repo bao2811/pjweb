@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Navbar from "@/components/Navbar";
 import {
   FaCalendarAlt,
   FaMapMarkerAlt,
@@ -15,7 +17,22 @@ import {
   FaFilter,
   FaSearch,
   FaUserFriends,
+  FaHeart,
+  FaTrophy,
+  FaComments,
+  FaStar,
+  FaTimesCircle,
 } from "react-icons/fa";
+import { authFetch } from "@/utils/auth";
+
+// Mock current user
+const mockCurrentUser = {
+  name: "Nguyễn Văn An",
+  email: "user@example.com",
+  avatar: "https://i.pravatar.cc/150?img=12",
+  role: "user" as const,
+  points: 1250,
+};
 
 // Types
 interface Participant {
@@ -43,7 +60,13 @@ interface UserEvent {
     role: string;
   };
   participants: Participant[];
-  userStatus: "pending" | "approved" | "completed" | "cancelled";
+  userStatus:
+    | "pending"
+    | "approved"
+    | "participating"
+    | "rejected"
+    | "completed"
+    | "cancelled";
   eventStatus: "upcoming" | "ongoing" | "completed" | "cancelled";
   appliedAt: string;
   approvedAt?: string;
@@ -256,14 +279,144 @@ const mockUserEvents: UserEvent[] = [
 ];
 
 export default function EventsAttendedPage() {
-  const [events, setEvents] = useState<UserEvent[]>(mockUserEvents);
+  const router = useRouter();
+  const [events, setEvents] = useState<UserEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<UserEvent | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState<
-    "all" | "pending" | "approved" | "completed"
+    "all" | "pending" | "approved" | "rejected" | "completed"
   >("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showParticipants, setShowParticipants] = useState(false);
+  const [cancellingEventId, setCancellingEventId] = useState<number | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch user's registered events
+  useEffect(() => {
+    const fetchUserEvents = async () => {
+      try {
+        setIsLoading(true);
+        const response = await authFetch("/user/my-registrations");
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data && Array.isArray(data)) {
+            // Transform backend data to frontend format
+            const transformedEvents: UserEvent[] = data
+              .filter((registration: any) => registration.event) // Filter out registrations without event
+              .map((registration: any) => {
+                const event = registration.event;
+                return {
+                  id: event.id,
+                  title: event.title || "Không có tiêu đề",
+                  description: event.content || event.description || "",
+                  image:
+                    event.image ||
+                    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop",
+                  date: event.start_time ? event.start_time.split(" ")[0] : "",
+                  time:
+                    event.start_time && event.end_time
+                      ? `${event.start_time
+                          .split(" ")[1]
+                          ?.substring(0, 5)} - ${event.end_time
+                          .split(" ")[1]
+                          ?.substring(0, 5)}`
+                      : "Cả ngày",
+                  location: event.address || "Chưa xác định",
+                  maxParticipants: event.max_attendees || 100,
+                  currentParticipants: event.current_attendees || 0,
+                  category: event.type || "Tình nguyện",
+                  organizer: {
+                    id: event.author?.id || event.creator_id || 1,
+                    name: event.author?.name || "Organizer",
+                    avatar:
+                      event.author?.avatar ||
+                      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
+                    role: "manager",
+                  },
+                  participants: [],
+                  userStatus: registration.status, // pending, approved, rejected, participating
+                  eventStatus: getEventStatus(event.start_time, event.end_time),
+                  appliedAt:
+                    registration.created_at || new Date().toISOString(),
+                  approvedAt:
+                    registration.updated_at &&
+                    registration.status === "approved"
+                      ? registration.updated_at
+                      : undefined,
+                  completedAt: undefined,
+                };
+              });
+            setEvents(transformedEvents);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user events:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserEvents();
+  }, []);
+
+  // Helper function to determine event status
+  const getEventStatus = (
+    startTime: string,
+    endTime: string
+  ): "upcoming" | "ongoing" | "completed" | "cancelled" => {
+    if (!startTime) return "upcoming";
+
+    const now = new Date();
+    const start = new Date(startTime);
+    const end = endTime
+      ? new Date(endTime)
+      : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Default 4h duration
+
+    if (now < start) return "upcoming";
+    if (now >= start && now <= end) return "ongoing";
+    return "completed";
+  };
+
+  // Handle cancel registration
+  const handleCancelRegistration = async (eventId: number) => {
+    if (!confirm("Bạn có chắc muốn hủy đăng ký sự kiện này?")) return;
+
+    try {
+      setCancellingEventId(eventId);
+      const response = await authFetch(`/user/leaveEvent/${eventId}`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        // Remove event from list
+        setEvents(events.filter((e) => e.id !== eventId));
+        alert("Đã hủy đăng ký thành công!");
+        setShowDetailModal(false);
+      } else {
+        const error = await response.json();
+        alert(error.message || "Hủy đăng ký thất bại!");
+      }
+    } catch (error: any) {
+      console.error("Cancel registration error:", error);
+      alert("Hủy đăng ký thất bại!");
+    } finally {
+      setCancellingEventId(null);
+    }
+  };
+
+  // Handle access channel
+  const handleAccessChannel = (eventId: number) => {
+    router.push(`/events/${eventId}/channel`);
+  };
+
+  // Handle rate event
+  const handleRateEvent = (eventId: number) => {
+    // TODO: Implement rating modal
+    alert("Chức năng đánh giá sẽ được cập nhật!");
+  };
 
   // Filter events based on tab and search
   const filteredEvents = events.filter((event) => {
@@ -273,6 +426,14 @@ export default function EventsAttendedPage() {
       event.location.toLowerCase().includes(searchTerm.toLowerCase());
 
     if (selectedTab === "all") return matchesSearch;
+    if (selectedTab === "approved") {
+      // "Đang tham gia" includes both "approved" and "participating" status
+      return (
+        matchesSearch &&
+        (event.userStatus === "approved" ||
+          event.userStatus === "participating")
+      );
+    }
     return matchesSearch && event.userStatus === selectedTab;
   });
 
@@ -291,6 +452,12 @@ export default function EventsAttendedPage() {
         bgColor: "bg-green-100",
         label: "Đang tham gia",
       },
+      rejected: {
+        icon: FaTimesCircle,
+        color: "text-red-600",
+        bgColor: "bg-red-100",
+        label: "Bị từ chối",
+      },
       completed: {
         icon: FaCheck,
         color: "text-blue-600",
@@ -299,19 +466,30 @@ export default function EventsAttendedPage() {
       },
       cancelled: {
         icon: FaExclamationCircle,
-        color: "text-red-600",
-        bgColor: "bg-red-100",
+        color: "text-orange-600",
+        bgColor: "bg-orange-100",
         label: "Đã hủy",
       },
+      participating: {
+        icon: FaCheckCircle,
+        color: "text-green-600",
+        bgColor: "bg-green-100",
+        label: "Đang tham gia",
+      },
     };
-    return statusConfig[status as keyof typeof statusConfig];
+    return (
+      statusConfig[status as keyof typeof statusConfig] || {
+        icon: FaCalendarAlt,
+        color: "text-gray-600",
+        bgColor: "bg-gray-100",
+        label: status || "Không xác định",
+      }
+    );
   };
 
   // Show event details
   const showEventDetails = (event: UserEvent) => {
-    setSelectedEvent(event);
-    setShowDetailModal(true);
-    setShowParticipants(false);
+    router.push(`/events/${event.id}`);
   };
 
   // Get tab counts
@@ -319,7 +497,10 @@ export default function EventsAttendedPage() {
     return {
       all: events.length,
       pending: events.filter((e) => e.userStatus === "pending").length,
-      approved: events.filter((e) => e.userStatus === "approved").length,
+      approved: events.filter(
+        (e) => e.userStatus === "approved" || e.userStatus === "participating"
+      ).length,
+      rejected: events.filter((e) => e.userStatus === "rejected").length,
       completed: events.filter((e) => e.userStatus === "completed").length,
     };
   };
@@ -327,75 +508,157 @@ export default function EventsAttendedPage() {
   const tabCounts = getTabCounts();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Sự kiện của tôi
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Quản lý các sự kiện bạn đã đăng ký tham gia
-              </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      {/* Page Header with Stats Dashboard */}
+      <div className="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Title and Stats */}
+          <div className="mb-6">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              Sự kiện của tôi
+            </h1>
+            <p className="text-gray-600 text-lg">
+              Quản lý và theo dõi các sự kiện bạn đã đăng ký
+            </p>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-4 border-2 border-yellow-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-yellow-700 font-medium">
+                    Chờ duyệt
+                  </p>
+                  <p className="text-2xl font-bold text-yellow-800">
+                    {tabCounts.pending}
+                  </p>
+                </div>
+                <FaHourglassHalf className="text-3xl text-yellow-600" />
+              </div>
             </div>
 
-            {/* Search */}
-            <div className="relative">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border-2 border-green-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-green-700 font-medium">
+                    Đang tham gia
+                  </p>
+                  <p className="text-2xl font-bold text-green-800">
+                    {tabCounts.approved}
+                  </p>
+                </div>
+                <FaCheckCircle className="text-3xl text-green-600" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border-2 border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-blue-700 font-medium">
+                    Hoàn thành
+                  </p>
+                  <p className="text-2xl font-bold text-blue-800">
+                    {tabCounts.completed}
+                  </p>
+                </div>
+                <FaTrophy className="text-3xl text-blue-600" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border-2 border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-purple-700 font-medium">
+                    Tổng cộng
+                  </p>
+                  <p className="text-2xl font-bold text-purple-800">
+                    {tabCounts.all}
+                  </p>
+                </div>
+                <FaHeart className="text-3xl text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+            <div className="relative flex-1 max-w-md">
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Tìm kiếm sự kiện..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
+                className="pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full transition-all"
               />
             </div>
-          </div>
 
-          {/* Tabs */}
-          <div className="mt-6">
-            <nav className="flex space-x-8">
+            {/* Tabs */}
+            <nav className="flex space-x-2 bg-gray-100 rounded-xl p-1">
               {[
-                { key: "all", label: "Tất cả", count: tabCounts.all },
+                {
+                  key: "all",
+                  label: "Tất cả",
+                  count: tabCounts.all,
+                  icon: FaCalendarAlt,
+                },
                 {
                   key: "pending",
                   label: "Chờ duyệt",
                   count: tabCounts.pending,
+                  icon: FaHourglassHalf,
                 },
                 {
                   key: "approved",
                   label: "Đang tham gia",
                   count: tabCounts.approved,
+                  icon: FaCheckCircle,
+                },
+                {
+                  key: "rejected",
+                  label: "Bị từ chối",
+                  count: tabCounts.rejected,
+                  icon: FaTimesCircle,
                 },
                 {
                   key: "completed",
-                  label: "Đã hoàn thành",
+                  label: "Hoàn thành",
                   count: tabCounts.completed,
+                  icon: FaTrophy,
                 },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setSelectedTab(tab.key as any)}
-                  className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition duration-200 ${
-                    selectedTab === tab.key
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${
+              ].map((tab) => {
+                const TabIcon = tab.icon;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setSelectedTab(tab.key as any)}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
                       selectedTab === tab.key
-                        ? "bg-blue-100 text-blue-600"
-                        : "bg-gray-100 text-gray-600"
+                        ? "bg-white text-blue-600 shadow-md"
+                        : "text-gray-600 hover:text-gray-800"
                     }`}
                   >
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
+                    <TabIcon
+                      className={
+                        selectedTab === tab.key
+                          ? "text-blue-600"
+                          : "text-gray-400"
+                      }
+                    />
+                    <span>{tab.label}</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                        selectedTab === tab.key
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-gray-200 text-gray-600"
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </nav>
           </div>
         </div>
@@ -403,7 +666,12 @@ export default function EventsAttendedPage() {
 
       {/* Events List */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {filteredEvents.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Đang tải sự kiện...</p>
+          </div>
+        ) : filteredEvents.length === 0 ? (
           <div className="text-center py-12">
             <FaCalendarAlt className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">
@@ -522,29 +790,91 @@ export default function EventsAttendedPage() {
                       )}
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-                      <div className="flex items-center">
-                        <Image
-                          src={event.organizer.avatar}
-                          alt={event.organizer.name}
-                          width={24}
-                          height={24}
-                          className="rounded-full"
-                          unoptimized
-                        />
-                        <span className="ml-2 text-sm text-gray-600">
-                          {event.organizer.name}
-                        </span>
-                      </div>
+                    {/* Action Buttons - Different for each status */}
+                    <div className="space-y-2 pt-4 border-t border-gray-100">
+                      {event.userStatus === "pending" && (
+                        <>
+                          <button
+                            onClick={() => showEventDetails(event)}
+                            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition duration-200 font-medium"
+                          >
+                            <FaEye />
+                            <span>Xem chi tiết</span>
+                          </button>
+                          <button
+                            onClick={() => handleCancelRegistration(event.id)}
+                            disabled={cancellingEventId === event.id}
+                            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {cancellingEventId === event.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                                <span>Đang hủy...</span>
+                              </>
+                            ) : (
+                              <>
+                                <FaTimesCircle />
+                                <span>Hủy đăng ký</span>
+                              </>
+                            )}
+                          </button>
+                        </>
+                      )}
 
-                      <button
-                        onClick={() => showEventDetails(event)}
-                        className="flex items-center space-x-1 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition duration-200"
-                      >
-                        <FaEye />
-                        <span>Chi tiết</span>
-                      </button>
+                      {(event.userStatus === "approved" ||
+                        event.userStatus === "participating") && (
+                        <>
+                          <button
+                            onClick={() => handleAccessChannel(event.id)}
+                            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gradient-to-r from-green-500 to-blue-500 text-white hover:shadow-lg rounded-lg transition duration-200 font-medium"
+                          >
+                            <FaComments />
+                            <span>Truy cập kênh</span>
+                          </button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => showEventDetails(event)}
+                              className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition duration-200 font-medium"
+                            >
+                              <FaEye />
+                              <span>Chi tiết</span>
+                            </button>
+                            <button
+                              onClick={() => handleCancelRegistration(event.id)}
+                              disabled={cancellingEventId === event.id}
+                              className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition duration-200 font-medium disabled:opacity-50"
+                            >
+                              {cancellingEventId === event.id ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                              ) : (
+                                <>
+                                  <FaTimes />
+                                  <span>Hủy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </>
+                      )}
+
+                      {event.userStatus === "completed" && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => showEventDetails(event)}
+                            className="flex items-center justify-center space-x-1 px-4 py-2.5 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition duration-200 font-medium"
+                          >
+                            <FaEye />
+                            <span>Xem lại</span>
+                          </button>
+                          <button
+                            onClick={() => handleRateEvent(event.id)}
+                            className="flex items-center justify-center space-x-1 px-4 py-2.5 text-sm bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-lg transition duration-200 font-medium"
+                          >
+                            <FaStar />
+                            <span>Đánh giá</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -756,6 +1086,94 @@ export default function EventsAttendedPage() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Modal Action Buttons */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                {selectedEvent.userStatus === "pending" && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDetailModal(false)}
+                      className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
+                    >
+                      Đóng
+                    </button>
+                    <button
+                      onClick={() => handleCancelRegistration(selectedEvent.id)}
+                      disabled={cancellingEventId === selectedEvent.id}
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:shadow-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                    >
+                      {cancellingEventId === selectedEvent.id ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Đang hủy...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaTimesCircle />
+                          <span>Hủy đăng ký</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {selectedEvent.userStatus === "approved" && (
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => handleAccessChannel(selectedEvent.id)}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl hover:shadow-lg transition font-medium flex items-center justify-center space-x-2"
+                    >
+                      <FaComments className="text-lg" />
+                      <span>Truy cập kênh sự kiện</span>
+                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowDetailModal(false)}
+                        className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleCancelRegistration(selectedEvent.id)
+                        }
+                        disabled={cancellingEventId === selectedEvent.id}
+                        className="flex-1 px-6 py-3 bg-red-50 text-red-600 border-2 border-red-200 rounded-xl hover:bg-red-100 transition font-medium disabled:opacity-50 flex items-center justify-center space-x-2"
+                      >
+                        {cancellingEventId === selectedEvent.id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
+                            <span>Đang hủy...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaTimes />
+                            <span>Hủy đăng ký</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {selectedEvent.userStatus === "completed" && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDetailModal(false)}
+                      className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
+                    >
+                      Đóng
+                    </button>
+                    <button
+                      onClick={() => handleRateEvent(selectedEvent.id)}
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl hover:shadow-lg transition font-medium flex items-center justify-center space-x-2"
+                    >
+                      <FaStar />
+                      <span>Đánh giá sự kiện</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

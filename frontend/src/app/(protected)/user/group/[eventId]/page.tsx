@@ -2,7 +2,7 @@
 import { use } from "react";
 import Group from "@/components/group_event";
 
-export default function ManagerGroupEventPage({
+export default function GroupEventPage({
   params,
 }: {
   params: Promise<{ eventId: string }>;

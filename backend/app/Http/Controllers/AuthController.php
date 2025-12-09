@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Utils\JWTUtil;
 use App\Services\UserService;
+use Illuminate\Support\Facades\Log;
 // use App\Jobs\SendWelcomeEmail;
 
 class AuthController extends Controller
@@ -98,7 +99,8 @@ class AuthController extends Controller
 
     public function refreshToken(Request $request)
     {
-        $refresh_token = $request->refresh_token;
+        $refresh_token = $request->input('refresh_token');
+        LOG::info('Refresh token request received', ['refresh_token' => $refresh_token]);
         if (!$refresh_token) {
             return response()->json(['error' => 'Invalid refresh token'], 401);
            

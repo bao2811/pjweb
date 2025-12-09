@@ -2,7 +2,7 @@
 
 // Auth constants - exported để AuthContext có thể dùng
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 export const TOKEN_KEY = "jwt_token";
 export const REFRESH_TOKEN_KEY = "refresh_token";
 export const USER_KEY = "user_data";
@@ -40,11 +40,13 @@ export async function authFetch(
       ...fetchOptions.headers,
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
+      Accept: "application/json",
     };
   } else if (!skipAuth) {
     fetchOptions.headers = {
       ...fetchOptions.headers,
       "Content-Type": "application/json",
+      Accept: "application/json",
     };
   }
 

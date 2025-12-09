@@ -67,11 +67,6 @@ class PostService
     public function updatePostById($id, $data)
     {
         try {
-            $request->validate([
-                'title' => 'sometimes|required|string|max:255',
-                'content' => 'sometimes|required|string',
-                'image' => 'sometimes|image|max:2048',
-            ]);
             $result =  $this->postRepo->updatePostById($id, $data);
             return [
                 'success' => $result,

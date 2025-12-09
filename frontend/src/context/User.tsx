@@ -72,6 +72,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 type User = {
   id: number;
   username: string;
@@ -99,7 +101,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
 
       // ✅ Gọi API /api/user (cookie sẽ tự động được gửi kèm)
-      const res = await axios.get<User>("http://localhost:8000/user/getuser", {
+      const res = await axios.get<User>(`${API_URL}/user/getuser`, {
         withCredentials: true, // <-- quan trọng
       });
 

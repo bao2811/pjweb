@@ -1,6 +1,5 @@
 import React from "react";
-import NavbarUser from "@/components/NavbarUser";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Navbar from "@/components/Navbar";
 
 export default function UserLayout({
   children,
@@ -8,11 +7,9 @@ export default function UserLayout({
   children: React.ReactNode;
 }) {
   return (
-    // <ProtectedRoute allowedRoles={["admin", "manager", "user"]}>
     <div>
-      <NavbarUser />
+      <Navbar />
       {children}
     </div>
-    // </ProtectedRoute>
   );
 }

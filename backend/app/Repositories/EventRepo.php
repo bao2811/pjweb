@@ -3,7 +3,7 @@
 namespace App\Repositories;
 
 use App\Repositories\UserRepo;
-use App\Repositories\EventRepo;
+
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;

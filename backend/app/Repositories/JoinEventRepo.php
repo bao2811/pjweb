@@ -45,7 +45,7 @@ class JoinEventRepo
         }
 
         $event = Event::find($data['event_id']);
-        Noti::createAndPush([
+        $notification = Noti::createAndPush([
             'title' => 'Yêu cầu tham gia sự kiện đã được gửi 📩',
             'message' => "Yêu cầu tham gia sự kiện của bạn đang chờ được phê duyệt.",
             'sender_id' => $data['user_id'],
@@ -56,6 +56,8 @@ class JoinEventRepo
                 'url' => "/notification/{$event->author_id}"
             ]
         ]);
+
+        broadcast(new \App\Events\NotificationSent($notification, $event->author_id))->toOthers();
 
         return $joinEvent;
     }
@@ -104,7 +106,7 @@ class JoinEventRepo
             
             // Gửi notification + push notification cho user
             if ($event) {
-                Noti::createAndPush([
+                $notification = Noti::createAndPush([
                     'title' => 'Tham gia sự kiện thành công! 🎉',
                     'message' => "Yêu cầu tham gia sự kiện '{$event->title}' của bạn đã được chấp nhận!",
                     'sender_id' => $managerId, // Manager đang accept
@@ -117,6 +119,8 @@ class JoinEventRepo
                     ]
                 ]);
             }
+
+            broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
             
             return $joinEvent;
         }
@@ -153,6 +157,8 @@ class JoinEventRepo
                     ]
                 ]);
             }
+
+            broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
             
             return $joinEvent;
         }

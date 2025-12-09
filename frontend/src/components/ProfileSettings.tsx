@@ -22,7 +22,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const { isSupported, isSubscribed, error, loading, subscribe, unsubscribe } =
     usePushNotifications({
       apiBaseUrl:
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api",
       vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "",
     });
 

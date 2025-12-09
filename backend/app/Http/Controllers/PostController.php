@@ -113,6 +113,11 @@ class PostController extends Controller
 
         //kiểm tra post có phải của user tạo không
         try {
+            $request->validate([
+                'title' => 'sometimes|required|string|max:255',
+                'content' => 'sometimes|required|string',
+                'image' => 'sometimes|image|max:2048',
+            ]);
             $postData = $request->only(['title', 'content', 'image']);
             $post = $this->postService->updatePostById($id, $postData);
             if (!$post) {
@@ -226,6 +231,7 @@ class PostController extends Controller
     public function addPostToChannel(Request $request): JsonResponse
     {
         try {
+            $user = $request->user();
             $request->validate([
                 'channel_id' => 'required|exists:channels,id',
                 'title' => 'required|string|max:255',
@@ -235,11 +241,11 @@ class PostController extends Controller
             ]);
 
             $postData = [
-                'channel_id' => $request->channel_id,
-                'title' => $request->title,
-                'content' => $request->content,
-                'image' => $request->image,
-                'author_id' => $request->author_id ?? auth()->id(), // Ưu tiên auth, fallback về request
+                'channel_id' => $request->input('channel_id'),
+                'title' => $request->input('title'),
+                'content' => $request->input('content'),
+                'image' => $request->input('image'),
+                'author_id' => $request->input('author_id', $user->id), // Ưu tiên auth, fallback về auth()->id()
                 'status' => 'active',
             ];
             

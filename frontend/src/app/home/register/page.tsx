@@ -3,6 +3,9 @@ import { useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 import {
   FaUser,
   FaEnvelope,
@@ -200,11 +203,9 @@ export default function RegisterPage() {
     if (!validate()) return;
 
     try {
-      const res = await axios.post(
-        "http://localhost:8000/api/register",
-        formData,
-        { withCredentials: true }
-      );
+      const res = await axios.post(`${API_URL}/api/register`, formData, {
+        withCredentials: true,
+      });
       console.log(res);
       if (res?.status === 201) {
         // clear the form to initial values

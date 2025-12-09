@@ -10,7 +10,7 @@ const PushNotificationSettings: React.FC = () => {
   const { isSupported, isSubscribed, error, loading, subscribe, unsubscribe } =
     usePushNotifications({
       apiBaseUrl:
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api",
       vapidPublicKey:
         process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
         "BGfcgEChdEI-iDX_RwDlob6AVdLxnGIxsd6iERT9PxFm-P8RGwQFDbQnt7-z0mN0wZfVF6m3w5JYuihH_2pG5qQ",

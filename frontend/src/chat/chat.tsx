@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import Pusher from "pusher-js";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 interface ChatProps {
   groupId: number; // truyền vào id nhóm
 }
@@ -42,7 +44,7 @@ export default function Chat({ groupId }: ChatProps) {
   }, [groupId]);
 
   async function sendMessage() {
-    await fetch(`http://localhost:8000/api/groups/${groupId}/message`, {
+    await fetch(`${API_URL}/api/groups/${groupId}/message`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: input }),

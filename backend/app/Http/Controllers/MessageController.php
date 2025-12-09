@@ -50,7 +50,7 @@ class MessageController extends Controller
             $message = Message::create([
                 'sender_id' => $senderId,
                 'channel_id' => $request->channel_id,
-                'content' => $request->content,
+                'content' => $request->input('content'),
                 'sent_at' => now(),
             ]);
 

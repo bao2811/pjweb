@@ -15,7 +15,91 @@ php artisan queue:work
 # Terminal 3
 php artisan serve
 
+# Terminal 4
+php artisan schedule:run
+
 # 4. Frontend - Restart
 cd ../frontend
 # Ctrl+C để stop
 npm run dev
+
+⭐ 3) Muốn Scheduler hoạt động → PHẢI cấu hình Cron Job
+
+Laravel yêu cầu chỉ duy nhất một dòng cron trong server:
+
+🟩 Đối với Linux server (Ubuntu / CentOS / Forge / Docker host):
+
+Chạy:
+
+crontab -e
+
+
+Thêm dòng:
+
+* * * * * php /path/to/your/project/artisan schedule:run >> /dev/null 2>&1
+
+
+Ví dụ nếu project ở /var/www/html/myapp:
+
+* * * * * php /var/www/html/myapp/artisan schedule:run >> /dev/null 2>&1
+
+1️⃣ Tắt tạm thời cron trên Linux/macOS
+
+Mở crontab:
+
+crontab -e
+
+
+Comment dòng cron bằng cách thêm #:
+
+# * * * * * php /path/to/your/project/artisan schedule:run >> /dev/null 2>&1
+
+
+Lưu lại → cron sẽ ngưng chạy Scheduler.
+
+2️⃣ Xoá hẳn cron
+
+Xoá dòng cron khỏi crontab.
+
+Cron sẽ không gọi Scheduler nữa.
+
+3️⃣ Tắt dịch vụ cron hoàn toàn (không khuyến nghị trừ khi máy không dùng cron khác)
+
+Ubuntu/Debian:
+
+sudo systemctl stop cron
+
+
+CentOS/RHEL:
+
+sudo systemctl stop crond
+
+
+macOS: nếu dùng launchd hoặc cron, disable job tương ứng.
+
+Cách này tắt toàn bộ cron service → tất cả các cron khác cũng không chạy.
+
+4️⃣ Kích hoạt lại khi cần
+
+Comment dòng cron → uncomment lại
+
+Hoặc tạo lại dòng cron mới
+
+Hoặc bật lại dịch vụ cron:
+
+sudo systemctl start cron   # Ubuntu/Debian
+sudo systemctl start crond  # CentOS
+
+✅ Kết luận
+
+Có thể tắt khi không dùng.
+
+Cách an toàn nhất: comment dòng cron trong crontab → dễ bật lại khi cần.
+
+Không cần tắt app hay server, chỉ cron job ngừng chạy Scheduler thôi.
+
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+
+docker exec laravel_app php artisan config:clear && docker exec laravel_app php artisan cache:clear && docker exec laravel_app php artisan route:clear

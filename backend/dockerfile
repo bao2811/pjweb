@@ -1,9 +1,9 @@
 FROM php:8.2-fpm
 
-# Cài các extension cần cho Laravel
+# Cài các extension cần cho Laravel và Reverb
 RUN apt-get update && apt-get install -y \
     git unzip libpq-dev libzip-dev zip && \
-    docker-php-ext-install pdo pdo_mysql zip
+    docker-php-ext-install pdo pdo_mysql pdo_pgsql zip pcntl
 
 # Cài composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
