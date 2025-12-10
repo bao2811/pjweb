@@ -255,8 +255,8 @@ class UserService
                     'events.start_time',
                     'events.end_time',
                     'join_events.created_at as joined_at',
-                    'author.name as organizer_name',
-                    'author.avatar as organizer_avatar'
+                    'author.username as organizer_name',
+                    'author.image as organizer_avatar'
                 )
                 ->orderBy('events.end_time', 'desc')
                 ->get()

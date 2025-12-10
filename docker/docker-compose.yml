@@ -27,6 +27,9 @@ services:
     container_name: nextjs_app
     ports:
       - "3000:3000"
+    volumes:
+      - ../frontend:/app:cached
+    command: ["sh", "-lc", "npm run dev"]
     environment:
       # Backend API runs on localhost:8000 (exposed from Docker)
       # Browser calls backend directly without nginx

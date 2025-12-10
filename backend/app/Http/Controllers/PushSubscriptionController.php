@@ -75,7 +75,7 @@ class PushSubscriptionController extends Controller
             ], 422);
         }
 
-        $user = Auth::user();
+        $user = $request->user();
 
         try {
             $deleted = PushSubscription::where('user_id', $user->id)

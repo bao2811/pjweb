@@ -88,7 +88,7 @@ class UserController extends Controller
      public function getEventHistory(Request $request)
    {
        try {
-           $userId = $request->input('user_id') ?? auth()->id();
+           $userId =$request->user()->id;
            
            if (!$userId) {
                return response()->json([

@@ -2,13 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\EventController;
-use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\LikeController;
-use App\Http\Controllers\CommentController;
-use App\Http\Controllers\JoinEventController;
 use App\Http\Controllers\NotiController;
 use App\Events\ChatMessage;
 use Illuminate\Http\Request;
@@ -62,6 +58,7 @@ Route::group(['prefix' => 'posts', 'middleware' => 'jwt'], function () {
     Route::post('/getPostsByChannel/{channelId}', [PostController::class, 'getPostsByChannel']);
     Route::post('/getPostsByUserId/{userId}', [PostController::class, 'getPostsByUserId']);
 
+    Route::get('/channel/{channelId}', [PostController::class, 'getPostsByChannel']);
     Route::post('/channel', [PostController::class, 'addPostToChannel']);
 });
 
@@ -80,6 +77,7 @@ Route::group(['prefix' => 'events', 'middleware' => 'jwt'], function () {
     Route::put('/updateEventById/{id}', [EventController::class, 'updateEventById']);
     Route::delete('/deleteEventById/{id}', [EventController::class, 'deleteEventById']);
     Route::post('/searchEvents', [EventController::class, 'searchEvents']);
+    Route::get('/{id}/channel', [EventController::class, 'getEventChannel']);
 });
 
  // Likes - Event
@@ -94,6 +92,7 @@ Route::group(['prefix' => 'messages', 'middleware' => 'jwt'], function () {
     Route::get('/channel/{channelId}', [MessageController::class, 'getMessagesByChannel']);
     Route::post('/send', [MessageController::class, 'sendMessage']);
     Route::delete('/{id}', [MessageController::class, 'deleteMessage']);
+
 });
 
 // Notifications

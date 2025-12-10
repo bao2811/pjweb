@@ -42,11 +42,19 @@ class EventController extends Controller
     }
 
 
-    public function getAllEvent(Request $request)
+    public function getAllEvents(Request $request)
     {
-        $userId = $request->user()->id;
-        $events = $this->eventService->getAllEvent($userId);
-        return response()->json(['events' => $events]);
+        try{
+            // Lấy userId từ authenticated user
+            $userId = $request->user() ? $request->user()->id : null;
+            $listEvent = $this->eventService->getAllEvents($userId);
+            return response()->json($listEvent, 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'=>'error server',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getDetailEvent(Request $request, $id)
@@ -148,5 +156,7 @@ class EventController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+
 
 }

@@ -14,6 +14,7 @@ Route::middleware(['jwt'])->prefix('user')->group(function () {
     Route::get('/leaveEvent/{id}', [UserController::class, 'leaveEvent']);
     Route::get('/joinEvent/{id}', [UserController::class, 'joinEvent']);
     Route::get('/getEventHistory', [UserController::class, 'getEventHistory']);
+    Route::get('/eventHistory', [UserController::class, 'getEventHistory']);
     
     // Push notification subscription routes
     Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe']);
@@ -25,4 +26,5 @@ Route::middleware(['jwt'])->prefix('user')->group(function () {
     Route::get('/notifications', [NotiController::class, 'getUserNotifications']);
     Route::post('/notifications/{id}/read', [NotiController::class, 'markAsRead']);
     Route::post('/notifications/mark-all-read', [NotiController::class, 'markAllAsRead']);
+    Route::get('/notifications/unread-count', [NotiController::class, 'getUnreadCount']);
 });

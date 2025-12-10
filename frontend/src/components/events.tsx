@@ -140,7 +140,7 @@ export default function Events() {
   const fetchEvents = async () => {
     try {
       setIsLoading(true);
-      const response = await authFetch("/events/getAllEvents");
+      const response = await authFetch("/api/events/getAllEvents");
       const data = await response.json();
 
       console.log("🔍 BACKEND RESPONSE:", data); // DEBUG
@@ -206,7 +206,7 @@ export default function Events() {
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const response = await authFetch("/me");
+        const response = await authFetch("/api/me");
         const data = await response.json();
         if (data) {
           setCurrentUser({
@@ -229,7 +229,7 @@ export default function Events() {
   // Fetch my registrations
   const fetchMyRegistrations = async () => {
     try {
-      const response = await authFetch("/my-registrations");
+      const response = await authFetch("/user/getEventHistory");
       const data = await response.json();
       console.log("🔍 My Registrations Response:", data); // DEBUG
       if (data && Array.isArray(data)) {
@@ -439,11 +439,11 @@ export default function Events() {
     try {
       let response;
       if (event.isLiked) {
-        response = await authFetch(`/likes/event/unlike/${eventId}`, {
+        response = await authFetch(`/api/likes/event/unlike/${eventId}`, {
           method: "POST",
         });
       } else {
-        response = await authFetch(`/likes/event/like/${eventId}`, {
+        response = await authFetch(`/api/likes/event/like/${eventId}`, {
           method: "POST",
         });
       }
@@ -493,9 +493,7 @@ export default function Events() {
       });
 
       // 2️⃣ GỬI REQUEST ĐẾN API
-      const response = await authFetch(`/joinEvent/${eventId}`, {
-        method: "POST",
-      });
+      const response = await authFetch(`/user/joinEvent/${eventId}`);
       const data = await response.json();
 
       // 3️⃣ ĐỒNG BỘ với server response
@@ -597,14 +595,10 @@ export default function Events() {
           ? `${newEvent.date} ${newEvent.time.split(" - ")[1] || "23:59"}:00`
           : undefined;
 
-      // Use env-injected base URL if present, otherwise default to same-origin "/api"
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
-      const response = await fetch(`${API_URL}/manager/createEvent`, {
+      const response = await authFetch("/api/manager/createEvent", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: newEvent.title,
