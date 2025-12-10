@@ -511,7 +511,7 @@ export default function MembersPage() {
                 placeholder="Tìm kiếm theo tên, email, địa điểm..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 text-base placeholder:text-gray-400"
               />
             </div>
 
@@ -519,7 +519,7 @@ export default function MembersPage() {
             <select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 text-base"
             >
               {roles.map((role) => (
                 <option key={role} value={role}>
@@ -538,7 +538,7 @@ export default function MembersPage() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 text-base"
             >
               {statuses.map((status) => (
                 <option key={status} value={status}>

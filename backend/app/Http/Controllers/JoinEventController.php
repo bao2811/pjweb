@@ -69,4 +69,23 @@ class JoinEventController extends Controller
         $registrations = $this->joinEventService->getMyRegistrations($user->id);
         return response()->json($registrations);
     }
+
+    public function approveRegistration(Request $request, $id)
+    {
+        $result = $this->joinEventService->approveRegistration($id);
+        if(!$result){
+            return response()->json(['error' => 'Registration not found'], 404);
+        }
+        return response()->json($result);
+    }
+
+    public function rejectRegistration(Request $request, $id)
+    {
+        $reason = $request->input('reason');
+        $result = $this->joinEventService->rejectRegistration($id, $reason);
+        if(!$result){
+            return response()->json(['error' => 'Registration not found'], 404);
+        }
+        return response()->json($result);
+    }
 }

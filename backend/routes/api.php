@@ -70,12 +70,15 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::post('/joinEvent/{eventId}', [JoinEventController::class, 'joinEvent']);
     Route::post('/leaveEvent/{eventId}', [JoinEventController::class, 'leaveEvent']);
     Route::get('/my-registrations', [JoinEventController::class, 'getMyRegistrations']);
+    Route::post('/registrations/{id}/approve', [JoinEventController::class, 'approveRegistration']);
+    Route::post('/registrations/{id}/reject', [JoinEventController::class, 'rejectRegistration']);
     
     // Notifications
     Route::get('/notifications', [NotiController::class, 'getUserNotifications']);
     Route::post('/notifications/{id}/read', [NotiController::class, 'markAsRead']);
     Route::post('/notifications/read-all', [NotiController::class, 'markAllAsRead']);
     Route::delete('/notifications/{id}', [NotiController::class, 'deleteNotification']);
+    Route::post('/notifications/register-device', [NotiController::class, 'registerDevice']);
     
     // Messages (Chat)
     Route::group(['prefix' => 'messages'], function () {

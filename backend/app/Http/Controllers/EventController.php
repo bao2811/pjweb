@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\WebPushApi;
+use App\Utils\WebPushApi;
 use App\Services\EventService;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;

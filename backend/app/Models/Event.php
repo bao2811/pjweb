@@ -11,15 +11,19 @@ class Event extends Model
 
     protected $fillable = [
         'title',
+        'content',
         'description',
         'location',
+        'address',
         'start_time',
         'end_time',
         'max_participants',
+        'current_participants',
         'points',
         'category',
         'image',
         'status',
+        'author_id',
         'creator_id',
     ];
 

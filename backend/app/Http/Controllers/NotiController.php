@@ -66,6 +66,43 @@ class NotiController extends Controller
         }
     }
 
+    public function registerDevice(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $subscription = $request->input('subscription');
+
+            if (!$subscription || !isset($subscription['endpoint'])) {
+                return response()->json(['error' => 'Invalid subscription'], 400);
+            }
+
+            $endpoint = $subscription['endpoint'];
+            $p256dh = $subscription['keys']['p256dh'] ?? null;
+            $auth = $subscription['keys']['auth'] ?? null;
+
+            // Upsert by endpoint
+            $existing = PushSubscription::where('endpoint', $endpoint)->first();
+            if ($existing) {
+                $existing->update([
+                    'user_id' => $user->id,
+                    'p256dh' => $p256dh,
+                    'auth' => $auth
+                ]);
+            } else {
+                PushSubscription::create([
+                    'user_id' => $user->id,
+                    'endpoint' => $endpoint,
+                    'p256dh' => $p256dh,
+                    'auth' => $auth
+                ]);
+            }
+
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function sendNotification(Request $request)
     {
         $subscriptions = PushSubscription::all();

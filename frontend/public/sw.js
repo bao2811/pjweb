@@ -1,9 +1,14 @@
 self.addEventListener("push", function (event) {
-  console.log("Push received:", event);
+  console.log("🔔 Push received:", event);
 
   let data = {};
-  if (event.data) {
-    data = event.data.json();
+  try {
+    if (event.data) {
+      data = event.data.json();
+      console.log("📦 Push data:", data);
+    }
+  } catch (e) {
+    console.error("❌ Failed to parse push data:", e);
   }
 
   const title = data.title || "Thông báo mới";
@@ -16,6 +21,7 @@ self.addEventListener("push", function (event) {
     },
   };
 
+  console.log("🔔 Showing notification:", title, options);
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
