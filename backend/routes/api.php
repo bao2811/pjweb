@@ -57,6 +57,7 @@ Route::group(['prefix' => 'posts', 'middleware' => 'jwt'], function () {
     Route::post('/getCommentsOfPost/{postId}', [PostController::class, 'getCommentsOfPost']);
     Route::post('/getPostsByChannel/{channelId}', [PostController::class, 'getPostsByChannel']);
     Route::post('/getPostsByUserId/{userId}', [PostController::class, 'getPostsByUserId']);
+    Route::get('/getTrendingPosts', [PostController::class, 'getTrendingPosts']);
 
     Route::get('/channel/{channelId}', [PostController::class, 'getPostsByChannel']);
     Route::post('/channel', [PostController::class, 'addPostToChannel']);
@@ -72,6 +73,7 @@ Route::group(['prefix' => 'likes', 'middleware' => 'jwt'], function () {
 // Event
 Route::group(['prefix' => 'events', 'middleware' => 'jwt'], function () {
     Route::get('/getAllEvents', [EventController::class, 'getAllEvents']);
+    Route::get('/getTrendingEvents', [EventController::class, 'getTrendingEvents']);
     Route::get('/getEventDetails/{id}', [EventController::class, 'getEventDetails']);
     Route::post('/createEvent', [EventController::class, 'createEvent']);
     Route::put('/updateEventById/{id}', [EventController::class, 'updateEventById']);

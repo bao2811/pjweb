@@ -597,10 +597,10 @@ export default function Navbar() {
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo & Brand */}
-          <div className="flex items-center space-x-8">
+          <div className="flex items-center">
             <Link
               href={`${basePath}/dashboard`}
               className="flex items-center space-x-3 group"
@@ -617,80 +617,80 @@ export default function Navbar() {
                 </div>
               </div>
             </Link>
+          </div>
 
-            {/* Main Navigation - Dynamic theo role */}
-            <div className="hidden lg:flex items-center justify-center gap-2 sm:gap-4 bg-gray-200 rounded-full px-3 sm:px-6 py-2 w-auto overflow-x-auto scrollbar-hide">
+          {/* Main Navigation - Centered */}
+          <div className="hidden lg:flex items-center justify-center gap-2 sm:gap-4 bg-gray-200 rounded-full px-3 sm:px-6 py-2 absolute left-1/2 transform -translate-x-1/2">
+            <Link
+              href={`${basePath}/dashboard`}
+              className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+            >
+              Bảng tin
+            </Link>
+
+            <Link
+              href={`/events`}
+              className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+            >
+              Sự kiện
+            </Link>
+
+            {/* User role: Sự kiện đã tham gia */}
+            {currentUser?.role === "user" && (
               <Link
-                href={`${basePath}/dashboard`}
+                href="/user/eventsattended"
                 className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
               >
-                Bảng tin
+                Sự kiện đã tham gia
               </Link>
+            )}
 
-              <Link
-                href={`/events`}
-                className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
-              >
-                Sự kiện
-              </Link>
-
-              {/* User role: Sự kiện đã tham gia */}
-              {currentUser?.role === "user" && (
+            {/* Manager role: Quản lý sự kiện */}
+            {currentUser?.role === "manager" && (
+              <>
                 <Link
-                  href="/user/eventsattended"
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
-                >
-                  Sự kiện đã tham gia
-                </Link>
-              )}
-
-              {/* Manager role: Quản lý sự kiện */}
-              {currentUser?.role === "manager" && (
-                <>
-                  <Link
-                    href="/
+                  href="/
                     /manage-events"
-                    className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
-                  >
-                    Quản lý sự kiện
-                  </Link>
-                  <Link
-                    href="/manager/reports"
-                    className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
-                  >
-                    Báo cáo
-                  </Link>
-                </>
-              )}
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
+                >
+                  Quản lý sự kiện
+                </Link>
+                <Link
+                  href="/manager/reports"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
+                >
+                  Báo cáo
+                </Link>
+              </>
+            )}
 
-              {/* Admin role: All management features */}
-              {currentUser?.role === "admin" && (
-                <>
-                  <Link
-                    href="/admin/manager"
-                    className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors duration-200 font-medium"
-                    // className={`text-xs sm:text-sm lg:text-base whitespace-nowrap px-2 sm:px-3 py-1 rounded-lg transition-colors hover:bg-blue-100 ${
-                    //   pathname === "/admin/manager"
-                    //     ? "bg-blue-500 text-white font-semibold"
-                    //     : "text-gray-700"
-                    // }`}
-                  >
-                    Quản lý điều phối viên
-                  </Link>
-                  <Link
-                    href="/admin/users"
-                    // className={`text-xs sm:text-sm lg:text-base whitespace-nowrap px-2 sm:px-3 py-1 rounded-lg transition-colors hover:bg-blue-100 ${
-                    //   pathname === "/admin/users"
-                    //     ? "bg-blue-500 text-white font-semibold"
-                    //     : "text-gray-700"
-                    // }`}
-                    className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors duration-200 font-medium"
-                  >
-                    Người dùng
-                  </Link>
-                </>
-              )}
-            </div>
+            {/* Admin role: All management features */}
+            {currentUser?.role === "admin" && (
+              <>
+                <Link
+                  href="/admin/manager"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors duration-200 font-medium"
+                  // className={`text-xs sm:text-sm lg:text-base whitespace-nowrap px-2 sm:px-3 py-1 rounded-lg transition-colors hover:bg-blue-100 ${
+                  //   pathname === "/admin/manager"
+                  //     ? "bg-blue-500 text-white font-semibold"
+                  //     : "text-gray-700"
+                  // }`}
+                >
+                  Quản lý điều phối viên
+                </Link>
+                <Link
+                  href="/admin/users"
+                  // className={`text-xs sm:text-sm lg:text-base whitespace-nowrap px-2 sm:px-3 py-1 rounded-lg transition-colors hover:bg-blue-100 ${
+                  //   pathname === "/admin/users"
+                  //     ? "bg-blue-500 text-white font-semibold"
+                  //     : "text-gray-700"
+                  // }`}
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors duration-200 font-medium"
+                >
+                  Người dùng
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Right Side */}

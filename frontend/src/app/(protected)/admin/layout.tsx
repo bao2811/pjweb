@@ -1,4 +1,4 @@
-import NavbarAdmin from "@/components/NavbarAdmin";
+import Navbar from "@/components/Navbar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 export default function AdminLayout({
@@ -9,7 +9,7 @@ export default function AdminLayout({
   return (
     // <ProtectedRoute allowedRoles={["admin"]}>
     <div>
-      <NavbarAdmin />
+      <Navbar />
       {children}
     </div>
     // </ProtectedRoute>

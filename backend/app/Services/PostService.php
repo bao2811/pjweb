@@ -235,4 +235,27 @@ class PostService
     //         throw $e;
     //     }
     // }
+
+    /**
+     * Lấy 5 bài post có nhiều like nhất trong 7 ngày gần đây
+     */
+    public function getTrendingPosts($limit = 5)
+    {
+        try {
+            $sevenDaysAgo = Carbon::now()->subDays(7);
+            
+            $trendingPosts = Post::with('user:id,username,email,image')
+                ->where('created_at', '>=', $sevenDaysAgo)
+                ->where('status', 'active')
+                ->orderBy('likes', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->limit($limit)
+                ->get();
+
+            return $trendingPosts;
+        } catch (Exception $e) {
+            \Log::error('Error getting trending posts: ' . $e->getMessage());
+            return collect([]);
+        }
+    }
 }

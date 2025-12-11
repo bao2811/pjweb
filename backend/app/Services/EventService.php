@@ -107,6 +107,32 @@ class EventService
         return $result;
     }
 
+    /**
+     * Lấy các sự kiện "hot" trong 7 ngày gần đây, sắp xếp theo số lượt like giảm dần
+     *
+     * @param int $limit
+     * @return \Illuminate\Support\Collection
+     */
+    public function getTrendingEvents($limit = 5)
+    {
+        try {
+            $sevenDaysAgo = Carbon::now()->subDays(7);
+
+            $trendingEvents = Event::with('author:id,username,email,image')
+                ->where('created_at', '>=', $sevenDaysAgo)
+                ->where('status', '<>', 'rejected')
+                ->orderBy('likes', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->limit($limit)
+                ->get();
+
+            return $trendingEvents;
+        } catch (Exception $e) {
+            \Log::error('Error getting trending events: ' . $e->getMessage());
+            return collect([]);
+        }
+    }
+
     public function acceptEvent($id, $senderId)
     {
         $result = $this->eventRepo->acceptEvent($id, $senderId);

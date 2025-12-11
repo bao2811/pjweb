@@ -267,4 +267,21 @@ class PostController extends Controller
             ], 500);
         }
     }
+
+    public function getTrendingPosts(Request $request): JsonResponse
+    {
+        try {
+            $limit = $request->input('limit', 5);
+            $trendingPosts = $this->postService->getTrendingPosts($limit);
+            
+            return response()->json([
+                'posts' => $trendingPosts
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

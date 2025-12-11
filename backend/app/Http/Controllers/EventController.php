@@ -57,6 +57,23 @@ class EventController extends Controller
         }
     }
 
+    /**
+     * Trả về các sự kiện hot (nhiều lượt like nhất trong 7 ngày gần đây)
+     */
+    public function getTrendingEvents(Request $request)
+    {
+        try {
+            $limit = (int) $request->query('limit', 5);
+            $events = $this->eventService->getTrendingEvents($limit);
+            return response()->json(['events' => $events], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'error server',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getDetailEvent(Request $request, $id)
     {
         $event = $this->eventService->getEventById($id);
