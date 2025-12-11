@@ -10,6 +10,8 @@ use Illuminate\Validation\ValidationException;
 use App\Utils\JWTUtil;
 use App\Services\UserService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cookie;
+
 // use App\Jobs\SendWelcomeEmail;
 
 class AuthController extends Controller
@@ -57,8 +59,8 @@ class AuthController extends Controller
                     'message' => 'Đăng nhập thành công!',
                     'user' => $user,
                     'access_token' => $token,
-                    'refresh_token' => $refresh_token,
-                ])->cookie('user', json_encode($user), 120, '/', 'localhost', false, false, 'lax');
+                    // 'refresh_token' => $refresh_token,
+                ])->cookie('refresh_token', $refresh_token,  60 * 24 * 7, '/', null, true, true, false, 'strict');
 
         }
 
@@ -99,8 +101,8 @@ class AuthController extends Controller
 
     public function refreshToken(Request $request)
     {
-        $refresh_token = $request->input('refresh_token');
-        LOG::info('Refresh token request received', ['refresh_token' => $refresh_token]);
+        $refresh_token = $request->cookie('refresh_token');
+        Log::info('Refresh token request received', ['refresh_token' => $refresh_token]);
         if (!$refresh_token) {
             return response()->json(['error' => 'Invalid refresh token'], 401);
            
@@ -118,6 +120,8 @@ class AuthController extends Controller
             'access_token' => $token,
             // 'refresh_token' => $refresh_token,
         ]);
+
+        
     }
 
 
