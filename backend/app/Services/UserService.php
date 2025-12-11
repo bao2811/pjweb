@@ -187,7 +187,7 @@ class UserService
         }
     } 
 
-    public function joinEvent($userId, $eventId)
+    public function joinEvent($userId, $eventId): array
     {
         $result =  $this->joinEventRepo->joinEvent($userId, $eventId);
 
@@ -198,7 +198,11 @@ class UserService
                 'data' => $result
             ];
         } else {
-            return false;
+            return [
+                'success'=> false,
+                'message'=> 'Failed to join event',
+                'data'=> null
+            ];
         }
     }
 

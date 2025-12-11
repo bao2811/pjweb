@@ -3,9 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WebPushApi;
-
-use Minishlink\WebPush\WebPush;
-use Minishlink\WebPush\Subscription;
 use Illuminate\Http\Request;
 use App\Services\EventService;
 
@@ -74,7 +71,7 @@ class EventController extends Controller
         }
     }
 
-    public function getDetailEvent(Request $request, $id)
+    public function getEventDetails(Request $request, $id)
     {
         $event = $this->eventService->getEventById($id);
         if (!$event) {
@@ -173,7 +170,5 @@ class EventController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
-
 
 }

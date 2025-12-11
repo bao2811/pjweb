@@ -69,7 +69,7 @@ class UserController extends Controller
     {
         $user = $request->user();
         $data = $this->userService->joinEvent($user->id, $eventId);
-        if(!$data){
+        if(!$data['success']){
             return response()->json(['error' => 'Event not found'], 404);
         }
         return response()->json(['message' => 'Joined event successfully']);

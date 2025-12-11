@@ -110,8 +110,8 @@ class AuthController extends Controller
             return response()->json(['error' => 'Invalid refresh token'], 401);
         }
 
-        $user = $request->user();
-        $token = JWTUtil::generateToken($user->id);
+        $user = JWTUtil::validateToken($refresh_token);
+        $token = JWTUtil::generateToken($user, 60);
         // $refresh_token = JWTUtil::generateToken($user->id, 43200); // 30 days
         return response()->json([
             'message' => 'Token refreshed successfully',

@@ -150,4 +150,8 @@ class EventService
         }
         return $result;
     }
+    public function getEventById($id)
+    {
+        return $this->eventRepo->getEventById($id);
+    }
 }

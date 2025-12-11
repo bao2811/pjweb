@@ -16,43 +16,39 @@ class JoinEventRepo
         return JoinEvent::find($id);
     }
 
-    public function joinEvent($data) : JoinEvent
+    public function joinEvent($userId, $eventId) 
     {
-        $joinEvent = DB::insert(
-                    "INSERT INTO joint_events (user_id, event_id, status, created_at, updated_at)
-                    SELECT :user_id, :event_id, 'pending', NOW(), NOW()
-                    FROM events e
-                    WHERE e.id = :event_id_check
-                    AND NOW() < e.start_time
-                    AND NOT EXISTS (
-                        SELECT 1 
-                        FROM joint_events je 
-                        WHERE je.user_id = :user_id_check
-                            AND je.event_id = :event_id_check2
-                    )
-                    LIMIT 1",
-                    [
-                        'user_id'         => $data['user_id'],
-                        'event_id'        => $data['event_id'],
-                        'event_id_check'  => $data['event_id'],
-                        'user_id_check'   => $data['user_id'],
-                        'event_id_check2' => $data['event_id'],
-                    ]
-                );
-
-        if (!$joinEvent) {
-            throw new Exception('Cannot create JoinEvent. It may already exist or the event has started');
+        // Kiểm tra event có tồn tại không
+        $event = Event::find($eventId);
+        if (!$event) {
+            throw new Exception('Event not found');
         }
+        
+        // Kiểm tra đã join chưa
+        $existing = JoinEvent::where('user_id', $userId)
+                             ->where('event_id', $eventId)
+                             ->first();
+        if ($existing) {
+            throw new Exception('Already joined this event');
+        }
+        
+        // Tạo join event mới - không dùng updated_at
+        $joinEvent = new JoinEvent();
+        $joinEvent->user_id = $userId;
+        $joinEvent->event_id = $eventId;
+        $joinEvent->status = 'pending';
+        $joinEvent->created_at = now();
+        $joinEvent->save();
 
-        $event = Event::find($data['event_id']);
+        // Gửi notification
         $notification = Noti::createAndPush([
             'title' => 'Yêu cầu tham gia sự kiện đã được gửi 📩',
             'message' => "Yêu cầu tham gia sự kiện của bạn đang chờ được phê duyệt.",
-            'sender_id' => $data['user_id'],
+            'sender_id' => $userId,
             'receiver_id' => $event->author_id,
             'type' => 'event_join_request',
             'data' => [
-                'event_id' => $data['event_id'],
+                'event_id' => $eventId,
                 'url' => "/notification/{$event->author_id}"
             ]
         ]);
@@ -64,11 +60,13 @@ class JoinEventRepo
 
     public function leaveEvent($userId, $eventId)
     {
-        $joinEvent = DB::update(
-            "UPDATE joint_events je
-             JOIN events e ON je.event_id = e.id
-             SET je.status = 'cancelled', je.updated_at = NOW()
-             WHERE je.user_id = :user_id
+        // PostgreSQL syntax - không dùng updated_at
+        $affectedRows = DB::update(
+            "UPDATE join_events je
+             SET status = 'cancelled'
+             FROM events e 
+             WHERE je.event_id = e.id
+               AND je.user_id = :user_id
                AND je.event_id = :event_id
                AND je.status = 'pending'
                AND NOW() < e.start_time",
@@ -77,10 +75,8 @@ class JoinEventRepo
                 'event_id' => $eventId,
             ]
         );
-        if ($joinEvent) {
-            return $joinEvent->delete();
-        }
-        return false;
+        
+        return $affectedRows > 0;
     }
 
     public function all()
@@ -89,18 +85,20 @@ class JoinEventRepo
     }
 
     public function acceptUserJoinEvent($userId, $eventId, $managerId) {
-        $joinEvent = DB::update(
-            "UPDATE joint_events je
-             JOIN events e ON je.event_id = e.id
-             SET je.status = 'approved', je.updated_at = NOW()
-             WHERE je.user_id = :user_id
+        // PostgreSQL syntax - không dùng updated_at
+        $affectedRows = DB::update(
+            "UPDATE join_events je
+             SET status = 'approved'
+             FROM events e
+             WHERE je.event_id = e.id
+               AND je.user_id = :user_id
                AND je.event_id = :event_id
                AND je.status = 'pending'
                AND NOW() < e.start_time",
             ['user_id' => $userId, 'event_id' => $eventId]
         );
 
-        if ($joinEvent) {
+        if ($affectedRows > 0) {
             // Lấy thông tin event
             $event = Event::find($eventId);
             
@@ -122,29 +120,30 @@ class JoinEventRepo
 
             broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
             
-            return $joinEvent;
+            return true;
         }
         throw new Exception('JoinEvent not found');
     }
 
     public function rejectUserJoinEvent($eventId, $userId, $managerId) {
-        $joinEvent = DB::update(
-            "UPDATE joint_events je
-             JOIN events e ON je.event_id = e.id
-             SET je.status = 'rejected', je.updated_at = NOW()
-             WHERE je.user_id = :user_id
+        // PostgreSQL syntax - không dùng updated_at
+        $affectedRows = DB::update(
+            "UPDATE join_events je
+             SET status = 'rejected'
+             FROM events e
+             WHERE je.event_id = e.id
+               AND je.user_id = :user_id
                AND je.event_id = :event_id
                AND je.status = 'pending'
                AND NOW() < e.start_time",
             ['user_id' => $userId, 'event_id' => $eventId]
         );
-        throw new Exception('JoinEvent not found');
 
-        if ($joinEvent) {
+        if ($affectedRows > 0) {
             $event = Event::find($eventId);
             // Gửi notification + push notification cho user
             if ($event) {
-                Noti::createAndPush([
+                $notification = Noti::createAndPush([
                     'title' => 'Yêu cầu tham gia sự kiện bị từ chối ❌',
                     'message' => "Yêu cầu tham gia sự kiện '{$event->title}' của bạn đã bị từ chối.",
                     'sender_id' => $managerId, // Manager đang reject
@@ -156,12 +155,14 @@ class JoinEventRepo
                         'url' => "/notification/{$userId}"
                     ]
                 ]);
+                
+                broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
             }
-
-            broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
             
-            return $joinEvent;
+            return true;
         }
+        
+        throw new Exception('JoinEvent not found');
     }
 
 

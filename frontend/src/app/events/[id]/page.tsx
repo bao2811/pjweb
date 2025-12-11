@@ -2,6 +2,7 @@
 import { use, useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import toast, { Toaster } from "react-hot-toast";
 import {
   FaCalendarAlt,
   FaMapMarkerAlt,
@@ -22,21 +23,26 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { authFetch } from "@/utils/auth";
+import { useAuth } from "@/hooks/useAuth";
 
 interface EventDetail {
   id: number;
   title: string;
   description: string;
+  content?: string;
   image: string;
-  start_date: string;
-  end_date: string;
-  location: string;
+  start_time: string;
+  end_time: string;
+  address: string;
+  location?: string;
   max_participants: number;
-  points: number;
+  points?: number;
   category: string;
   status: string;
-  creator_id: number;
+  creator_id?: number;
+  author_id?: number;
   currentParticipants?: number;
+  current_participants?: number;
   manager?: {
     id: number;
     name: string;
@@ -54,6 +60,7 @@ export default function EventDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { user, token } = useAuth();
   const { id } = use(params);
   const router = useRouter();
   const [event, setEvent] = useState<EventDetail | null>(null);
@@ -73,7 +80,7 @@ export default function EventDetailPage({
   const fetchEventDetail = async () => {
     try {
       setIsLoading(true);
-      const response = await authFetch(`/events/getEventDetails/${id}`);
+      const response = await authFetch(`/api/events/getEventDetails/${id}`);
       const data = await response.json();
       if (data && data.event) {
         setEvent(data.event);
@@ -87,7 +94,7 @@ export default function EventDetailPage({
 
   const fetchRegistrationStatus = async () => {
     try {
-      const response = await authFetch("/my-registrations");
+      const response = await authFetch("/user/my-registrations");
       const data = await response.json();
       if (data && Array.isArray(data)) {
         const registration = data.find(
@@ -114,22 +121,40 @@ export default function EventDetailPage({
   const handleRegister = async () => {
     try {
       setIsRegistering(true);
-      const response = await authFetch(`/joinEvent/${id}`, {
+      const response = await authFetch(`/user/joinEvent/${id}`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
       const data = await response.json();
 
-      if (data && data.registration) {
-        setRegistrationStatus(data.registration.status);
-        alert("Đã gửi yêu cầu tham gia sự kiện. Vui lòng chờ manager duyệt!");
-      } else if (data && data.success) {
+      if (data && (data.registration || data.success)) {
         setRegistrationStatus("pending");
-        alert("Đã gửi yêu cầu tham gia sự kiện. Vui lòng chờ manager duyệt!");
+        toast.success(
+          "✅ Đã gửi yêu cầu tham gia sự kiện thành công! Vui lòng chờ manager duyệt.",
+          {
+            duration: 4000,
+            position: "top-center",
+            style: {
+              background: "#10b981",
+              color: "#fff",
+              fontWeight: "600",
+            },
+          }
+        );
+        // Reload event details
+        fetchEventDetail();
       }
     } catch (error: any) {
       console.error("Registration error:", error);
-      alert(
-        error.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại!"
+      toast.error(
+        "❌ " + (error.message || "Đăng ký thất bại. Vui lòng thử lại!"),
+        {
+          duration: 4000,
+          position: "top-center",
+        }
       );
     } finally {
       setIsRegistering(false);
@@ -143,20 +168,32 @@ export default function EventDetailPage({
 
     try {
       setIsRegistering(true);
-      const response = await authFetch(`/leaveEvent/${id}`, {
+      const response = await authFetch(`/user/leaveEvent/${id}`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
       const data = await response.json();
 
       if (data) {
         setRegistrationStatus("none");
-        alert("Đã hủy yêu cầu tham gia sự kiện");
+        toast.success("✅ Đã hủy yêu cầu tham gia sự kiện thành công!", {
+          duration: 3000,
+          position: "top-center",
+        });
+        // Reload event details
+        fetchEventDetail();
       }
     } catch (error: any) {
       console.error("Cancel error:", error);
-      alert(
-        error.response?.data?.message ||
-          "Hủy yêu cầu thất bại. Vui lòng thử lại!"
+      toast.error(
+        "❌ " + (error.message || "Hủy yêu cầu thất bại. Vui lòng thử lại!"),
+        {
+          duration: 4000,
+          position: "top-center",
+        }
       );
     } finally {
       setIsRegistering(false);
@@ -205,6 +242,7 @@ export default function EventDetailPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+      <Toaster />
       {/* Hero Section */}
       <div className="relative h-[400px] w-full">
         <Image
@@ -256,7 +294,7 @@ export default function EventDetailPage({
                 Giới thiệu sự kiện
               </h2>
               <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                {event.description}
+                {event.content || event.description}
               </p>
             </div>
 
@@ -283,7 +321,7 @@ export default function EventDetailPage({
                   <div>
                     <h3 className="font-semibold text-gray-800">Tích điểm</h3>
                     <p className="text-sm text-gray-600">
-                      Nhận {event.points} điểm tình nguyện
+                      Nhận {event.points || 10} điểm tình nguyện
                     </p>
                   </div>
                 </div>
@@ -407,7 +445,7 @@ export default function EventDetailPage({
                   <div className="flex-1">
                     <p className="text-sm text-gray-500">Bắt đầu</p>
                     <p className="font-semibold text-gray-800">
-                      {new Date(event.start_date).toLocaleString("vi-VN", {
+                      {new Date(event.start_time).toLocaleString("vi-VN", {
                         weekday: "long",
                         year: "numeric",
                         month: "long",
@@ -425,7 +463,7 @@ export default function EventDetailPage({
                   <div className="flex-1">
                     <p className="text-sm text-gray-500">Kết thúc</p>
                     <p className="font-semibold text-gray-800">
-                      {new Date(event.end_date).toLocaleString("vi-VN", {
+                      {new Date(event.end_time).toLocaleString("vi-VN", {
                         weekday: "long",
                         year: "numeric",
                         month: "long",
@@ -573,10 +611,10 @@ export default function EventDetailPage({
                   <div>
                     <p className="text-sm text-gray-500">Thời gian</p>
                     <p className="font-semibold text-gray-800">
-                      {new Date(event.start_date).toLocaleDateString("vi-VN")}
+                      {new Date(event.start_time).toLocaleDateString("vi-VN")}
                     </p>
                     <p className="text-sm text-gray-600">
-                      đến {new Date(event.end_date).toLocaleDateString("vi-VN")}
+                      đến {new Date(event.end_time).toLocaleDateString("vi-VN")}
                     </p>
                   </div>
                 </div>
@@ -586,7 +624,7 @@ export default function EventDetailPage({
                   <div>
                     <p className="text-sm text-gray-500">Địa điểm</p>
                     <p className="font-semibold text-gray-800">
-                      {event.location}
+                      {event.address || event.location || "Chưa cập nhật"}
                     </p>
                   </div>
                 </div>
