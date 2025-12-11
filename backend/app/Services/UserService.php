@@ -235,6 +235,80 @@ class UserService
     }
 
     /**
+     * Get all user's event registrations (pending, accepted, rejected, etc.)
+     */
+    public function getMyRegistrations($userId)
+    {
+        try {
+            $registrations = DB::table('join_events')
+                ->join('events', 'join_events.event_id', '=', 'events.id')
+                ->join('users as author', 'events.author_id', '=', 'author.id')
+                ->where('join_events.user_id', $userId)
+                ->select(
+                    'join_events.id as registration_id',
+                    'join_events.status as registration_status',
+                    'join_events.created_at',
+                    'join_events.joined_at',
+                    'events.id as event_id',
+                    'events.title',
+                    'events.content',
+                    'events.image',
+                    'events.address',
+                    'events.start_time',
+                    'events.end_time',
+                    'events.max_participants',
+                    'events.current_participants',
+                    'events.category',
+                    'events.status as event_status',
+                    'events.likes',
+                    'events.author_id',
+                    'events.created_at as event_created_at',
+                    'author.username as author_username',
+                    'author.email as author_email',
+                    'author.image as author_image'
+                )
+                ->orderBy('join_events.created_at', 'desc')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->registration_id,
+                        'status' => $item->registration_status,
+                        'created_at' => $item->created_at,
+                        'joined_at' => $item->joined_at,
+                        'event_id' => $item->event_id,
+                        'event' => [
+                            'id' => $item->event_id,
+                            'title' => $item->title,
+                            'content' => $item->content,
+                            'image' => $item->image,
+                            'address' => $item->address,
+                            'start_time' => $item->start_time,
+                            'end_time' => $item->end_time,
+                            'max_participants' => $item->max_participants,
+                            'current_participants' => $item->current_participants,
+                            'category' => $item->category,
+                            'status' => $item->event_status,
+                            'likes' => $item->likes,
+                            'author_id' => $item->author_id,
+                            'created_at' => $item->event_created_at,
+                            'author' => [
+                                'id' => $item->author_id,
+                                'username' => $item->author_username,
+                                'email' => $item->author_email,
+                                'image' => $item->author_image,
+                            ]
+                        ]
+                    ];
+                });
+
+            return $registrations;
+        } catch (\Exception $e) {
+            \Log::error('Error in UserService::getMyRegistrations: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
      * Get user's event history
      */
     public function getEventHistory($userId)

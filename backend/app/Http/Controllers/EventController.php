@@ -48,7 +48,7 @@ class EventController extends Controller
             // Lấy userId từ authenticated user
             $userId = $request->user() ? $request->user()->id : null;
             $listEvent = $this->eventService->getAllEvents($userId);
-            return response()->json($listEvent, 200);
+            return response()->json(['events' => $listEvent], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'error'=>'error server',

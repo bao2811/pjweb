@@ -55,8 +55,8 @@ class CommentRepo
 
         $comments = Comment::where('comments.post_id', $postId)
             ->whereNull('parent_id') // Chỉ lấy comment gốc, không lấy replies
-            ->with('author:id,name,avatar,role')
-            ->with('replies.author:id,name,avatar,role')
+            ->with('author:id,username,image,role')
+            ->with('replies.author:id,username,image,role')
             ->orderBy('created_at', 'asc')
             ->get();
             

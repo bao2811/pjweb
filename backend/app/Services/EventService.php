@@ -107,19 +107,18 @@ class EventService
         return $result;
     }
 
-    public function acceptEvent($id)
+    public function acceptEvent($id, $senderId)
     {
-        $result = $this->eventRepo->acceptEvent($id);
+        $result = $this->eventRepo->acceptEvent($id, $senderId);
         if (!$result) {
             throw new Exception('Failed to accept event');
         }
-        Noti::sendPush();
         return $result;
     }
 
-    public function rejectEvent($id)
+    public function rejectEvent($id, $senderId)
     {
-        $result = $this->eventRepo->rejectEvent($id);
+        $result = $this->eventRepo->rejectEvent($id, $senderId);
         if (!$result) {
             throw new Exception('Failed to reject event');
         }

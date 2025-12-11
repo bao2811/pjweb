@@ -18,6 +18,8 @@ class NotiService
         $this->notiRepo = $notiRepo;
     }
 
+
+
     public function getNotificationsByUserId($userId)
     {
         try {

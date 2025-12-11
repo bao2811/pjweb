@@ -113,4 +113,30 @@ class UserController extends Controller
            ], 500);
        }
    }
+
+   public function getMyRegistrations(Request $request)
+   {
+       try {
+           $userId = $request->user()->id;
+           
+           if (!$userId) {
+               return response()->json([
+                   'success' => false,
+                   'message' => 'User ID is required'
+               ], 400);
+           }
+
+           $registrations = $this->userService->getMyRegistrations($userId);
+
+           return response()->json($registrations);
+
+       } catch (\Exception $e) {
+           \Log::error('Error getting my registrations: ' . $e->getMessage());
+           return response()->json([
+               'success' => false,
+               'message' => 'Failed to get registrations',
+               'error' => $e->getMessage()
+           ], 500);
+       }
+   }
 }
