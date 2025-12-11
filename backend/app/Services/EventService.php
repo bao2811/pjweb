@@ -40,6 +40,11 @@ class EventService
         return $this->eventRepo->getAllEvents($userId);
     }
 
+    public function getEventById($id)
+    {
+        return $this->eventRepo->getEventById($id);
+    }
+
     public function createEvent(array $data, array $comanager = [], $authorId = null)
     {
         try {

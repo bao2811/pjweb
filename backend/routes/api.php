@@ -6,6 +6,7 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\NotiController;
+use App\Http\Controllers\MessageController;
 use App\Events\ChatMessage;
 use Illuminate\Http\Request;
 use App\Jobs\ExampleJob;

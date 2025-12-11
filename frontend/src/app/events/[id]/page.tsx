@@ -73,7 +73,7 @@ export default function EventDetailPage({
   const fetchEventDetail = async () => {
     try {
       setIsLoading(true);
-      const response = await authFetch(`/events/getEventDetails/${id}`);
+      const response = await authFetch(`/api/events/getEventDetails/${id}`);
       const data = await response.json();
       if (data && data.event) {
         setEvent(data.event);
@@ -87,7 +87,7 @@ export default function EventDetailPage({
 
   const fetchRegistrationStatus = async () => {
     try {
-      const response = await authFetch("/my-registrations");
+      const response = await authFetch("/user/my-registrations");
       const data = await response.json();
       if (data && Array.isArray(data)) {
         const registration = data.find(
@@ -114,9 +114,7 @@ export default function EventDetailPage({
   const handleRegister = async () => {
     try {
       setIsRegistering(true);
-      const response = await authFetch(`/joinEvent/${id}`, {
-        method: "POST",
-      });
+      const response = await authFetch(`/user/joinEvent/${id}`);
       const data = await response.json();
 
       if (data && data.registration) {
@@ -143,9 +141,7 @@ export default function EventDetailPage({
 
     try {
       setIsRegistering(true);
-      const response = await authFetch(`/leaveEvent/${id}`, {
-        method: "POST",
-      });
+      const response = await authFetch(`/user/leaveEvent/${id}`);
       const data = await response.json();
 
       if (data) {

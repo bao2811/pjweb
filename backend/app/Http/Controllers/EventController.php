@@ -74,7 +74,7 @@ class EventController extends Controller
         }
     }
 
-    public function getDetailEvent(Request $request, $id)
+    public function getEventDetails(Request $request, $id)
     {
         $event = $this->eventService->getEventById($id);
         if (!$event) {

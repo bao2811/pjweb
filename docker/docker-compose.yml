@@ -7,8 +7,9 @@ services:
       - "8000:8000" # Expose backend API to host machine
     volumes:
       - ../backend:/var/www/html:cached
+      - /var/www/html/vendor
     # use artisan serve as a simple HTTP server so nginx can proxy to it
-    command: ["sh", "-lc", "php artisan serve --host=0.0.0.0 --port=8000"]
+    command: ["sh", "-lc", "composer install && php artisan serve --host=0.0.0.0 --port=8000"]
     environment:
       - APP_ENV=local
       - DB_CONNECTION=pgsql
@@ -29,7 +30,9 @@ services:
       - "3000:3000"
     volumes:
       - ../frontend:/app:cached
-    command: ["sh", "-lc", "npm run dev"]
+      - /app/node_modules
+      - /app/.next
+    command: ["sh", "-lc", "npm install && npm run dev"]
     environment:
       # Backend API runs on localhost:8000 (exposed from Docker)
       # Browser calls backend directly without nginx
@@ -54,6 +57,20 @@ services:
       timeout: 5s
       retries: 5
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin123456
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
   # Laravel Reverb WebSocket Server
   reverb:
     build: ../backend
@@ -62,7 +79,8 @@ services:
       - "8080:8080" # Expose Reverb WebSocket port
     volumes:
       - ../backend:/var/www/html:cached
-    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+      - /var/www/html/vendor
+    command: ["sh", "-c", "composer install && php artisan reverb:start --host=0.0.0.0 --port=8080"]
     environment:
       - APP_ENV=local
       - DB_CONNECTION=pgsql
@@ -83,8 +101,9 @@ services:
     container_name: laravel_queue
     volumes:
       - ../backend:/var/www/html:cached
+      - /var/www/html/vendor
     command:
-      ["php", "artisan", "queue:work", "--tries=3", "--timeout=90", "--sleep=3"]
+      ["sh", "-c", "composer install && php artisan queue:work --tries=3 --timeout=90 --sleep=3"]
     environment:
       - APP_ENV=local
       - DB_CONNECTION=pgsql
@@ -130,6 +149,7 @@ services:
 
 volumes:
   postgres_data:
+  pgadmin_data:
 
 networks:
   default:
