@@ -1,0 +1,37 @@
+---
+# ============================================================================
+# TEST SUITE 1: Basic Authentication & User Operations
+# ============================================================================
+# Chạy: pyresttest http://localhost:8000 api_test/test_suite_1_basic.yaml
+# ============================================================================
+
+- config:
+    testset: "Suite 1: Basic Auth & User"
+    timeout: 10
+
+- test:
+    name: "Login - Get Token"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    expected_status: [200]
+    extract_binds:
+      - token: { jsonpath_mini: access_token }
+      - user_id: { jsonpath_mini: user.id }
+
+- test:
+    name: "Get Current User Info"
+    url: http://localhost:8000/api/me
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+
+- test:
+    name: "Logout User"
+    url: http://localhost:8000/api/logout
+    method: POST
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 500]

@@ -1,0 +1,51 @@
+---
+# ============================================================================
+# TEST SUITE 2: Content Read Operations (Posts & Likes)
+# ============================================================================
+# Chạy: pyresttest http://localhost:8000 api_test/test_suite_2_content.yaml
+# Với retry: --max-retries 3 --retry-backoff-base 1 --retry-backoff-max 10
+# ============================================================================
+
+- config:
+    testset: "Suite 2: Content Operations"
+    timeout: 10
+
+- test:
+    name: "Login"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    expected_status: [200]
+    extract_binds:
+      - token: { jsonpath_mini: access_token }
+
+- test:
+    name: "Get Post By ID - 1"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+
+- test:
+    name: "Get Post By ID - 2"
+    url: http://localhost:8000/api/getPostById/2
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+
+- test:
+    name: "Get Post By ID - 3"
+    url: http://localhost:8000/api/getPostById/3
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+
+- test:
+    name: "Get All Likes"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
