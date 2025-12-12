@@ -1,0 +1,67 @@
+---
+# ============================================================================
+# CÁCH 2: Custom Runner với Performance Block (Async Mode)
+# Chạy: python run_api_tests.py api_test/suites/test_suite_7_performance_async_advanced.yaml --perf --async
+# Hoặc: python abc.py api_test/suites/test_suite_7_performance_async_advanced.yaml --perf --async
+# ============================================================================
+- config:
+    testset: "Performance Async Mode (Advanced - High Throughput)"
+    timeout: 60
+
+- test:
+    name: "Perf-Async-Bench: Login API"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    expected_status: [200]
+    performance:
+      mode: async
+      repeat: 100
+      concurrency: 20
+      threshold_ms: 250
+
+- test:
+    name: "Perf-Async-Bench: Get User Info"
+    url: http://localhost:8000/api/me
+    method: GET
+    expected_status: [200, 401]
+    performance:
+      mode: async
+      repeat: 200
+      concurrency: 50
+      threshold_ms: 150
+
+- test:
+    name: "Perf-Async-Bench: Get All Likes"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    expected_status: [200, 401]
+    performance:
+      mode: async
+      repeat: 80
+      concurrency: 25
+      threshold_ms: 400
+
+- test:
+    name: "Perf-Async-Bench: Get Post By ID"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    expected_status: [200, 404]
+    performance:
+      mode: async
+      repeat: 150
+      concurrency: 30
+      threshold_ms: 200
+
+- test:
+    name: "Perf-Async-Bench: Mixed Endpoints"
+    url: http://localhost:8000/api/getPostById/5
+    method: GET
+    expected_status: [200, 404]
+    performance:
+      mode: async
+      repeat: 120
+      concurrency: 40
+      threshold_ms: 180

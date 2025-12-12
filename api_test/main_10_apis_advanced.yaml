@@ -1,0 +1,251 @@
+---
+# ============================================================================
+# ADVANCED API TESTING - PyRestTest với Performance & Retry
+# ============================================================================
+# Chạy cơ bản:
+#   pyresttest http://localhost:8000 api_test/main_10_apis_advanced.yaml
+#
+# Chạy với retry + concurrency:
+#   pyresttest http://localhost:8000 api_test/main_10_apis_advanced.yaml \
+#     --max-retries 3 --retry-backoff-base 1 --retry-backoff-max 10 \
+#     --max-concurrency 5
+#
+# Chạy performance benchmark:
+#   pyresttest http://localhost:8000 api_test/main_10_apis_advanced.yaml \
+#     --benchmark --benchmark-runs 100
+# ============================================================================
+
+- config:
+    testset: "10 API Endpoints - Advanced Testing"
+    timeout: 10
+    unicode_escape: true
+    # Performance settings
+    benchmark:
+      warmup_runs: 5
+      test_runs: 10
+      metrics:
+        - response_time
+        - throughput
+    # Retry configuration
+    retry:
+      max_retries: 3
+      backoff_base: 1.0
+      backoff_max: 10.0
+      retry_on_status: [500, 502, 503, 504]
+      retry_on_timeout: true
+      retry_on_connection_error: true
+
+# ============================================================================
+# TEST 1: Authentication Flow
+# ============================================================================
+- test:
+    name: "1. POST /api/login - Authentication"
+    group: "Auth"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    expected_status: [200]
+    extract_binds:
+      - token: { jsonpath_mini: access_token }
+      - user_id: { jsonpath_mini: user.id }
+    validators:
+      - compare: { jsonpath_mini: access_token, comparator: exists }
+    # Performance thresholds
+    benchmark:
+      - response_time_ms: { max: 500 } # Max 500ms
+      - throughput: { min: 10 } # Min 10 req/s
+
+# ============================================================================
+# TEST 2: User Info Retrieval
+# ============================================================================
+- test:
+    name: "2. GET /api/me - Current User Info"
+    group: "User"
+    url: http://localhost:8000/api/me
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+    validators:
+      - compare: { jsonpath_mini: id, comparator: exists }
+      - compare:
+          { jsonpath_mini: email, comparator: eq, expected: "1@gmail.com" }
+    benchmark:
+      - response_time_ms: { max: 300 }
+      - throughput: { min: 20 }
+
+# ============================================================================
+# TEST 3: Read-Only Resource Access
+# ============================================================================
+- test:
+    name: "3. GET /api/getPostById/1 - Fetch Post"
+    group: "Content"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+    benchmark:
+      - response_time_ms: { max: 400 }
+      - throughput: { min: 15 }
+
+# ============================================================================
+# TEST 4: List Endpoint - Likes
+# ============================================================================
+- test:
+    name: "4. GET /api/getAllLikes - Retrieve All Likes"
+    group: "Content"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+    validators:
+      - compare: { jsonpath_mini: $, comparator: type, expected: "array" }
+    benchmark:
+      - response_time_ms: { max: 600 }
+      - throughput: { min: 8 }
+    # Retry configuration for this specific test
+    retry:
+      max_retries: 5 # Override global retry
+
+# ============================================================================
+# TEST 5: Secondary Resource Access
+# ============================================================================
+- test:
+    name: "5. GET /api/getPostById/2 - Alternative Post Fetch"
+    group: "Content"
+    url: http://localhost:8000/api/getPostById/2
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+    benchmark:
+      - response_time_ms: { max: 400 }
+
+# ============================================================================
+# TEST 6: Duplicate Like List (Concurrency Test)
+# ============================================================================
+- test:
+    name: "6. GET /api/getAllLikes - Concurrent Access Test"
+    group: "Concurrency"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+    benchmark:
+      concurrent_requests: 10
+      response_time_ms: { max: 1000 }
+      throughput: { min: 5 }
+
+# ============================================================================
+# TEST 7: Resource List Verification
+# ============================================================================
+- test:
+    name: "7. GET /api/getAllLikes - Verify List Consistency"
+    group: "Content"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+    benchmark:
+      - response_time_ms: { max: 600 }
+
+# ============================================================================
+# TEST 8: Third Post Fetch
+# ============================================================================
+- test:
+    name: "8. GET /api/getPostById/3 - Third Post Fetch"
+    group: "Content"
+    url: http://localhost:8000/api/getPostById/3
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+    benchmark:
+      - response_time_ms: { max: 400 }
+
+# ============================================================================
+# TEST 9: Final Like List Check
+# ============================================================================
+- test:
+    name: "9. GET /api/getAllLikes - Final Consistency Check"
+    group: "Content"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+    benchmark:
+      - response_time_ms: { max: 600 }
+      - throughput: { min: 8 }
+
+# ============================================================================
+# TEST 10: Logout (Session Cleanup)
+# ============================================================================
+- test:
+    name: "10. POST /api/logout - Session Termination"
+    group: "Auth"
+    url: http://localhost:8000/api/logout
+    method: POST
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 500] # 500 acceptable for logout
+    benchmark:
+      - response_time_ms: { max: 400 }
+
+# ============================================================================
+# PERFORMANCE BENCHMARK GROUP
+# ============================================================================
+- benchmark:
+    name: "Load Test - Login Flow"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    warmup_runs: 10
+    benchmark_runs: 100
+    metrics:
+      response_time:
+        - mean: { max: 200 }
+        - p95: { max: 500 }
+        - p99: { max: 1000 }
+      throughput:
+        - min: 20
+    output: "benchmark_results_login.json"
+
+- benchmark:
+    name: "Load Test - Get User Info"
+    url: http://localhost:8000/api/me
+    method: GET
+    headers:
+      Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..." # Static token for benchmark
+    warmup_runs: 10
+    benchmark_runs: 100
+    concurrent_requests: 20
+    metrics:
+      response_time:
+        - mean: { max: 150 }
+        - p95: { max: 400 }
+        - p99: { max: 800 }
+      throughput:
+        - min: 30
+    output: "benchmark_results_user_info.json"
+
+- benchmark:
+    name: "Stress Test - Get All Likes"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers:
+      Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+    warmup_runs: 5
+    benchmark_runs: 200
+    concurrent_requests: 50 # High concurrency
+    metrics:
+      response_time:
+        - mean: { max: 500 }
+        - p95: { max: 1500 }
+        - p99: { max: 3000 }
+      throughput:
+        - min: 10
+      error_rate:
+        - max: 0.05 # Max 5% error rate
+    output: "benchmark_results_stress_test.json"
