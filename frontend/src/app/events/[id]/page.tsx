@@ -2,7 +2,7 @@
 import { use, useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import {
+import { 
   FaCalendarAlt,
   FaMapMarkerAlt,
   FaUsers,
@@ -22,6 +22,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { authFetch } from "@/utils/auth";
+import Navbar from "@/components/Navbar";
 
 interface EventDetail {
   id: number;
@@ -77,6 +78,9 @@ export default function EventDetailPage({
       const data = await response.json();
       if (data && data.event) {
         setEvent(data.event);
+        // Set like status từ backend
+        setIsLiked(Boolean(data.event.is_liked));
+        setLikes(data.event.likes || 0);
       }
     } catch (error) {
       console.error("Error fetching event details:", error);
@@ -89,8 +93,9 @@ export default function EventDetailPage({
     try {
       const response = await authFetch("/user/my-registrations");
       const data = await response.json();
-      if (data && Array.isArray(data)) {
-        const registration = data.find(
+      // Fix: Đọc đúng format {success: true, registrations: [...]}
+      if (data && data.success && Array.isArray(data.registrations)) {
+        const registration = data.registrations.find(
           (reg: any) => reg.event_id === parseInt(id)
         );
         if (registration) {
@@ -102,9 +107,36 @@ export default function EventDetailPage({
     }
   };
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikes(isLiked ? likes - 1 : likes + 1);
+  const handleLike = async () => {
+    // Optimistic update
+    const newIsLiked = !isLiked;
+    const newLikes = isLiked ? likes - 1 : likes + 1;
+    setIsLiked(newIsLiked);
+    setLikes(newLikes);
+
+    try {
+      // Gọi API đến backend
+      const endpoint = isLiked 
+        ? `/api/likes/event/unlike/${id}` 
+        : `/api/likes/event/like/${id}`;
+      
+      const response = await authFetch(endpoint, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        // Rollback nếu lỗi
+        setIsLiked(isLiked);
+        setLikes(likes);
+        const data = await response.json();
+        console.error("Like error:", data);
+      }
+    } catch (error) {
+      console.error("Error liking event:", error);
+      // Rollback nếu lỗi
+      setIsLiked(isLiked);
+      setLikes(likes);
+    }
   };
 
   const handleJoinChat = () => {
@@ -201,6 +233,8 @@ export default function EventDetailPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+      <Navbar />
+      
       {/* Hero Section */}
       <div className="relative h-[400px] w-full">
         <Image
@@ -447,7 +481,7 @@ export default function EventDetailPage({
           {/* Right Column - Action Cards */}
           <div className="space-y-6">
             {/* Registration Card - Featured */}
-            <div className="bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl shadow-xl p-8 text-white sticky top-4">
+            <div className="bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl shadow-xl p-8 text-white sticky top-24 z-10">
               <div className="text-center mb-6">
                 <FaHandsHelping className="text-6xl mx-auto mb-4 opacity-90" />
                 <h3 className="text-2xl font-bold mb-2">

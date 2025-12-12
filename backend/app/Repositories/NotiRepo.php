@@ -18,12 +18,21 @@ class NotiRepo
     }
 
     /**
-     * Lấy tất cả notifications của một user
+     * Lấy tất cả notifications của một user (với thông tin sender)
      */
     public function findByUserId($userId)
     {
-        return Noti::where('receiver_id', $userId)
-            ->orderBy('created_at', 'desc')
+        return DB::table('notis')
+            ->leftJoin('users as sender', 'notis.sender_id', '=', 'sender.id')
+            ->where('notis.receiver_id', $userId)
+            ->select(
+                'notis.*',
+                'sender.username as sender_username',
+                'sender.email as sender_email',
+                'sender.image as sender_image',
+                'sender.role as sender_role'
+            )
+            ->orderBy('notis.created_at', 'desc')
             ->get();
     }
 

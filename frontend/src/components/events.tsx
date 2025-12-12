@@ -236,17 +236,18 @@ export default function Events() {
   // Fetch my registrations
   const fetchMyRegistrations = async () => {
     try {
-      const response = await authFetch("/user/getEventHistory");
+      const response = await authFetch("/user/my-registrations");
       const data = await response.json();
       console.log("🔍 My Registrations Response:", data); // DEBUG
-      if (data && Array.isArray(data)) {
+      
+      if (data && data.success && Array.isArray(data.registrations)) {
         const registrationsMap: {
           [key: number]: {
             id: number;
             status: "pending" | "accepted" | "rejected";
           };
         } = {};
-        data.forEach((reg: any) => {
+        data.registrations.forEach((reg: any) => {
           console.log("📝 Processing registration:", reg); // DEBUG
           registrationsMap[reg.event_id] = {
             id: reg.id,
@@ -504,7 +505,7 @@ export default function Events() {
       const data = await response.json();
 
       // 3️⃣ ĐỒNG BỘ với server response
-      if (data && data.registration) {
+      if (data && data.success && data.registration) {
         const registration = data.registration;
         setMyRegistrations((prev) => ({
           ...prev,
@@ -519,20 +520,14 @@ export default function Events() {
           }. Vui lòng chờ manager duyệt!`
         );
         setShowDetailModal(false);
-      } else if (data && data.success) {
-        // Fallback nếu backend chưa sửa
-        alert(
-          `Đã gửi yêu cầu tham gia sự kiện: ${
-            event?.title || ""
-          }. Vui lòng chờ manager duyệt!`
-        );
-        setShowDetailModal(false);
+      } else if (data && data.error) {
+        setMyRegistrations(prevRegistrations); 
+        alert(data.error);
       }
     } catch (error: any) {
       console.error("Error joining event:", error);
-      // 4️⃣ Rollback nếu lỗi
       setMyRegistrations(prevRegistrations);
-      alert(error.response?.data?.message || "Lỗi khi đăng ký sự kiện");
+      alert(error.message || "Lỗi khi đăng ký sự kiện");
     } finally {
       setJoiningEvents((prev) => {
         const newSet = new Set(prev);

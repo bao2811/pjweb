@@ -3,18 +3,22 @@
 namespace App\Services;
 
 use App\Repositories\JoinEventRepo;
+use App\Repositories\ChannelRepo;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Repositories\EventRepo;
 
 class ManagerService {
     protected $joinEventRepo;
     protected $eventRepo;
+    protected $channelRepo;
 
-    public function __construct(JoinEventRepo $joinEventRepo, EventRepo $eventRepo) {
+    public function __construct(JoinEventRepo $joinEventRepo, EventRepo $eventRepo, ChannelRepo $channelRepo) {
         $this->joinEventRepo = $joinEventRepo;
         $this->eventRepo = $eventRepo;
+        $this->channelRepo = $channelRepo;
     }
 
     public function getListUserByEvent($eventId) {
@@ -33,15 +37,29 @@ class ManagerService {
     {
         try {
             DB::beginTransaction();
-            $event = $this->eventRepo->createEvent($data);
-            $this->eventManagementRepo->addComanagerByEventId($event->id, $comanager);
-            // tạo kênh sự kiện nữa
+            $event = $this->eventRepo->createEvent($data, $comanager);
+            
+            // Tạo kênh sự kiện
+            $this->channelRepo->createChannel([
+                'event_id' => $event->id,
+                'title' => 'Kênh sự kiện: ' . $event->title,
+                'created_at' => Carbon::now(),
+            ]);
+            
             DB::commit();
-    return $event;
+            return $event;
         } catch (Exception $e) {
-            // Handle exception
             DB::rollBack();
-            return null;
+            Log::error('ManagerService createEvent error: ' . $e->getMessage());
+            throw $e;
         }
+    }
+
+    /**
+     * Lấy danh sách events của một manager cụ thể
+     */
+    public function getEventsByManagerId($managerId)
+    {
+        return $this->eventRepo->getEventsByManagerId($managerId);
     }
 }

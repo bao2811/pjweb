@@ -96,8 +96,24 @@ export default function ManagerEventDetailPage({
     try {
       const response = await authFetch(`/manager/getListUserByEvent/${id}`);
       const data = await response.json();
-      if (data && Array.isArray(data)) {
-        setParticipants(data);
+      console.log("🔍 Participants response:", data); // DEBUG
+      
+      if (data && data.success && Array.isArray(data.users)) {
+        // Transform data to match Participant interface
+        const transformedUsers = data.users.map((user: any) => ({
+          id: user.id,
+          user_id: user.user_id,
+          event_id: user.event_id,
+          status: user.status,
+          user: {
+            id: user.user_id,
+            username: user.username,
+            email: user.email,
+            image: user.image,
+          },
+          created_at: user.created_at,
+        }));
+        setParticipants(transformedUsers);
       }
     } catch (error) {
       console.error("Error fetching participants:", error);
@@ -105,14 +121,29 @@ export default function ManagerEventDetailPage({
   };
 
   const handleApproveUser = async (userId: number) => {
+    if (!confirm("Bạn có chắc muốn duyệt user này?")) {
+      return;
+    }
+
     try {
       setIsProcessing(true);
-      const response = await authFetch(`/manager/acceptUserJoinEvent/${userId}`);
+      const response = await authFetch(`/manager/acceptUserJoinEvent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          event_id: parseInt(id),
+        }),
+      });
       const data = await response.json();
       
       if (data.success) {
         alert("Đã duyệt user tham gia sự kiện!");
         fetchParticipants();
+      } else {
+        alert(data.message || "Có lỗi xảy ra khi duyệt user");
       }
     } catch (error) {
       console.error("Error approving user:", error);
@@ -129,12 +160,23 @@ export default function ManagerEventDetailPage({
 
     try {
       setIsProcessing(true);
-      const response = await authFetch(`/manager/rejectUserJoinEvent/${userId}`);
+      const response = await authFetch(`/manager/rejectUserJoinEvent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          event_id: parseInt(id),
+        }),
+      });
       const data = await response.json();
       
       if (data.success) {
         alert("Đã từ chối user tham gia sự kiện!");
         fetchParticipants();
+      } else {
+        alert(data.message || "Có lỗi xảy ra khi từ chối user");
       }
     } catch (error) {
       console.error("Error rejecting user:", error);
@@ -169,7 +211,7 @@ export default function ManagerEventDetailPage({
   };
 
   const handleJoinChat = () => {
-    router.push(`/manager/events/${id}/channel`);
+    router.push(`/events/${id}/channel`);
   };
 
   if (isLoading) {
@@ -315,7 +357,9 @@ export default function ManagerEventDetailPage({
                 {participants.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">Chưa có người đăng ký</p>
                 ) : (
-                  participants.map((participant) => (
+                  participants
+                    .filter((p) => p.status !== "rejected" && p.status !== "cancelled")
+                    .map((participant) => (
                     <div
                       key={participant.id}
                       className={`p-4 rounded-xl border-2 ${
@@ -357,7 +401,7 @@ export default function ManagerEventDetailPage({
                           {participant.status === "pending" ? (
                             <>
                               <button
-                                onClick={() => handleApproveUser(participant.id)}
+                                onClick={() => handleApproveUser(participant.user_id)}
                                 disabled={isProcessing}
                                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
                               >
@@ -365,7 +409,7 @@ export default function ManagerEventDetailPage({
                                 <span>Duyệt</span>
                               </button>
                               <button
-                                onClick={() => handleRejectUser(participant.id)}
+                                onClick={() => handleRejectUser(participant.user_id)}
                                 disabled={isProcessing}
                                 className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50"
                               >

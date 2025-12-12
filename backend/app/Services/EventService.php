@@ -57,6 +57,11 @@ class EventService
             $event = $this->eventRepo->createEvent($data);
             $this->eventManagementRepo->addComanagerByEventId($event->id, $comanager);
             // tạo kênh sự kiện nữa
+            $this->channelRepo->createChannel([
+                'event_id' => $event->id,
+                'name' => 'Kênh sự kiện: ' . $event->name,
+                'created_at' => Carbon::now(),
+            ]);
             DB::commit();
 
             $this->notifyAllUsersNewEvent($event);

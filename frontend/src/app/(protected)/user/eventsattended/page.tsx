@@ -99,9 +99,9 @@ export default function EventsAttendedPage() {
           const data = await response.json();
           console.log("🔍 Backend response:", data); // DEBUG
 
-          if (data && Array.isArray(data)) {
+          if (data && data.success && Array.isArray(data.registrations)) {
             // Transform backend data to frontend format
-            const transformedEvents: UserEvent[] = data
+            const transformedEvents: UserEvent[] = data.registrations
               .filter((registration: any) => registration.event) // Filter out registrations without event
               .map((registration: any) => {
                 const event = registration.event;

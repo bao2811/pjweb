@@ -189,7 +189,10 @@ class UserService
 
     public function joinEvent($userId, $eventId)
     {
-        $result =  $this->joinEventRepo->joinEvent($userId, $eventId);
+        $result =  $this->joinEventRepo->joinEvent([
+            'user_id' => $userId,
+            'event_id' => $eventId
+        ]);
 
         if ($result) {
             return [

@@ -67,12 +67,30 @@ class UserController extends Controller
 
      public function joinEvent(Request $request, $eventId)
     {
-        $user = $request->user();
-        $data = $this->userService->joinEvent($user->id, $eventId);
-        if(!$data){
-            return response()->json(['error' => 'Event not found'], 404);
+        try {
+            $user = $request->user();
+            $data = $this->userService->joinEvent($user->id, $eventId);
+            
+            if(!$data){
+                return response()->json(['error' => 'Event not found'], 404);
+            }
+            
+            // Trả về registration object cho frontend
+            return response()->json([
+                'success' => true,
+                'message' => 'Joined event successfully',
+                'registration' => [
+                    'id' => $data['data']->id ?? null,
+                    'event_id' => $eventId,
+                    'status' => $data['data']->status ?? 'pending',
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 400);
         }
-        return response()->json(['message' => 'Joined event successfully']);
     }
 
     public function leaveEvent(Request $request, $eventId)
@@ -128,7 +146,10 @@ class UserController extends Controller
 
            $registrations = $this->userService->getMyRegistrations($userId);
 
-           return response()->json($registrations);
+           return response()->json([
+               'success' => true,
+               'registrations' => $registrations
+           ]);
 
        } catch (\Exception $e) {
            \Log::error('Error getting my registrations: ' . $e->getMessage());
