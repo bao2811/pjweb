@@ -14,6 +14,7 @@ import {
   isTokenExpired,
   refreshAccessToken,
   setToken as saveToken,
+  setRefreshToken as saveRefreshToken,
   setUserData,
   getUserData,
   clearAuthData,
@@ -162,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Save tokens - be defensive about field names
         const access =
           data.access_token || data.token || data.auth_token || null;
-        // const refresh = data.refresh_token || data.refreshToken || null;
+        const refresh = data.refresh_token || data.refreshToken || null;
 
         if (!access) {
           console.error("Login did not return an access token", data);
@@ -175,9 +176,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             saveToken(access);
             setToken(access); // update React state so isAuthenticated becomes true
           }
-          // if (refresh) {
-          //   saveRefreshToken(refresh);
-          // }
+          if (refresh) {
+            saveRefreshToken(refresh);
+          }
         } catch (err) {
           console.error("Error saving tokens to localStorage:", err);
         }

@@ -112,6 +112,23 @@ export default function EventDetailPage({
   const handleLike = () => {
     setIsLiked(!isLiked);
     setLikes(isLiked ? likes - 1 : likes + 1);
+    if (!isLiked) {
+      authFetch(`/api/likes/event/like/${id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } else {
+      authFetch(`/api/likes/event/unlike/${id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
   };
 
   const handleJoinChat = () => {

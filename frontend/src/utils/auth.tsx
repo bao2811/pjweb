@@ -4,7 +4,7 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 export const TOKEN_KEY = "jwt_token";
-// export const REFRESH_TOKEN_KEY = "refresh_token";
+export const REFRESH_TOKEN_KEY = "refresh_token";
 export const USER_KEY = "user_data";
 
 interface FetchOptions extends RequestInit {
@@ -71,7 +71,7 @@ export async function authFetch(
       // Refresh failed, redirect to login
       if (typeof window !== "undefined") {
         localStorage.removeItem(TOKEN_KEY);
-        // localStorage.removeItem(REFRESH_TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem("user_data");
         window.location.href = "/home/login";
       }
@@ -84,17 +84,18 @@ export async function authFetch(
 // Refresh access token - exported để AuthContext có thể dùng
 export async function refreshAccessToken(): Promise<boolean> {
   try {
-    // const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-    // if (!refreshToken) {
-    //   return false;
-    // }
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!refreshToken) {
+      return false;
+    }
 
     const response = await fetch(`${API_URL}/api/refresh`, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
-      // body: JSON.stringify({ refresh_token: refreshToken }),
+      body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
     if (!response.ok) {
@@ -105,9 +106,9 @@ export async function refreshAccessToken(): Promise<boolean> {
 
     // Save new tokens
     localStorage.setItem(TOKEN_KEY, data.access_token);
-    // if (data.refresh_token) {
-    //   localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
-    // }
+    if (data.refresh_token) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+    }
 
     return true;
   } catch (error) {
@@ -148,10 +149,10 @@ export function getToken(): string | null {
 }
 
 // Get refresh token from localStorage
-// export function getRefreshToken(): string | null {
-//   if (typeof window === "undefined") return null;
-//   return localStorage.getItem(REFRESH_TOKEN_KEY);
-// }
+export function getRefreshToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
 
 // Check if user is authenticated
 export function isAuthenticated(): boolean {
@@ -184,11 +185,11 @@ export function setToken(token: string): void {
 }
 
 // Save refresh token to localStorage
-// export function setRefreshToken(token: string): void {
-//   if (typeof window !== "undefined") {
-//     localStorage.setItem(REFRESH_TOKEN_KEY, token);
-//   }
-// }
+export function setRefreshToken(token: string): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  }
+}
 
 // Save user data to localStorage
 export function setUserData(user: any): void {
@@ -213,7 +214,7 @@ export function getUserData(): any {
 export function clearAuthData(): void {
   if (typeof window !== "undefined") {
     localStorage.removeItem(TOKEN_KEY);
-    // localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   }
 }

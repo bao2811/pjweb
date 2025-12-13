@@ -50,7 +50,7 @@ interface Participant {
   id: number;
   user_id: number;
   event_id: number;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "cancelled";
   user: {
     id: number;
     username: string;
@@ -97,7 +97,7 @@ export default function ManagerEventDetailPage({
       const response = await authFetch(`/manager/getListUserByEvent/${id}`);
       const data = await response.json();
       console.log("🔍 Participants response:", data); // DEBUG
-      
+
       if (data && data.success && Array.isArray(data.users)) {
         // Transform data to match Participant interface
         const transformedUsers = data.users.map((user: any) => ({
@@ -138,7 +138,7 @@ export default function ManagerEventDetailPage({
         }),
       });
       const data = await response.json();
-      
+
       if (data.success) {
         alert("Đã duyệt user tham gia sự kiện!");
         fetchParticipants();
@@ -171,7 +171,7 @@ export default function ManagerEventDetailPage({
         }),
       });
       const data = await response.json();
-      
+
       if (data.success) {
         alert("Đã từ chối user tham gia sự kiện!");
         fetchParticipants();
@@ -219,7 +219,9 @@ export default function ManagerEventDetailPage({
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600"></div>
-          <p className="mt-4 text-gray-600 text-lg">Đang tải thông tin sự kiện...</p>
+          <p className="mt-4 text-gray-600 text-lg">
+            Đang tải thông tin sự kiện...
+          </p>
         </div>
       </div>
     );
@@ -230,7 +232,9 @@ export default function ManagerEventDetailPage({
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center">
         <div className="text-center">
           <FaLeaf className="mx-auto text-6xl text-gray-400 mb-4" />
-          <h2 className="text-2xl font-bold text-gray-700 mb-2">Không tìm thấy sự kiện</h2>
+          <h2 className="text-2xl font-bold text-gray-700 mb-2">
+            Không tìm thấy sự kiện
+          </h2>
           <button
             onClick={() => router.push("/manager/events")}
             className="mt-4 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
@@ -244,11 +248,18 @@ export default function ManagerEventDetailPage({
 
   const progress =
     event.max_participants > 0
-      ? Math.min(((event.currentParticipants || 0) / event.max_participants) * 100, 100)
+      ? Math.min(
+          ((event.currentParticipants || 0) / event.max_participants) * 100,
+          100
+        )
       : 0;
 
-  const pendingCount = participants.filter((p) => p.status === "pending").length;
-  const approvedCount = participants.filter((p) => p.status === "approved").length;
+  const pendingCount = participants.filter(
+    (p) => p.status === "pending"
+  ).length;
+  const approvedCount = participants.filter(
+    (p) => p.status === "approved"
+  ).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
@@ -355,83 +366,98 @@ export default function ManagerEventDetailPage({
 
               <div className="space-y-4">
                 {participants.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">Chưa có người đăng ký</p>
+                  <p className="text-gray-500 text-center py-8">
+                    Chưa có người đăng ký
+                  </p>
                 ) : (
                   participants
-                    .filter((p) => p.status !== "rejected" && p.status !== "cancelled")
+                    .filter(
+                      (p) => p.status !== "rejected" && p.status !== "cancelled"
+                    )
                     .map((participant) => (
-                    <div
-                      key={participant.id}
-                      className={`p-4 rounded-xl border-2 ${
-                        participant.status === "pending"
-                          ? "bg-yellow-50 border-yellow-200"
-                          : participant.status === "approved"
-                          ? "bg-green-50 border-green-200"
-                          : "bg-red-50 border-red-200"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          {participant.user.image ? (
-                            <Image
-                              src={participant.user.image}
-                              alt={participant.user.username}
-                              width={50}
-                              height={50}
-                              className="rounded-full"
-                              unoptimized
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                              {participant.user.username.charAt(0).toUpperCase()}
+                      <div
+                        key={participant.id}
+                        className={`p-4 rounded-xl border-2 ${
+                          participant.status === "pending"
+                            ? "bg-yellow-50 border-yellow-200"
+                            : participant.status === "approved"
+                            ? "bg-green-50 border-green-200"
+                            : "bg-red-50 border-red-200"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            {participant.user.image ? (
+                              <Image
+                                src={participant.user.image}
+                                alt={participant.user.username}
+                                width={50}
+                                height={50}
+                                className="rounded-full"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                                {participant.user.username
+                                  .charAt(0)
+                                  .toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-semibold text-gray-800">
+                                {participant.user.username}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {participant.user.email}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Đăng ký:{" "}
+                                {new Date(
+                                  participant.created_at
+                                ).toLocaleDateString("vi-VN")}
+                              </p>
                             </div>
-                          )}
-                          <div>
-                            <p className="font-semibold text-gray-800">
-                              {participant.user.username}
-                            </p>
-                            <p className="text-sm text-gray-600">{participant.user.email}</p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Đăng ký: {new Date(participant.created_at).toLocaleDateString("vi-VN")}
-                            </p>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            {participant.status === "pending" ? (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleApproveUser(participant.user_id)
+                                  }
+                                  disabled={isProcessing}
+                                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                                >
+                                  <FaUserCheck />
+                                  <span>Duyệt</span>
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleRejectUser(participant.user_id)
+                                  }
+                                  disabled={isProcessing}
+                                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+                                >
+                                  <FaUserTimes />
+                                  <span>Từ chối</span>
+                                </button>
+                              </>
+                            ) : participant.status === "approved" ? (
+                              <span className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg">
+                                <FaCheckCircle />
+                                <span>Đã duyệt</span>
+                              </span>
+                            ) : (
+                              <span className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg">
+                                <FaTimes />
+                                <span>Đã từ chối</span>
+                              </span>
+                            )}
                           </div>
                         </div>
-
-                        <div className="flex items-center space-x-2">
-                          {participant.status === "pending" ? (
-                            <>
-                              <button
-                                onClick={() => handleApproveUser(participant.user_id)}
-                                disabled={isProcessing}
-                                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
-                              >
-                                <FaUserCheck />
-                                <span>Duyệt</span>
-                              </button>
-                              <button
-                                onClick={() => handleRejectUser(participant.user_id)}
-                                disabled={isProcessing}
-                                className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50"
-                              >
-                                <FaUserTimes />
-                                <span>Từ chối</span>
-                              </button>
-                            </>
-                          ) : participant.status === "approved" ? (
-                            <span className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg">
-                              <FaCheckCircle />
-                              <span>Đã duyệt</span>
-                            </span>
-                          ) : (
-                            <span className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg">
-                              <FaTimes />
-                              <span>Đã từ chối</span>
-                            </span>
-                          )}
-                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))
                 )}
               </div>
             </div>
@@ -487,7 +513,9 @@ export default function ManagerEventDetailPage({
           <div className="space-y-6">
             {/* Event Info Card */}
             <div className="bg-white rounded-2xl shadow-lg p-6 border border-purple-100 sticky top-4">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Thông tin sự kiện</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-4">
+                Thông tin sự kiện
+              </h3>
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
                   <FaCalendarAlt className="text-purple-600 mt-1 text-lg" />
@@ -506,19 +534,26 @@ export default function ManagerEventDetailPage({
                   <FaMapMarkerAlt className="text-red-600 mt-1 text-lg" />
                   <div>
                     <p className="text-sm text-gray-500">Địa điểm</p>
-                    <p className="font-semibold text-gray-800">{event.location}</p>
+                    <p className="font-semibold text-gray-800">
+                      {event.location}
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex items-start space-x-3">
                   <FaUsers className="text-blue-600 mt-1 text-lg" />
                   <div className="flex-1">
-                    <p className="text-sm text-gray-500 mb-2">Số lượng tham gia</p>
+                    <p className="text-sm text-gray-500 mb-2">
+                      Số lượng tham gia
+                    </p>
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-semibold text-gray-800">
-                        {event.currentParticipants || 0}/{event.max_participants}
+                        {event.currentParticipants || 0}/
+                        {event.max_participants}
                       </span>
-                      <span className="text-sm text-gray-600">{progress.toFixed(0)}%</span>
+                      <span className="text-sm text-gray-600">
+                        {progress.toFixed(0)}%
+                      </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
                       <div
@@ -533,7 +568,9 @@ export default function ManagerEventDetailPage({
                   <FaTrophy className="text-yellow-500 mt-1 text-lg" />
                   <div>
                     <p className="text-sm text-gray-500">Điểm thưởng</p>
-                    <p className="font-semibold text-gray-800">{event.points} điểm</p>
+                    <p className="font-semibold text-gray-800">
+                      {event.points} điểm
+                    </p>
                   </div>
                 </div>
               </div>

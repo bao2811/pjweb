@@ -13,13 +13,7 @@ import {
   FaTimes,
   FaHashtag,
   FaUsers,
-  FaCog,
-  FaBell,
-  FaSearch,
   FaPaperclip,
-  FaVideo,
-  FaCalendarAlt,
-  FaMapMarkerAlt,
   FaComments,
   FaClock,
   FaFileAlt,
@@ -27,22 +21,13 @@ import {
   FaFilter,
   FaArrowLeft,
   FaPlus,
-  FaThumbsUp,
-  FaLaugh,
-  FaSurprise,
-  FaSadTear,
-  FaAngry,
   FaFire,
   FaThumbtack,
-  FaMicrophone,
-  FaPoll,
-  FaChartLine,
-  FaEye,
-  FaUserCircle,
   FaMedal,
 } from "react-icons/fa";
 import { authFetch } from "@/utils/auth";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 interface User {
   id: number;
@@ -136,414 +121,13 @@ interface GroupProps {
   role?: "user" | "manager" | "admin";
 }
 
-// Mock current user
-const currentUser: User = {
-  id: 1,
-  name: "Bạn",
-  avatar:
-    "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-  role: "user",
-};
-
-// Mock events
-const mockEvents: Record<string, Event> = {
-  "1": {
-    id: 1,
-    eventId: "1",
-    title: "Trồng cây xanh - Vì môi trường sạch",
-    description:
-      "Cùng nhau trồng cây tại công viên để tạo ra không gian xanh cho cộng đồng",
-    image:
-      "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop",
-    date: "2025-10-15",
-    time: "07:00 - 11:00",
-    location: "Công viên Tao Đàn, Quận 1",
-    maxParticipants: 100,
-    currentParticipants: 45,
-    category: "Môi trường",
-    organizer: {
-      id: 2,
-      name: "Trần Thị B",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
-      role: "manager",
-    },
-    status: "ongoing",
-    isHidden: false,
-    approvalStatus: "approved",
-    createdAt: "2025-10-01",
-  },
-  "2": {
-    id: 2,
-    eventId: "2",
-    title: "Dạy học miễn phí cho trẻ em vùng cao",
-    description:
-      "Chương trình giáo dục tình nguyện dành cho trẻ em ở vùng núi cao. Chúng ta sẽ dạy các môn cơ bản và tặng sách vở, dụng cụ học tập.",
-    image:
-      "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop",
-    date: "2025-10-20",
-    time: "Cả ngày (3 ngày 2 đêm)",
-    location: "Sapa, Lào Cai",
-    maxParticipants: 20,
-    currentParticipants: 12,
-    category: "Giáo dục",
-    organizer: {
-      id: 3,
-      name: "Lê Văn C",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      role: "manager",
-    },
-    status: "upcoming",
-    isHidden: false,
-    approvalStatus: "approved",
-    createdAt: "2025-09-25",
-  },
-};
-
-// Mock posts
-const mockPostsByEvent: Record<string, Post[]> = {
-  "1": [
-    {
-      id: 1,
-      eventId: "1",
-      content:
-        "Hôm nay chúng mình đã trồng được 50 cây xanh tại công viên! Cảm ơn tất cả mọi người đã nhiệt tình tham gia. Môi trường xanh - sạch - đẹp là trách nhiệm của chúng ta! 🌱",
-      images: [
-        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop",
-        "https://images.unsplash.com/photo-1574263867128-a3d5c1b1deae?w=800&h=600&fit=crop",
-      ],
-      timestamp: "2 giờ trước",
-      author: {
-        id: 2,
-        name: "Trần Thị B",
-        avatar:
-          "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
-        role: "manager",
-      },
-      likes: 45,
-      shares: 5,
-      isLiked: false,
-      isPinned: true,
-      views: 128,
-      reactions: [
-        { type: "like", count: 25, users: [] },
-        { type: "love", count: 15, users: [] },
-        { type: "wow", count: 5, users: [] },
-      ],
-      comments: [
-        {
-          id: 1,
-          content: "Tuyệt vời! Hẹn gặp mọi người lần sau 🌱",
-          timestamp: new Date().toLocaleString(),
-          author: {
-            id: 3,
-            name: "Nguyễn Văn An",
-            avatar:
-              "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-            role: "user",
-          },
-          likes: 2,
-          isLiked: false,
-          replies: [],
-        },
-      ],
-    },
-  ],
-  "2": [
-    {
-      id: 1,
-      eventId: "2",
-      content:
-        "Chuẩn bị sách vở và đồ dùng học tập để mang lên Sapa cho các em! Ai có sách cũ thì mang theo nhé 📚✏️",
-      images: [
-        "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&h=600&fit=crop",
-      ],
-      timestamp: "1 ngày trước",
-      author: {
-        id: 3,
-        name: "Lê Văn C",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        role: "manager",
-      },
-      likes: 23,
-      shares: 3,
-      isLiked: true,
-      isPinned: true,
-      views: 89,
-      reactions: [
-        { type: "like", count: 18, users: [] },
-        { type: "love", count: 5, users: [] },
-      ],
-      comments: [
-        {
-          id: 1,
-          content: "Mình có 10 quyển vở mới, sẽ đóng góp cho các em! 📖",
-          timestamp: new Date().toLocaleString(),
-          author: {
-            id: 1,
-            name: "Nguyễn Văn A",
-            avatar:
-              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
-            role: "user",
-          },
-          likes: 5,
-          isLiked: false,
-          replies: [],
-        },
-      ],
-    },
-    {
-      id: 2,
-      eventId: "2",
-      content:
-        "Thông báo lịch trình: Ngày 1 - Di chuyển và làm quen. Ngày 2 - Dạy học buổi sáng, hoạt động ngoài trời buổi chiều. Ngày 3 - Trao quà và chia tay các em 🎒",
-      timestamp: "5 giờ trước",
-      author: {
-        id: 3,
-        name: "Lê Văn C",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        role: "manager",
-      },
-      likes: 18,
-      shares: 1,
-      isLiked: false,
-      views: 67,
-      reactions: [
-        { type: "like", count: 12, users: [] },
-        { type: "love", count: 4, users: [] },
-        { type: "wow", count: 2, users: [] },
-      ],
-      comments: [],
-    },
-  ],
-};
-
-// Mock chat messages
-const mockChatMessages: Record<string, ChatMessage[]> = {
-  "1": [
-    {
-      id: 1,
-      userId: 2,
-      userName: "Nguyễn Văn An",
-      userAvatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-      message:
-        "Xin chào mọi người! Sự kiện trồng cây sẽ diễn ra lúc 7h sáng nhé! 🌱",
-      timestamp: "10:30",
-      isCurrentUser: false,
-    },
-    {
-      id: 2,
-      userId: 3,
-      userName: "Trần Thị Bình",
-      userAvatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
-      message: "Đã chuẩn bị xẻng và găng tay rồi! 🧤",
-      timestamp: "10:32",
-      isCurrentUser: false,
-    },
-  ],
-  "2": [
-    {
-      id: 1,
-      userId: 3,
-      userName: "Lê Văn C",
-      userAvatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      message: "Các bạn nhớ mang theo sách vở cũ để tặng các em nhé! 📚",
-      timestamp: "09:15",
-      isCurrentUser: false,
-    },
-    {
-      id: 2,
-      userId: 1,
-      userName: "Nguyễn Văn A",
-      userAvatar:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
-      message: "Mình đã chuẩn bị 10 quyển vở và bút chì rồi!",
-      timestamp: "09:20",
-      isCurrentUser: false,
-    },
-    {
-      id: 3,
-      userId: 5,
-      userName: "Hoàng Thị E",
-      userAvatar:
-        "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=150&h=150&fit=crop&crop=face",
-      message: "Chúng ta sẽ đi chung xe buýt từ bến xe Mỹ Đình đúng không?",
-      timestamp: "09:25",
-      isCurrentUser: false,
-    },
-  ],
-};
-
-// Mock resources
-const mockResources: Record<string, Resource[]> = {
-  "1": [
-    {
-      id: 1,
-      name: "Hướng dẫn trồng cây.pdf",
-      type: "pdf",
-      url: "#",
-      size: "2.5 MB",
-      uploadedBy: {
-        id: 2,
-        name: "Trần Thị B",
-        avatar:
-          "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
-        role: "manager",
-      },
-      uploadedAt: "3 giờ trước",
-    },
-    {
-      id: 2,
-      name: "Danh sách dụng cụ cần mang.doc",
-      type: "doc",
-      url: "#",
-      size: "156 KB",
-      uploadedBy: {
-        id: 2,
-        name: "Trần Thị B",
-        avatar:
-          "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
-        role: "manager",
-      },
-      uploadedAt: "1 ngày trước",
-    },
-  ],
-  "2": [
-    {
-      id: 1,
-      name: "Lịch trình 3 ngày 2 đêm tại Sapa.pdf",
-      type: "pdf",
-      url: "#",
-      size: "1.8 MB",
-      uploadedBy: {
-        id: 3,
-        name: "Lê Văn C",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        role: "manager",
-      },
-      uploadedAt: "2 ngày trước",
-    },
-    {
-      id: 2,
-      name: "Chương trình giảng dạy cho các em.doc",
-      type: "doc",
-      url: "#",
-      size: "324 KB",
-      uploadedBy: {
-        id: 3,
-        name: "Lê Văn C",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        role: "manager",
-      },
-      uploadedAt: "2 ngày trước",
-    },
-    {
-      id: 3,
-      name: "Danh sách sách vở cần tặng.pdf",
-      type: "pdf",
-      url: "#",
-      size: "450 KB",
-      uploadedBy: {
-        id: 3,
-        name: "Lê Văn C",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        role: "manager",
-      },
-      uploadedAt: "1 ngày trước",
-    },
-    {
-      id: 4,
-      name: "Hình ảnh chuyến đi năm ngoái.jpg",
-      type: "image",
-      url: "#",
-      size: "3.2 MB",
-      uploadedBy: {
-        id: 1,
-        name: "Nguyễn Văn A",
-        avatar:
-          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
-        role: "user",
-      },
-      uploadedAt: "5 giờ trước",
-    },
-  ],
-};
-
-// Mock activity users
-const mockActivityUsers: Record<string, ActivityUser[]> = {
-  "1": [
-    {
-      user: {
-        id: 2,
-        name: "Trần Thị B",
-        avatar:
-          "https://images.unsplash.com/photo-1494790108755-2616b2e4a0ee?w=150&h=150&fit=crop&crop=face",
-        role: "manager",
-      },
-      lastActive: "Online",
-      contribution: 45,
-    },
-    {
-      user: {
-        id: 3,
-        name: "Nguyễn Văn An",
-        avatar:
-          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-        role: "user",
-      },
-      lastActive: "2 phút trước",
-      contribution: 28,
-    },
-    {
-      user: {
-        id: 4,
-        name: "Phạm Thị D",
-        avatar:
-          "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-        role: "user",
-      },
-      lastActive: "Online",
-      contribution: 19,
-    },
-  ],
-  "2": [
-    {
-      user: {
-        id: 3,
-        name: "Lê Văn C",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        role: "manager",
-      },
-      lastActive: "Online",
-      contribution: 52,
-    },
-    {
-      user: {
-        id: 1,
-        name: "Nguyễn Văn A",
-        avatar:
-          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
-        role: "user",
-      },
-      lastActive: "5 phút trước",
-      contribution: 31,
-    },
-  ],
-};
-
 export default function Group({ eventId, role = "user" }: GroupProps) {
+  const token = localStorage.getItem("token");
   const router = useRouter();
+  const { user } = useAuth(); // ✅ Lấy user từ AuthContext
   const [isLoading, setIsLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null); // null = checking, true = allowed, false = denied
+  const [accessError, setAccessError] = useState<string>("");
   const [event, setEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<"posts" | "chat" | "resources">(
     "posts"
@@ -553,9 +137,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     "all" | "organizer" | "media" | "myposts"
   >("all");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [resources, setResources] = useState<Resource[]>(
-    mockResources[eventId] || []
-  );
+  const [resources, setResources] = useState<Resource[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [newPost, setNewPost] = useState("");
   const [postImages, setPostImages] = useState<string[]>([]);
@@ -566,76 +148,119 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     {}
   );
   const [showActivitySidebar, setShowActivitySidebar] = useState(false);
-  const [activityUsers] = useState<ActivityUser[]>(
-    mockActivityUsers[eventId] || []
-  );
+  const [activityUsers] = useState<ActivityUser[]>([]);
   const [showFAB, setShowFAB] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [newPostsCount, setNewPostsCount] = useState(0);
   const [channelId, setChannelId] = useState<number | null>(null);
-  const [currentUserData, setCurrentUserData] = useState<User>(currentUser);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [newPostImages, setNewPostImages] = useState<string[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
 
+  // ✅ Convert user từ AuthContext sang format của component
+  const currentUserData: User = user
+    ? {
+        id: user.id,
+        name: user.username,
+        avatar:
+          user.image ||
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
+        role: user.role,
+      }
+    : {
+        id: 0,
+        name: "Guest",
+        avatar:
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
+        role: "user",
+      };
+
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch current user
+  // ✅ STEP 1: Kiểm tra quyền truy cập TRƯỚC KHI fetch bất kỳ dữ liệu nào
   useEffect(() => {
-    const fetchCurrentUser = async () => {
-      // Kiểm tra token trước
-      const token = localStorage.getItem("access_token");
-      console.log(
-        "🔑 JWT Token:",
-        token ? `${token.substring(0, 50)}...` : "NO TOKEN"
-      );
-
-      if (!token) {
-        console.warn("⚠️ No JWT token found! User not logged in.");
-        // Sử dụng mock user nếu không có token
-        setCurrentUserData(currentUser);
-        return;
-      }
-
+    const checkAccess = async () => {
       try {
-        const response = await authFetch("/me");
-        const data = await response.json();
-        console.log("✅ /me response:", data);
+        console.log("🔐 Checking access for event:", eventId);
 
-        // Handle cả 2 trường hợp: data.user hoặc data trực tiếp
-        const userData = data.user || data;
+        // Lấy danh sách tất cả registrations của user
+        const response = await authFetch("/user/my-registrations");
 
-        if (userData && userData.id) {
-          setCurrentUserData({
-            id: userData.id,
-            name: userData.name,
-            avatar: userData.avatar || currentUser.avatar,
-            role: userData.role || "user",
-          });
-          console.log("✅ User data loaded:", userData);
-        } else {
-          console.warn("⚠️ Invalid user data structure:", data);
-          setCurrentUserData(currentUser);
+        if (!response.ok) {
+          setHasAccess(false);
+          setAccessError(
+            "Không thể kiểm tra quyền truy cập. Vui lòng đăng nhập lại."
+          );
+          return;
         }
-      } catch (error) {
-        console.error("❌ Error fetching current user:", error);
 
-        // Fallback: Dùng mock user khi không fetch được
-        console.log("Using fallback user:", currentUser);
-        setCurrentUserData(currentUser);
+        const data = await response.json();
+        console.log("📋 User registrations:", data);
+
+        // data có thể là {registrations: [...]} hoặc trực tiếp [...]
+        const registrations = data.registrations || data;
+
+        if (!Array.isArray(registrations)) {
+          console.error("❌ Invalid registrations format:", data);
+          setHasAccess(false);
+          setAccessError("Lỗi hệ thống. Vui lòng thử lại sau.");
+          return;
+        }
+
+        // Kiểm tra xem user đã tham gia sự kiện này chưa
+        const registration = registrations.find(
+          (reg: any) => String(reg.event_id) === String(eventId)
+        );
+
+        if (!registration) {
+          console.warn("⛔ User has NOT joined event:", eventId);
+          setHasAccess(false);
+          setAccessError("Bạn chưa đăng ký tham gia sự kiện này.");
+          return;
+        }
+
+        // Kiểm tra trạng thái đăng ký
+        if (registration.status !== "approved") {
+          console.warn(`⏳ Registration status: ${registration.status}`);
+          setHasAccess(false);
+          setAccessError(
+            registration.status === "pending"
+              ? "Yêu cầu tham gia của bạn đang chờ manager duyệt."
+              : registration.status === "rejected"
+              ? "Yêu cầu tham gia của bạn đã bị từ chối."
+              : "Bạn không có quyền truy cập vào nhóm này."
+          );
+          return;
+        }
+
+        // ✅ User đã được approved
+        console.log("✅ Access granted for event:", eventId);
+        setHasAccess(true);
+      } catch (error) {
+        console.error("❌ Error checking access:", error);
+        setHasAccess(false);
+        setAccessError("Lỗi kết nối. Vui lòng thử lại sau.");
       }
     };
-    fetchCurrentUser();
-  }, []);
 
-  // Fetch event details and channel
+    checkAccess();
+  }, [eventId]);
+
+  // Fetch event details and channel - CHỈ KHI ĐÃ CÓ QUYỀN TRUY CẬP
   useEffect(() => {
+    // ⛔ Chỉ fetch khi đã có quyền truy cập
+    if (hasAccess !== true) {
+      return;
+    }
+
     const fetchEventDetail = async () => {
       try {
         setIsLoading(true);
-        const response = await authFetch(`/api/events/getEventDetails/${eventId}`);
+        const response = await authFetch(
+          `/api/events/getEventDetails/${eventId}`
+        );
         const data = await response.json();
         if (data && data.event) {
           const eventData = data.event;
@@ -683,7 +308,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           // Get channel for this event
           try {
             const channelResponse = await authFetch(
-              `/events/${eventId}/channel`
+              `/api/events/${eventId}/channel`
             );
             const channelData = await channelResponse.json();
             console.log("📡 Channel Response:", channelData);
@@ -700,18 +325,14 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
         }
       } catch (error) {
         console.error("Error fetching event details:", error);
-        // Fallback to mock data
-        const mockEvent = mockEvents[eventId];
-        if (mockEvent) {
-          setEvent(mockEvent);
-        }
+        // Không dùng mock data nữa - để event = null
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchEventDetail();
-  }, [eventId]);
+  }, [eventId, hasAccess]);
 
   // Fetch posts when channel is available
   useEffect(() => {
@@ -722,7 +343,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
       try {
         const response = await authFetch(
-          `/posts/channel/${channelId}?user_id=${currentUserData.id}`
+          `/api/posts/channel/${channelId}?user_id=${currentUserData.id}`
         );
         const data = await response.json();
 
@@ -816,7 +437,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
       if (!channelId) return;
       try {
         setLoadingMessages(true);
-        const response = await authFetch(`/messages/channel/${channelId}`);
+        const response = await authFetch(`/api/messages/channel/${channelId}`);
         const data = await response.json();
         if (data && Array.isArray(data)) {
           const normalizedMessages: ChatMessage[] = data.map((msg: any) => ({
@@ -913,10 +534,11 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     setShowFAB(false);
 
     try {
-      const response = await authFetch("/posts/channel", {
+      const response = await authFetch("/api/posts/channel", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           channel_id: channelId,
@@ -996,12 +618,20 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
     try {
       if (post.isLiked) {
-        await authFetch(`/likes/post/unlike/${postId}`, {
+        await authFetch(`/api/likes/post/unlike/${postId}`, {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
       } else {
-        await authFetch(`/likes/post/like/${postId}`, {
+        await authFetch(`/api/likes/post/like/${postId}`, {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
       }
     } catch (error) {
@@ -1092,10 +722,11 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
     // Call API to save comment
     try {
-      const response = await authFetch("/posts/addCommentOfPost", {
+      const response = await authFetch("/api/posts/addCommentOfPost", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           post_id: postId,
@@ -1272,10 +903,11 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
         currentUserData,
       });
 
-      const response = await authFetch("/messages/send", {
+      const response = await authFetch("/api/messages/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           channel_id: channelId,
@@ -1300,6 +932,55 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
       alert("Không thể gửi tin nhắn. Vui lòng thử lại!");
     }
   };
+
+  // ✅ Kiểm tra quyền truy cập TRƯỚC TIÊN
+  if (hasAccess === null) {
+    // Đang kiểm tra quyền truy cập
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">
+            Đang kiểm tra quyền truy cập...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasAccess === false) {
+    // Không có quyền truy cập
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center">
+        <div className="text-center bg-white rounded-2xl shadow-xl p-12 max-w-md">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaTimes className="text-red-600 text-3xl" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">
+            Không có quyền truy cập
+          </h1>
+          <p className="text-gray-600 mb-6">
+            {accessError ||
+              "Bạn chưa đăng ký hoặc chưa được duyệt tham gia sự kiện này."}
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => router.push(`/events/${eventId}`)}
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold"
+            >
+              Xem chi tiết sự kiện
+            </button>
+            <button
+              onClick={() => router.push("/events")}
+              className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all font-semibold"
+            >
+              Quay lại danh sách sự kiện
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

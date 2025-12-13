@@ -34,4 +34,28 @@ class Like extends Model
         'event_id', // thêm vào
         'status',
     ];
+
+    /**
+     * Get the user that owns the like.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the post that is liked (nullable).
+     */
+    public function post()
+    {
+        return $this->belongsTo(Post::class);
+    }
+
+    /**
+     * Get the event that is liked (nullable).
+     */
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
 }

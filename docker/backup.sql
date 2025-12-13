@@ -26,6 +26,7 @@ ALTER TABLE IF EXISTS ONLY public.messages DROP CONSTRAINT IF EXISTS messages_se
 ALTER TABLE IF EXISTS ONLY public.messages DROP CONSTRAINT IF EXISTS messages_channel_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.likes DROP CONSTRAINT IF EXISTS likes_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.likes DROP CONSTRAINT IF EXISTS likes_post_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.likes DROP CONSTRAINT IF EXISTS likes_event_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.join_events DROP CONSTRAINT IF EXISTS join_events_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.join_events DROP CONSTRAINT IF EXISTS join_events_event_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.events DROP CONSTRAINT IF EXISTS events_author_id_fkey;
@@ -407,10 +408,10 @@ ALTER SEQUENCE public.join_events_id_seq OWNED BY public.join_events.id;
 CREATE TABLE public.likes (
     id bigint NOT NULL,
     user_id bigint NOT NULL,
-    post_id bigint NOT NULL,
+    post_id bigint,
+    event_id bigint,
     status character varying(50),
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    event_id integer
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -1668,6 +1669,14 @@ ALTER TABLE ONLY public.join_events
 
 ALTER TABLE ONLY public.likes
     ADD CONSTRAINT likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: likes likes_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.likes
+    ADD CONSTRAINT likes_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE;
 
 
 --

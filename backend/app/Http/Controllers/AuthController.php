@@ -44,7 +44,7 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
                 try {
-                    $token = JWTUtil::generateToken($user);
+                    $token = JWTUtil::generateToken($user, 15);
                     $refresh_token = JWTUtil::generateToken($user, 43200); // 30 days
                 } catch (\Exception $e) {
                     // Log full exception for debugging and return a JSON error so the frontend can surface it
@@ -59,8 +59,19 @@ class AuthController extends Controller
                     'message' => 'Đăng nhập thành công!',
                     'user' => $user,
                     'access_token' => $token,
-                    // 'refresh_token' => $refresh_token,
-                ])->cookie('refresh_token', $refresh_token,  60 * 24 * 7, '/', null, true, true, false, 'strict');
+                    'refresh_token' => $refresh_token,
+                ])->withCookie(cookie(
+                    'refresh_token',
+                    $refresh_token,
+                    60 * 24 * 7, // phút
+                    '/',         // path
+                    null,        // domain
+                    false,       // 🔴 secure = false (localhost)
+                    true,        // httpOnly
+                    false,
+                    'None'
+                ));
+
 
         }
 
@@ -68,61 +79,54 @@ class AuthController extends Controller
 
     }
 
-    // public function refreshToken(Request $request)
-    // {
-    //     $refresh_token = $request->refresh_token;
-
-    //     if (!$refresh_token) {
-    //         return response()->json(['error' => 'Refresh token is required'], 401);
-    //     }
-
-    //     try {
-    //         // Kiểm tra refresh token hợp lệ
-    //         $payload = JWTUtil::validateToken($refresh_token);
-    //     } catch (\Exception $e) {
-    //         // Nếu token hết hạn hoặc invalid → logout
-    //         return response()->json(['error' => 'Invalid or expired refresh token'], 401);
-    //     }
-
-    //     // Lấy user từ payload hoặc request
-    //     $user = $request->user();
-
-    //     // Tạo access token mới
-    //     $access_token = JWTUtil::generateToken($user->id, 60); // 60 phút
-
-    //     return response()->json([
-    //         'message' => 'Token refreshed successfully',
-    //         'access_token' => $access_token,
-    //         'token_type' => 'Bearer',
-    //         'expires_in' => 3600,
-    //     ]);
-    // }
-
-
     public function refreshToken(Request $request)
     {
-        $refresh_token = $request->cookie('refresh_token');
-        Log::info('Refresh token request received', ['refresh_token' => $refresh_token]);
+        $refresh_token = $request->input('refresh_token');
+
         if (!$refresh_token) {
-            return response()->json(['error' => 'Invalid refresh token'], 401);
-           
+            return response()->json(['error' => 'Refresh token is required'], 401);
         }
 
-        if (JWTUtil::validateToken($refresh_token) === false) {
-            return response()->json(['error' => 'Invalid refresh token'], 401);
+        try {
+            // Kiểm tra refresh token hợp lệ
+            $payload = JWTUtil::validateToken($refresh_token);
+        } catch (\Exception $e) {
+            // Nếu token hết hạn hoặc invalid → logout
+            return response()->json(['error' => 'Invalid or expired refresh token'], 401);
         }
 
-        $user = JWTUtil::validateToken($refresh_token);
-        $token = JWTUtil::generateToken($user, 60);
-        // $refresh_token = JWTUtil::generateToken($user->id, 43200); // 30 days
+        $access_token = JWTUtil::generateToken($payload, 15); // 15 phút
+
         return response()->json([
             'message' => 'Token refreshed successfully',
-            'access_token' => $token,
-            // 'refresh_token' => $refresh_token,
+            'access_token' => $access_token,
+            'token_type' => 'Bearer',
+            'expires_in' => 900,
         ]);
-
-        
     }
+
+
+    // public function refreshToken(Request $request)
+    // {
+
+    //     $refresh_token = $request->cookie('refresh_token');
+    //     if (!$refresh_token) {
+    //         return response()->json(['error' => 'Invalid refresh token'], 401);
+    //     }
+
+    //     if (JWTUtil::validateToken($refresh_token) === false) {
+    //         return response()->json(['error' => 'Invalid refresh token'], 401);
+    //     }
+
+    //     $user = JWTUtil::validateToken($refresh_token);
+    //     $token = JWTUtil::generateToken($user, 60);
+    //     // $refresh_token = JWTUtil::generateToken($user->id, 43200); // 30 days
+    //     return response()->json([
+    //         'message' => 'Token refreshed successfully',
+    //         'access_token' => $token,
+    //         // 'refresh_token' => $refresh_token,
+    //     ]);
+    // }
 
 
     public function getCurrentUser(Request $request)
@@ -183,10 +187,19 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
-        Auth::logout();
-        session()->flush();
-        return response()->json(['message' => 'Logged out successfully']);
+        return response()->json([
+            'message' => 'Logged out successfully'
+        ])->cookie(
+            'refresh_token',
+            '',
+            -1,     // xoá cookie
+            '/',
+            null,
+            false,  // secure (true nếu https)
+            true,   // httpOnly
+            false,
+            'Lax'
+        );
     }
 
     public function resendVerificationEmail(Request $request)

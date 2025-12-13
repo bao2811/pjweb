@@ -45,7 +45,6 @@ Route::post('/groups/{id}/message', function (Request $request, $id) {
     return response()->json(['status' => 'Message sent']);
 });
 
-
 // post
 Route::group(['prefix' => 'posts', 'middleware' => 'jwt'], function () {
     Route::post('/getAllPosts', [PostController::class, 'getAllPosts']);
@@ -94,8 +93,8 @@ Route::group(['prefix' => 'likes/event', 'middleware' => 'jwt'], function () {
 Route::group(['prefix' => 'messages', 'middleware' => 'jwt'], function () {
     Route::get('/channel/{channelId}', [MessageController::class, 'getMessagesByChannel']);
     Route::post('/send', [MessageController::class, 'sendMessage']);
+    Route::post('/send/channel/{channelId}', [MessageController::class, 'sendMessage']);
     Route::delete('/{id}', [MessageController::class, 'deleteMessage']);
-
 });
 
 // Notifications
