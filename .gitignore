@@ -65,6 +65,5 @@ img.*.png
 run_api_tests.py
 test.py
 /pyresttest_perf.py
-abc.py
 
 /scripts

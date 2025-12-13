@@ -1,0 +1,63 @@
+{
+  "suites": [
+    {
+      "file": "test_suite_1_basic.yaml",
+      "type": "functional",
+      "passed": 0,
+      "total": 0,
+      "raw": "Traceback (most recent call last):\n  File \"/home/bao/Downloads/pyresttest/pyresttest/validators.py\", line 239, in extract_internal\n    body = json.loads(body)\n  File \"/usr/lib/python3.13/json/__init__.py\", line 346, in loads\n    return _default_decoder.decode(s)\n           ~~~~~~~~~~~~~~~~~~~~~~~^^^\n  File \"/usr/lib/python3.13/json/decoder.py\", line 345, in decode\n    obj, end = self.raw_decode(s, idx=_w(s, 0).end())\n               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.13/json/decoder.py\", line 363, in raw_decode\n    raise JSONDecodeError(\"Expecting value\", s, err.value) from None\njson.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/bao/Documents/pj_web/venv/bin/pyresttest\", line 4, in <module>\n    resttest.command_line_run(sys.argv[1:])\n    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^\n  File \"/home/bao/Downloads/pyresttest/pyresttest/resttest.py\", line 1085, in command_line_run\n    main(args)\n    ~~~~^^^^^^\n  File \"/home/bao/Downloads/pyresttest/pyresttest/resttest.py\", line 1011, in main\n    failures = execute_tests_with_args(args)\n  File \"/home/bao/Downloads/pyresttest/pyresttest/resttest.py\", line 927, in execute_tests_with_args\n    failures = run_testsets(tests, retry_config=retry_config, max_concurrency=max_concurrency)\n  File \"/home/bao/Downloads/pyresttest/pyresttest/resttest.py\", line 704, in run_testsets\n    result = run_test(test, test_config=myconfig, context=context,\n                    curl_handle=curl_handle, retry_config=retry_config,\n                    max_concurrency=max_concurrency)\n  File \"/home/bao/Downloads/pyresttest/pyresttest/resttest.py\", line 462, in run_test\n    mytest.update_context_after(result.body, head, my_context)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/bao/Downloads/pyresttest/pyresttest/tests.py\", line 224, in update_context_after\n    result = value.extract(\n        body=response_body, headers=headers, context=context)\n  File \"/home/bao/Downloads/pyresttest/pyresttest/validators.py\", line 185, in extract\n    return self.extract_internal(query=query, body=body, headers=headers, args=self.args)\n           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/bao/Downloads/pyresttest/pyresttest/validators.py\", line 242, in extract_internal\n    raise ValueError(\"Not legal JSON!\")\nValueError: Not legal JSON!\n"
+    },
+    {
+      "file": "test_suite_2_content.yaml",
+      "type": "functional",
+      "passed": 5,
+      "total": 5,
+      "raw": "\u001b[92mTest Group Default SUCCEEDED: : 5/5 Tests Passed!\u001b[0m\n"
+    },
+    {
+      "file": "test_suite_3_concurrency.yaml",
+      "type": "functional",
+      "passed": 11,
+      "total": 11,
+      "raw": "\u001b[92mTest Group Default SUCCEEDED: : 11/11 Tests Passed!\u001b[0m\n"
+    },
+    {
+      "file": "test_suite_4_performance.yaml",
+      "type": "performance",
+      "summary": {},
+      "raw": "Traceback (most recent call last):\n  File \"/home/bao/Documents/pj_web/abc.py\", line 45, in <module>\n    main()\n    ~~~~^^\n  File \"/home/bao/Documents/pj_web/abc.py\", line 31, in main\n    result = run_test(mytest)\n  File \"/home/bao/Downloads/pyresttest/pyresttest/resttest.py\", line 350, in run_test\n    mytest.update_context_before(my_context)\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'dict' object has no attribute 'update_context_before'\n"
+    },
+    {
+      "file": "test_suite_5_retry.yaml",
+      "type": "functional",
+      "passed": 6,
+      "total": 6,
+      "raw": "\u001b[92mTest Group Default SUCCEEDED: : 6/6 Tests Passed!\u001b[0m\n"
+    },
+    {
+      "file": "test_suite_6_performance_sync.yaml",
+      "type": "performance",
+      "summary": {},
+      "raw": "Traceback (most recent call last):\n  File \"/home/bao/Documents/pj_web/abc.py\", line 45, in <module>\n    main()\n    ~~~~^^\n  File \"/home/bao/Documents/pj_web/abc.py\", line 31, in main\n    result = run_test(mytest)\n  File \"/home/bao/Downloads/pyresttest/pyresttest/resttest.py\", line 350, in run_test\n    mytest.update_context_before(my_context)\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'dict' object has no attribute 'update_context_before'\n"
+    },
+    {
+      "file": "test_suite_6_performance_sync_advanced.yaml",
+      "type": "performance",
+      "summary": {},
+      "raw": "Traceback (most recent call last):\n  File \"/home/bao/Documents/pj_web/abc.py\", line 45, in <module>\n    main()\n    ~~~~^^\n  File \"/home/bao/Documents/pj_web/abc.py\", line 31, in main\n    result = run_test(mytest)\n  File \"/home/bao/Downloads/pyresttest/pyresttest/resttest.py\", line 350, in run_test\n    mytest.update_context_before(my_context)\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'dict' object has no attribute 'update_context_before'\n"
+    },
+    {
+      "file": "test_suite_7_performance_async.yaml",
+      "type": "functional",
+      "passed": 10,
+      "total": 10,
+      "raw": "\u001b[92mTest Group Default SUCCEEDED: : 10/10 Tests Passed!\u001b[0m\n"
+    },
+    {
+      "file": "test_suite_7_performance_async_advanced.yaml",
+      "type": "performance",
+      "summary": {},
+      "raw": "Traceback (most recent call last):\n  File \"/home/bao/Documents/pj_web/abc.py\", line 45, in <module>\n    main()\n    ~~~~^^\n  File \"/home/bao/Documents/pj_web/abc.py\", line 31, in main\n    result = run_test(mytest)\n  File \"/home/bao/Downloads/pyresttest/pyresttest/resttest.py\", line 350, in run_test\n    mytest.update_context_before(my_context)\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'dict' object has no attribute 'update_context_before'\n"
+    }
+  ]
+}

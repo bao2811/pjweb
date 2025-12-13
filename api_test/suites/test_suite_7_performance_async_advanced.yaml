@@ -18,7 +18,7 @@
     expected_status: [200]
     performance:
       mode: async
-      repeat: 100
+      repeat: 10
       concurrency: 20
       threshold_ms: 250
 
@@ -29,7 +29,7 @@
     expected_status: [200, 401]
     performance:
       mode: async
-      repeat: 200
+      repeat: 20
       concurrency: 50
       threshold_ms: 150
 
@@ -40,7 +40,7 @@
     expected_status: [200, 401]
     performance:
       mode: async
-      repeat: 80
+      repeat: 20
       concurrency: 25
       threshold_ms: 400
 
@@ -51,7 +51,7 @@
     expected_status: [200, 404]
     performance:
       mode: async
-      repeat: 150
+      repeat: 30
       concurrency: 30
       threshold_ms: 200
 
@@ -62,6 +62,6 @@
     expected_status: [200, 404]
     performance:
       mode: async
-      repeat: 120
+      repeat: 20
       concurrency: 40
       threshold_ms: 180

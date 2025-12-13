@@ -1,0 +1,57 @@
+---
+# ============================================================================
+# TEST SUITE 7: Performance Async Mode (wrapper-compatible)
+# ============================================================================
+# Run with custom runner:
+#   python abc.py api_test/suites/test_suite_7_performance_async.yaml --perf --async
+# ============================================================================
+- config:
+    testset: "Performance Async Mode"
+    timeout: 60
+
+- test:
+    name: "Perf-Async: Login"
+    url: /api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    expected_status: [200]
+    performance:
+      mode: async
+      repeat: 100
+      concurrency: 20
+      threshold_ms: 300
+
+- test:
+    name: "Perf-Async: Get User Info"
+    url: /api/me
+    method: GET
+    expected_status: [200, 401]
+    performance:
+      mode: async
+      repeat: 150
+      concurrency: 30
+      threshold_ms: 250
+
+- test:
+    name: "Perf-Async: Get All Likes"
+    url: /api/getAllLikes
+    method: GET
+    expected_status: [200, 401]
+    performance:
+      mode: async
+      repeat: 200
+      concurrency: 50
+      threshold_ms: 400
+
+- test:
+    name: "Perf-Async: Get Post By ID"
+    url: /api/getPostById/1
+    method: GET
+    expected_status: [200, 404]
+    performance:
+      mode: async
+      repeat: 100
+      concurrency: 25
+      threshold_ms: 200

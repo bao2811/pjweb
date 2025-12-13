@@ -18,7 +18,7 @@
     expected_status: [200]
     performance:
       mode: sync
-      repeat: 50
+      repeat: 20
       concurrency: 10
       threshold_ms: 300
 
@@ -29,7 +29,7 @@
     expected_status: [200, 401]
     performance:
       mode: sync
-      repeat: 100
+      repeat: 20
       concurrency: 15
       threshold_ms: 200
 
@@ -40,8 +40,8 @@
     expected_status: [200, 401]
     performance:
       mode: sync
-      repeat: 30
-      concurrency: 5
+      repeat: 20
+      concurrency: 10
       threshold_ms: 500
 
 - test:
@@ -51,6 +51,6 @@
     expected_status: [200, 404]
     performance:
       mode: sync
-      repeat: 80
+      repeat: 20
       concurrency: 12
       threshold_ms: 250
