@@ -42,7 +42,6 @@ next-env.d.ts
 
 /*.local.ts
 /*.local.tsx
-/api_test
 /venv
 /pyresttest
 
@@ -66,6 +65,5 @@ img.*.png
 run_api_tests.py
 test.py
 /pyresttest_perf.py
-abc.py
 
 /scripts

@@ -15,7 +15,7 @@ import {
 } from "react-icons/fa";
 import { useAuth } from "@/hooks/useAuth";
 import { authFetch } from "@/utils/auth";
-// import { useReverbNotification } from "@/hooks/useReverbNotification";
+import { useReverbNotification } from "@/hooks/useReverbNotification";
 
 export default function Navbar() {
   const { user: currentUser, token, logout, isLoading } = useAuth();
@@ -49,12 +49,12 @@ export default function Navbar() {
       fetchNotifications();
 
       // Refresh mỗi 30 giây
-      const interval = setInterval(() => {
-        console.log("🔄 [Navbar] Auto-refreshing notifications...");
-        fetchNotifications();
-      }, 30000);
+      // const interval = setInterval(() => {
+      //   console.log("🔄 [Navbar] Auto-refreshing notifications...");
+      //   fetchNotifications();
+      // }, 30000);
 
-      return () => clearInterval(interval);
+      // return () => clearInterval(interval);
     }
   }, [currentUser]);
 
@@ -115,12 +115,12 @@ export default function Navbar() {
     hasToken: !!token,
   });
 
-  // useReverbNotification({
-  //   userId: currentUser?.id || null,
-  //   authToken: token,
-  //   onNewNotification: handleNewNotification,
-  //   onNotificationRead: handleNotificationRead,
-  // });
+  useReverbNotification({
+    userId: currentUser?.id || null,
+    authToken: token,
+    onNewNotification: handleNewNotification,
+    onNotificationRead: handleNotificationRead,
+  });
 
   const initializePushState = async () => {
     setIsLoadingState(true);
@@ -504,6 +504,7 @@ export default function Navbar() {
       setLoadingNotifications(false);
     }
   };
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -632,11 +633,11 @@ export default function Navbar() {
             {currentUser?.role === "user" && (
               <>
                 <Link
-                href={`/events`}
-                className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
-              >
-                Sự kiện
-              </Link>
+                  href={`/events`}
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+                >
+                  Sự kiện
+                </Link>
                 <Link
                   href="/user/eventsattended"
                   className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
@@ -705,6 +706,9 @@ export default function Navbar() {
               <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
             ) : currentUser ? (
               <>
+                {/* <div ref={notificationRef} className="relative color-gray-600">
+                  <NotificationIcon />
+                </div> */}
                 {/* Notifications */}
                 <div className="relative" ref={notificationRef}>
                   <button
@@ -810,7 +814,6 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
-
                 {/* User Menu */}
                 <div className="relative" ref={userMenuRef}>
                   <button
@@ -818,7 +821,8 @@ export default function Navbar() {
                     className="flex items-center space-x-3 hover:bg-gray-100 rounded-full pl-1 pr-4 py-1 transition-colors duration-200"
                   >
                     <div className="relative">
-                      {currentUser.image && currentUser.image.startsWith('http') ? (
+                      {currentUser.image &&
+                      currentUser.image.startsWith("http") ? (
                         <Image
                           src={currentUser.image}
                           alt={currentUser.username}

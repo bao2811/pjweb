@@ -1,0 +1,54 @@
+[96m======================================================================[0m
+[1m[96mPyRestTest Parallel Suite Runner[0m
+[96m======================================================================[0m
+
+[1mConfiguration:[0m
+  Base URL: http://localhost:8000
+  Test Pattern: api_test/suites/*.yaml
+  Workers: 4
+  Timeout: 300s
+  Start Time: 2025-12-12 11:03:26
+
+[92mFound 7 test file(s):[0m
+  1. api_test/suites/test_suite_5_retry.yaml
+  2. api_test/suites/test_suite_3_concurrency.yaml
+  3. api_test/suites/test_suite_6_performance_sync.yaml
+  4. api_test/suites/test_suite_7_performance_async.yaml
+  5. api_test/suites/test_suite_2_content.yaml
+  6. api_test/suites/test_suite_4_performance.yaml
+  7. api_test/suites/test_suite_1_basic.yaml
+
+[1mRunning 7 test suite(s) with 4 worker(s)...[0m
+
+[1/7] [92m✅ PASS[0m: api_test/suites/test_suite_6_performance_sync.yaml (0.23s, PID: 78541)
+[2/7] [92m✅ PASS[0m: api_test/suites/test_suite_7_performance_async.yaml (0.23s, PID: 78542)
+[3/7] [92m✅ PASS[0m: api_test/suites/test_suite_4_performance.yaml (0.90s, PID: 78542)
+[4/7] [92m✅ PASS[0m: api_test/suites/test_suite_5_retry.yaml (1.25s, PID: 78539)
+[5/7] [92m✅ PASS[0m: api_test/suites/test_suite_2_content.yaml (1.03s, PID: 78541)
+[6/7] [92m✅ PASS[0m: api_test/suites/test_suite_3_concurrency.yaml (1.34s, PID: 78540)
+[7/7] [92m✅ PASS[0m: api_test/suites/test_suite_1_basic.yaml (0.47s, PID: 78542)
+
+[96m======================================================================[0m
+[1mTEST SUMMARY[0m
+[96m======================================================================[0m
+
+[1mExecution Stats:[0m
+  Total Files: 7
+  [92mPassed: 7[0m
+  [91mFailed: 0[0m
+  Success Rate: 100.0%
+  Workers Used: 4
+  Overall Time: 1.61s
+  Avg Time/File: 0.78s
+  Total Sequential Time: 5.45s
+  Speedup: 3.38x
+  End Time: 2025-12-12 11:03:27
+
+[1mDetailed Results:[0m
+  1. [[92m✅ PASS[0m] api_test/suites/test_suite_6_performance_sync.yaml (0.23s)
+  2. [[92m✅ PASS[0m] api_test/suites/test_suite_7_performance_async.yaml (0.23s)
+  3. [[92m✅ PASS[0m] api_test/suites/test_suite_4_performance.yaml (0.90s)
+  4. [[92m✅ PASS[0m] api_test/suites/test_suite_5_retry.yaml (1.25s)
+  5. [[92m✅ PASS[0m] api_test/suites/test_suite_2_content.yaml (1.03s)
+  6. [[92m✅ PASS[0m] api_test/suites/test_suite_3_concurrency.yaml (1.34s)
+  7. [[92m✅ PASS[0m] api_test/suites/test_suite_1_basic.yaml (0.47s)

@@ -25,7 +25,7 @@ export async function authFetch(
     const success = await refreshAccessToken();
     if (!success) {
       localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      // localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
       if (typeof window !== "undefined") {
         window.location.href = "/home/login";
@@ -91,6 +91,7 @@ export async function refreshAccessToken(): Promise<boolean> {
 
     const response = await fetch(`${API_URL}/api/refresh`, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },

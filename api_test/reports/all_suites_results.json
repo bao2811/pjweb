@@ -1,0 +1,519 @@
+{
+  "timestamp": "2025-12-12T21:59:29.516959",
+  "base_url": "http://localhost:8000",
+  "results": {
+    "functional": [
+      {
+        "suite_name": "test_suite_1_basic",
+        "suite_file": "test_suite_1_basic.yaml",
+        "category": "functional",
+        "tests": [
+          {
+            "name": "Login - Get Token",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Get Current User Info",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Logout User",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          }
+        ],
+        "summary": {
+          "total_tests": 3,
+          "performance_tests": 0,
+          "functional_tests": 3,
+          "total_requests": 0,
+          "successful_requests": 0,
+          "failed_requests": 0
+        }
+      },
+      {
+        "suite_name": "test_suite_2_content",
+        "suite_file": "test_suite_2_content.yaml",
+        "category": "functional",
+        "tests": [
+          {
+            "name": "Login",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Get Post By ID - 1",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Get Post By ID - 2",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Get Post By ID - 3",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Get All Likes",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          }
+        ],
+        "summary": {
+          "total_tests": 5,
+          "performance_tests": 0,
+          "functional_tests": 5,
+          "total_requests": 0,
+          "successful_requests": 0,
+          "failed_requests": 0
+        }
+      }
+    ],
+    "performance": [
+      {
+        "suite_name": "test_suite_4_performance",
+        "suite_file": "test_suite_4_performance.yaml",
+        "category": "performance",
+        "tests": [
+          {
+            "name": "Login",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Performance Test - Get User Info (Fast)",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 100,
+              "successful": 0,
+              "failed": 100,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          },
+          {
+            "name": "Performance Test - Get All Likes (Medium)",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 100,
+              "successful": 0,
+              "failed": 100,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          },
+          {
+            "name": "Performance Test - Get Post By ID (Fast)",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 100,
+              "successful": 0,
+              "failed": 100,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "total_tests": 4,
+          "performance_tests": 3,
+          "functional_tests": 1,
+          "total_requests": 300,
+          "successful_requests": 0,
+          "failed_requests": 300
+        }
+      },
+      {
+        "suite_name": "test_suite_6_performance_sync_advanced",
+        "suite_file": "test_suite_6_performance_sync_advanced.yaml",
+        "category": "performance",
+        "tests": [
+          {
+            "name": "Perf-Sync-Bench: Login API",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 50,
+              "successful": 0,
+              "failed": 50,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          },
+          {
+            "name": "Perf-Sync-Bench: Get User Info",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 100,
+              "successful": 0,
+              "failed": 100,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          },
+          {
+            "name": "Perf-Sync-Bench: Get All Likes",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 100,
+              "successful": 0,
+              "failed": 100,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          },
+          {
+            "name": "Perf-Sync-Bench: Get Post By ID",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 80,
+              "successful": 0,
+              "failed": 80,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "total_tests": 4,
+          "performance_tests": 4,
+          "functional_tests": 0,
+          "total_requests": 330,
+          "successful_requests": 0,
+          "failed_requests": 330
+        }
+      },
+      {
+        "suite_name": "test_suite_7_performance_async_advanced",
+        "suite_file": "test_suite_7_performance_async_advanced.yaml",
+        "category": "performance",
+        "tests": [
+          {
+            "name": "Perf-Async-Bench: Login API",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 100,
+              "successful": 0,
+              "failed": 100,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          },
+          {
+            "name": "Perf-Async-Bench: Get User Info",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 200,
+              "successful": 0,
+              "failed": 200,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          },
+          {
+            "name": "Perf-Async-Bench: Get All Likes",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 80,
+              "successful": 0,
+              "failed": 80,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          },
+          {
+            "name": "Perf-Async-Bench: Get Post By ID",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 150,
+              "successful": 0,
+              "failed": 150,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          },
+          {
+            "name": "Perf-Async-Bench: Mixed Endpoints",
+            "type": "performance",
+            "metrics": {
+              "total_requests": 120,
+              "successful": 0,
+              "failed": 120,
+              "errors": [
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error",
+                "Unknown error"
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "total_tests": 5,
+          "performance_tests": 5,
+          "functional_tests": 0,
+          "total_requests": 650,
+          "successful_requests": 0,
+          "failed_requests": 650
+        }
+      }
+    ],
+    "concurrency": [
+      {
+        "suite_name": "test_suite_3_concurrency",
+        "suite_file": "test_suite_3_concurrency.yaml",
+        "category": "concurrency",
+        "tests": [
+          {
+            "name": "Login",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Concurrent Request 1",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Concurrent Request 2",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Concurrent Request 3",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Concurrent Request 4",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Concurrent Request 5",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Concurrent Request 6",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Concurrent Request 7",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Concurrent Request 8",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Concurrent Request 9",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Concurrent Request 10",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          }
+        ],
+        "summary": {
+          "total_tests": 11,
+          "performance_tests": 0,
+          "functional_tests": 11,
+          "total_requests": 0,
+          "successful_requests": 0,
+          "failed_requests": 0
+        }
+      }
+    ],
+    "retry": [
+      {
+        "suite_name": "test_suite_5_retry",
+        "suite_file": "test_suite_5_retry.yaml",
+        "category": "retry",
+        "tests": [
+          {
+            "name": "Login",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Stable Endpoint 1",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Stable Endpoint 2",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Optional Resource 1",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Optional Resource 2",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          },
+          {
+            "name": "Logout (May Fail)",
+            "type": "functional",
+            "result": {
+              "passed": false,
+              "output": "/home/bao/Documents/pj_web/venv/bin/python3: No module named pyresttest.__main__; 'pyresttest' is a package and cannot be directly executed\n"
+            }
+          }
+        ],
+        "summary": {
+          "total_tests": 6,
+          "performance_tests": 0,
+          "functional_tests": 6,
+          "total_requests": 0,
+          "successful_requests": 0,
+          "failed_requests": 0
+        }
+      }
+    ]
+  }
+}

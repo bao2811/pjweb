@@ -1,0 +1,56 @@
+---
+# ============================================================================
+# CÁCH 2: Custom Runner với Performance Block
+# Chạy: python run_api_tests.py api_test/suites/test_suite_6_performance_sync_advanced.yaml --perf
+# Hoặc: python abc.py api_test/suites/test_suite_6_performance_sync_advanced.yaml --perf
+# ============================================================================
+- config:
+    testset: "Performance Sync Mode (Advanced)"
+    timeout: 60
+
+- test:
+    name: "Perf-Sync-Bench: Login API"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    expected_status: [200]
+    performance:
+      mode: sync
+      repeat: 20
+      concurrency: 10
+      threshold_ms: 300
+
+- test:
+    name: "Perf-Sync-Bench: Get User Info"
+    url: http://localhost:8000/api/me
+    method: GET
+    expected_status: [200, 401]
+    performance:
+      mode: sync
+      repeat: 20
+      concurrency: 15
+      threshold_ms: 200
+
+- test:
+    name: "Perf-Sync-Bench: Get All Likes"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    expected_status: [200, 401]
+    performance:
+      mode: sync
+      repeat: 20
+      concurrency: 10
+      threshold_ms: 500
+
+- test:
+    name: "Perf-Sync-Bench: Get Post By ID"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    expected_status: [200, 404]
+    performance:
+      mode: sync
+      repeat: 20
+      concurrency: 12
+      threshold_ms: 250

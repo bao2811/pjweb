@@ -10,7 +10,6 @@ import { useRouter } from "next/navigation";
 import {
   API_URL,
   TOKEN_KEY,
-  REFRESH_TOKEN_KEY,
   USER_KEY,
   isTokenExpired,
   refreshAccessToken,

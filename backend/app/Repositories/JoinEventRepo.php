@@ -196,7 +196,7 @@ class JoinEventRepo
                 broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
             }
             
-            // Xóa bản ghi luôn (user có thể đăng ký lại)
+            // Xóa bản ghi thay vì update status
             $joinEvent->delete();
             
             return true;

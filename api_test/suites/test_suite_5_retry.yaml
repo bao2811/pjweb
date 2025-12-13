@@ -1,0 +1,64 @@
+---
+# ============================================================================
+# TEST SUITE 5: Retry Logic Test (Simulated Failures)
+# ============================================================================
+# Chạy với retry enabled:
+#   pyresttest http://localhost:8000 api_test/test_suite_5_retry.yaml \
+#     --max-retries 5 --retry-backoff-base 0.5 --retry-backoff-max 30
+#
+# Test này bao gồm các endpoint có thể thất bại để demo retry logic
+# ============================================================================
+
+- config:
+    testset: "Suite 5: Retry Logic Test"
+    timeout: 20
+
+- test:
+    name: "Login"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    expected_status: [200]
+    extract_binds:
+      - token: { jsonpath_mini: access_token }
+
+# Các endpoint stable - nên pass ngay lần đầu
+- test:
+    name: "Stable Endpoint 1"
+    url: http://localhost:8000/api/me
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+
+- test:
+    name: "Stable Endpoint 2"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+
+# Endpoint có thể trả về 404 - test retry với multiple expected status
+- test:
+    name: "Optional Resource 1"
+    url: http://localhost:8000/api/getPostById/999
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+
+- test:
+    name: "Optional Resource 2"
+    url: http://localhost:8000/api/getPostById/1000
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+
+# Logout có thể trả về 500 - test retry
+- test:
+    name: "Logout (May Fail)"
+    url: http://localhost:8000/api/logout
+    method: POST
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 500]

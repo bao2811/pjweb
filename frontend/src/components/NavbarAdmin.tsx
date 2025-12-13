@@ -15,6 +15,7 @@ import {
 } from "react-icons/fa";
 import { RiSettings4Fill, RiLogoutBoxLine } from "react-icons/ri";
 import { MdDashboard, MdEdit } from "react-icons/md";
+import { useReverbNotification } from "@/hooks/useReverbNotification";
 
 export default function NavbarAdmin() {
   const pathname = usePathname();
@@ -72,19 +73,19 @@ export default function NavbarAdmin() {
         console.error("Error fetching notifications:", error);
       }
     };
-
-    if (user) {
-      fetchNotifications();
-      // Refresh every 30 seconds
-      const interval = setInterval(fetchNotifications, 30000);
-      return () => clearInterval(interval);
-    }
   }, [user]);
 
   // Initialize push notification state
   useEffect(() => {
     initializePushState();
   }, []);
+
+  // useReverbNotification({
+  //   userId: currentUser?.id || null,
+  //   authToken: token,
+  //   onNewNotification: handleNewNotification,
+  //   onNotificationRead: handleNotificationRead,
+  // });
 
   const initializePushState = async () => {
     try {

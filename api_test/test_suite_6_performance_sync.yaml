@@ -1,0 +1,59 @@
+---
+# ============================================================================
+# TEST SUITE 6: Performance Sync Mode (wrapper-compatible)
+# ============================================================================
+# This file uses a `performance` block per test so the custom runner (abc.py)
+# can execute benchmarks: it supports mode/repeat/concurrency/threshold_ms.
+# Example: python abc.py api_test/suites/test_suite_6_performance_sync.yaml --perf
+# ============================================================================
+
+- config:
+    testset: "Suite 6: Performance Sync (Wrapper)"
+    timeout: 60
+
+- test:
+    name: "Perf-Sync: Login"
+    url: /api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    expected_status: [200]
+    performance:
+      mode: sync
+      repeat: 100
+      concurrency: 1
+      threshold_ms: 250
+
+- test:
+    name: "Perf-Sync: Get Current User"
+    url: /api/me
+    method: GET
+    expected_status: [200, 401]
+    performance:
+      mode: sync
+      repeat: 100
+      concurrency: 1
+      threshold_ms: 250
+
+- test:
+    name: "Perf-Sync: Get All Likes"
+    url: /api/getAllLikes
+    method: GET
+    expected_status: [200, 401]
+    performance:
+      mode: sync
+      repeat: 100
+      concurrency: 1
+      threshold_ms: 300
+
+- test:
+    name: "Perf-Sync: Get Post By ID"
+    url: /api/getPostById/1
+    method: GET
+    expected_status: [200, 404]
+    performance:
+      mode: sync
+      repeat: 100
+      concurrency: 1
+      threshold_ms: 200

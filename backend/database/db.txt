@@ -112,9 +112,14 @@ CREATE TABLE notis (
 CREATE TABLE likes (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,
+    event_id BIGINT REFERENCES events(id) ON DELETE CASCADE,
     status VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Constraint: Một user chỉ có 1 like cho mỗi post
+    CONSTRAINT unique_user_post UNIQUE (user_id, post_id) WHERE post_id IS NOT NULL,
+    -- Constraint: Một user chỉ có 1 like cho mỗi event
+    CONSTRAINT unique_user_event UNIQUE (user_id, event_id) WHERE event_id IS NOT NULL
 );
 
 

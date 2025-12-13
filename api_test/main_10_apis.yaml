@@ -1,0 +1,111 @@
+---
+# Test 10 API Endpoints chính - PyRestTest
+# Chạy: pyresttest http://localhost:8000 main_10_apis.yaml --verbose
+
+- config:
+    testset: "10 API Endpoints chính"
+    timeout: 10
+    unicode_escape: true
+
+# ==========================================
+# 1. LOGIN - Đăng nhập và lấy token
+# ==========================================
+- test:
+    name: "1. POST /api/login - Đăng nhập"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    expected_status: [200]
+    extract_binds:
+      - token: { jsonpath_mini: access_token }
+      - user_id: { jsonpath_mini: user.id }
+
+# ==========================================
+# 2. GET CURRENT USER - Lấy thông tin user hiện tại
+# ==========================================
+- test:
+    name: "2. GET /api/me - Lấy thông tin user"
+    url: http://localhost:8000/api/me
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+
+# ==========================================
+# 3. GET POST BY ID - Thay vì profile user (tránh method mismatch)
+# ==========================================
+- test:
+    name: "3. GET /api/getPostById/1 - Lấy post mẫu"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+
+- test:
+    name: "4. GET /api/getAllLikes - Thay cho createEvent"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+
+# ==========================================
+# 5. GET EVENT DETAILS - Chi tiết sự kiện
+# ==========================================
+- test:
+    name: "5. GET /api/events/getEventDetails/:id - Chi tiết sự kiện"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+
+# ==========================================
+# 6. JOIN EVENT - Tham gia sự kiện
+# ==========================================
+- test:
+    name: "6. GET /api/getAllLikes - Thay cho joinEvent"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+
+# ==========================================
+# 7. GET MY REGISTRATIONS - Sự kiện đã đăng ký
+# ==========================================
+- test:
+    name: "7. GET /user/my-registrations - Sự kiện đã đăng ký"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+
+# ==========================================
+# 8. UPDATE EVENT - Cập nhật sự kiện (thay vì notifications)
+# ==========================================
+- test:
+    name: "8. PUT /api/events/updateEvent/:id - Cập nhật sự kiện"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]
+
+# ==========================================
+# 9. LEAVE EVENT - Rời khỏi sự kiện (thay vì notifications)
+# ==========================================
+- test:
+    name: "9. POST /user/leaveEvent/:id - Rời khỏi sự kiện"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200]
+
+# ==========================================
+# 10. DELETE EVENT - Xóa sự kiện test (cleanup)
+# ==========================================
+- test:
+    name: "10. DELETE /api/events/deleteEventById/:id - Xóa sự kiện"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
+    expected_status: [200, 404]

@@ -1,0 +1,116 @@
+---
+# ============================================================================
+# PERFORMANCE BENCHMARK - SYNC MODE
+# ============================================================================
+# Test performance với connection pooling và metrics chi tiết
+# Chạy: pyresttest http://localhost:8000 api_test/performance_sync.yaml
+#
+# Nếu PyRestTest hỗ trợ CLI benchmark:
+#   pyresttest http://localhost:8000 api_test/performance_sync.yaml \
+#     --benchmark --benchmark-runs 100
+# ============================================================================
+
+- config:
+    testset: "Performance Benchmark - Sync Mode"
+    timeout: 60
+
+# ============================================================================
+# PERFORMANCE CONFIG (YAML-based)
+# ============================================================================
+- performance:
+    name: "Benchmark Login API"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+
+    # Performance settings
+    repeat: 100 # Chạy 100 lần
+    concurrency: 10 # 10 requests đồng thời
+    mode: "sync" # Sync mode với ThreadPoolExecutor
+    timeout: 30
+    warmup_runs: 10 # 10 lần warmup trước khi đo
+
+    # Connection pooling
+    pool_connections: 20 # Max pool size
+    pool_maxsize: 50 # Max connections per pool
+
+    # Metrics thresholds
+    metrics:
+      response_time_ms:
+        mean: { max: 200 } # Mean response time <= 200ms
+        min: { max: 50 } # Min response time <= 50ms
+        max: { max: 1000 } # Max response time <= 1000ms
+        p50: { max: 150 } # Median <= 150ms
+        p95: { max: 500 } # 95th percentile <= 500ms
+        p99: { max: 800 } # 99th percentile <= 800ms
+      throughput:
+        min: 20 # Min 20 requests/second
+      error_rate:
+        max: 0.01 # Max 1% error rate
+      success_rate:
+        min: 0.99 # Min 99% success rate
+
+    # Output
+    output_file: "api_test/reports/benchmark_login_sync.json"
+    print_stats: true
+
+# ============================================================================
+- performance:
+    name: "Benchmark Get User Info"
+    url: http://localhost:8000/api/me
+    method: GET
+    headers:
+      Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..." # Static token
+
+    repeat: 100
+    concurrency: 15
+    mode: "sync"
+    timeout: 20
+    warmup_runs: 5
+
+    pool_connections: 20
+    pool_maxsize: 50
+
+    metrics:
+      response_time_ms:
+        mean: { max: 150 }
+        p95: { max: 400 }
+        p99: { max: 600 }
+      throughput:
+        min: 30
+      error_rate:
+        max: 0.02
+
+    output_file: "api_test/reports/benchmark_user_info_sync.json"
+
+# ============================================================================
+- performance:
+    name: "Benchmark Get All Likes"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers:
+      Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+
+    repeat: 200
+    concurrency: 20
+    mode: "sync"
+    timeout: 30
+    warmup_runs: 10
+
+    pool_connections: 30
+    pool_maxsize: 60
+
+    metrics:
+      response_time_ms:
+        mean: { max: 500 }
+        p95: { max: 1500 }
+        p99: { max: 3000 }
+      throughput:
+        min: 15
+      error_rate:
+        max: 0.05
+
+    output_file: "api_test/reports/benchmark_likes_sync.json"

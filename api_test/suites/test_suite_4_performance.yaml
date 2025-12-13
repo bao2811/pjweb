@@ -1,0 +1,66 @@
+---
+# ============================================================================
+# TEST SUITE 4: Performance Benchmark (wrapper-compatible)
+# ============================================================================
+# Run with custom runner (supports `performance` block per test):
+#   python abc.py api_test/suites/test_suite_4_performance.yaml --perf --async
+# Or with pyresttest vanilla (no performance block):
+#   pyresttest --url http://localhost:8000 api_test/suites/test_suite_4_performance.yaml
+# ============================================================================
+
+- config:
+    testset: "Suite 4: Performance Benchmark (Wrapper)"
+    timeout: 30
+
+- test:
+    name: "Login"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+    expected_status: [200]
+    extract_binds:
+      - token: { jsonpath_mini: access_token }
+
+# Performance test - endpoint nhẹ
+- test:
+    name: "Performance Test - Get User Info (Fast)"
+    url: http://localhost:8000/api/me
+    method: GET
+    headers:
+      template: { "Authorization": "Bearer $token" }
+    expected_status: [200]
+    performance:
+      mode: sync
+      repeat: 10
+      concurrency: 10
+      threshold_ms: 250
+
+# Performance test - endpoint có thể chậm hơn
+- test:
+    name: "Performance Test - Get All Likes (Medium)"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers:
+      template: { "Authorization": "Bearer $token" }
+    expected_status: [200]
+    performance:
+      mode: sync
+      repeat: 10
+      concurrency: 20
+      threshold_ms: 400
+
+- test:
+    name: "Performance Test - Get Post By ID (Fast)"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    headers:
+      template: { "Authorization": "Bearer $token" }
+    expected_status: [200, 404]
+    performance:
+      mode: sync
+      repeat: 10
+      concurrency: 5
+      threshold_ms: 200

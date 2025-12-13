@@ -5,6 +5,7 @@ namespace App\Events;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Broadcasting\PrivateChannel;
 
 class ChatMessage implements ShouldBroadcast
 {
@@ -26,9 +27,16 @@ class ChatMessage implements ShouldBroadcast
         return new Channel('chat.' . $this->groupId);
     }
 
-    public function broadcastPrivate(): Channel
+    public function broadcastPrivate(): PrivateChannel
     {
         return new PrivateChannel('group.' . $this->groupId);
+    }
 
+    public function broadcastWith(): array
+    {
+        return [
+            'user' => $this->user,
+            'message' => $this->message,
+        ];
     }
 }

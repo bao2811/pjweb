@@ -1,0 +1,148 @@
+---
+# ============================================================================
+# PERFORMANCE BENCHMARK - ASYNC MODE
+# ============================================================================
+# Test performance với aiohttp và asyncio.Semaphore
+# Chạy: pyresttest http://localhost:8000 api_test/performance_async.yaml
+#
+# Async mode nâng throughput cao hơn, không chặn I/O
+# Sử dụng aiohttp.ClientSession thay vì requests
+# ============================================================================
+
+- config:
+    testset: "Performance Benchmark - Async Mode"
+    timeout: 60
+
+# ============================================================================
+# ASYNC PERFORMANCE CONFIG
+# ============================================================================
+- performance:
+    name: "Async Benchmark - Login API"
+    url: http://localhost:8000/api/login
+    method: POST
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: '{"email":"1@gmail.com","password":"Bao12345"}'
+
+    # Async settings
+    repeat: 200 # 200 requests
+    concurrency: 50 # 50 concurrent async requests
+    mode: "async" # Async mode với aiohttp
+    timeout: 30
+    warmup_runs: 20
+
+    # Async connection pooling (aiohttp)
+    connector:
+      limit: 100 # Total connection limit
+      limit_per_host: 50 # Connections per host
+      ttl_dns_cache: 300 # DNS cache TTL (seconds)
+
+    # Metrics
+    metrics:
+      response_time_ms:
+        mean: { max: 150 } # Async should be faster
+        p95: { max: 400 }
+        p99: { max: 700 }
+      throughput:
+        min: 50 # Higher throughput với async
+      error_rate:
+        max: 0.01
+      concurrent_connections:
+        mean: { min: 30 } # Track concurrent connections
+
+    output_file: "api_test/reports/benchmark_login_async.json"
+    print_stats: true
+
+# ============================================================================
+- performance:
+    name: "Async Benchmark - Get User Info"
+    url: http://localhost:8000/api/me
+    method: GET
+    headers:
+      Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+
+    repeat: 300
+    concurrency: 100 # High concurrency với async
+    mode: "async"
+    timeout: 20
+    warmup_runs: 30
+
+    connector:
+      limit: 150
+      limit_per_host: 100
+      ttl_dns_cache: 300
+
+    metrics:
+      response_time_ms:
+        mean: { max: 100 } # Very fast with async
+        p95: { max: 300 }
+        p99: { max: 500 }
+      throughput:
+        min: 100 # Very high throughput
+      error_rate:
+        max: 0.02
+
+    output_file: "api_test/reports/benchmark_user_info_async.json"
+
+# ============================================================================
+- performance:
+    name: "Async Stress Test - Get All Likes"
+    url: http://localhost:8000/api/getAllLikes
+    method: GET
+    headers:
+      Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+
+    repeat: 500 # 500 requests
+    concurrency: 150 # Very high concurrency
+    mode: "async"
+    timeout: 30
+    warmup_runs: 50
+
+    connector:
+      limit: 200
+      limit_per_host: 150
+      ttl_dns_cache: 300
+
+    metrics:
+      response_time_ms:
+        mean: { max: 400 }
+        p95: { max: 1200 }
+        p99: { max: 2500 }
+      throughput:
+        min: 50
+      error_rate:
+        max: 0.05
+      concurrent_connections:
+        mean: { min: 80 }
+
+    output_file: "api_test/reports/benchmark_likes_async.json"
+    print_stats: true
+
+# ============================================================================
+# COMPARISON TEST - Sync vs Async
+# ============================================================================
+- performance:
+    name: "Comparison - Same endpoint Sync vs Async"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    headers:
+      Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+
+    # Run both modes for comparison
+    modes: ["sync", "async"]
+
+    repeat: 100
+    concurrency: 30
+    timeout: 20
+    warmup_runs: 10
+
+    metrics:
+      response_time_ms:
+        mean: { max: 200 }
+        p95: { max: 500 }
+      throughput:
+        min: 40
+
+    output_file: "api_test/reports/benchmark_comparison.json"
+    compare_modes: true # Generate comparison report
