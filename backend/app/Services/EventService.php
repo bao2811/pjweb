@@ -64,7 +64,7 @@ class EventService
             ]);
             DB::commit();
 
-            $this->notifyAllUsersNewEvent($event);
+            $this->notifyAllUsersNewEvent($event, $authorId);
             return $event;
         } catch (Exception $e) {
             // Handle exception
@@ -76,15 +76,15 @@ class EventService
     /**
      * Gửi thông báo WebPush đến tất cả users khi có sự kiện mới
      */
-    public function notifyAllUsersNewEvent($event)
+    public function notifyAllUsersNewEvent($event, $authorId)
     {
-        $this->pushRepo->getAllSubscriptionsInChunk(100, function($subscriptions) use ($event) {
+        $this->pushRepo->getAllSubscriptionsInChunk(100, function($subscriptions) use ($event, $authorId) {
             foreach ($subscriptions as $subscription) {
                 // Dispatch notification job cho từng user
                 Noti::dispatchCreateAndPush([
                     'title' => 'Sự kiện mới: ' . $event->name,
                     'message' => "Một sự kiện mới đã được tạo, hãy tham gia ngay!",
-                    'sender_id' => auth()->id() ?? null,
+                    'sender_id' => $authorId,
                     'receiver_id' => $subscription->user_id,
                     'type' => 'event_new',
                     'data' => [

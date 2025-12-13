@@ -281,7 +281,7 @@ export default function Home() {
               </a>
               <div className="flex items-center gap-3 ml-4">
                 <a
-                  href="/login"
+                  href="/home/login"
                   className="text-white hover:text-yellow-300 font-medium"
                 >
                   Đăng nhập
@@ -346,7 +346,7 @@ export default function Home() {
                 </a>
                 <div className="pt-3 border-t border-white/20 flex flex-col gap-2">
                   <a
-                    href="/login"
+                    href="/home/login"
                     className="text-white hover:text-yellow-300 font-medium"
                   >
                     Đăng nhập
@@ -1121,7 +1121,10 @@ export default function Home() {
               © 2025 Tình Nguyện Trẻ. All rights reserved.
             </p>
             <div className="flex gap-6 text-gray-400">
-              <a href="/login" className="hover:text-white transition-colors">
+              <a
+                href="/home/login"
+                className="hover:text-white transition-colors"
+              >
                 Đăng nhập
               </a>
               <span>|</span>
