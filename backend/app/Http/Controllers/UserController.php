@@ -18,37 +18,52 @@ class UserController extends Controller
 
    function getUser(Request $request)
    {
-      $user = $request-user();
-      return response()->json($user);
+      $user = $request->user();
+      if (!$user) {
+         return response()->json(['error' => 'User not found'], 404);
+      }
+      
+      $result = $this->userService->getUserWithStats($user->id);
+      return response()->json($result['data']);
    }
 
    public function getUserDetails(Request $request, $id)
    {
-      $userId = $request->session()->get('user_id');
-      $user = $this->userService->getUserById($id);
-      return response()->json($user);
+      $result = $this->userService->getUserWithStats($id);
+      return response()->json($result['data']);
    }
 
    public function updateUserProfile(Request $request, $id)
    {
       try{
-         $request->validate([
-             'name' => 'sometimes|string|max:255',
+         // Verify user chỉ có thể update chính mình
+         $currentUser = $request->user();
+         if ($currentUser->id != $id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+         }
+
+         $validated = $request->validate([
+             'username' => 'sometimes|string|max:255',
              'email' => 'sometimes|email|max:255',
-             'password' => 'sometimes|string|min:6',
+             'phone' => 'sometimes|string|max:20',
+             'address' => 'sometimes|string|max:255',
+             'image' => 'sometimes|string|max:255',
+             'address_card' => 'sometimes|string|max:255',
          ]);
          
-         $userId = $request->session()->get('user_id');
-         $data = $request->only(['name', 'email', 'password']);
-         $updatedUser = $this->userService->updateUser($userId, $data);
+         $updatedUser = $this->userService->updateUser($id, $validated);
          return response()->json($updatedUser);
       } catch (\Illuminate\Validation\ValidationException $e) {
          return response()->json([
              'error' => 'Validation error',
              'messages' => $e->errors()
          ], 422);
+      } catch (\Exception $e) {
+         return response()->json([
+             'error' => 'Update failed',
+             'message' => $e->getMessage()
+         ], 500);
       }
-      
    }
 
    public function createUser(Request $request)

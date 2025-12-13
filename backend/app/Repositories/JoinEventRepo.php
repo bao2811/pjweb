@@ -29,14 +29,19 @@ class JoinEventRepo
             throw new Exception('Event has already started');
         }
 
-        // Kiểm tra user đã đăng ký chưa (chỉ kiểm tra status pending hoặc approved)
+        // Kiểm tra user đã đăng ký chưa (kiểm tra TẤT CẢ status)
         $existing = JoinEvent::where('user_id', $data['user_id'])
             ->where('event_id', $data['event_id'])
-            ->whereIn('status', ['pending', 'approved'])
             ->first();
         
         if ($existing) {
-            throw new Exception('You have already registered for this event');
+            // Nếu là rejected, cho phép đăng ký lại bằng cách xóa record cũ
+            if ($existing->status === 'rejected') {
+                $existing->delete();
+            } else {
+                // Nếu là pending hoặc approved, không cho đăng ký lại
+                throw new Exception('You have already registered for this event');
+            }
         }
 
         // Tạo JoinEvent mới bằng Eloquent (trả về JoinEvent model)
@@ -191,7 +196,7 @@ class JoinEventRepo
                 broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
             }
             
-            // Xóa bản ghi thay vì update status
+            // Xóa bản ghi luôn (user có thể đăng ký lại)
             $joinEvent->delete();
             
             return true;

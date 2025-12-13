@@ -7,6 +7,14 @@ class Message extends Model
 {
     /** @use HasFactory<\Database\Factories\MessageFactory> */
     use HasFactory; 
+    
+    /**
+     * Indicates if the model should be timestamped.
+     *
+     * @var bool
+     */
+    public $timestamps = false;
+    
     /**
      * The attributes that are mass assignable.
      *
@@ -17,6 +25,15 @@ class Message extends Model
         'channel_id',
         'content',
         'sent_at',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'sent_at' => 'datetime',
     ];
 
     public function sender()

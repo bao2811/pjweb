@@ -102,7 +102,7 @@ export default function Events() {
   const [myRegistrations, setMyRegistrations] = useState<{
     [eventId: number]: {
       id: number;
-      status: "pending" | "accepted" | "rejected";
+      status: "pending" | "approved" | "rejected";
     };
   }>({});
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -192,9 +192,29 @@ export default function Events() {
             participants: [],
             isLiked: Boolean(event.is_liked),
             likes: event.likes || 0,
-            status: event.status || "upcoming",
+            // Computed status based on time OR backend status if it's special
+            status: (() => {
+              // Nếu backend gửi cancelled, giữ nguyên
+              if (event.status === "cancelled") return "cancelled";
+              
+              // Tính toán dựa trên thời gian
+              const now = new Date();
+              const start = new Date(event.start_time);
+              const end = new Date(event.end_time);
+              
+              if (now < start) return "upcoming";
+              if (now > end) return "completed";
+              return "ongoing";
+            })(),
             isHidden: false,
-            approvalStatus: "approved",
+            // Approval status: pending/approved/rejected HOẶC tự động approved nếu không phải pending/rejected
+            approvalStatus: (() => {
+              const backendStatus = event.status?.toLowerCase();
+              if (backendStatus === "pending") return "pending";
+              if (backendStatus === "rejected") return "rejected";
+              // Tất cả các status khác (approved, ongoing, upcoming, completed, cancelled) đều được coi là approved
+              return "approved";
+            })(),
             createdAt: event.created_at || "",
           };
         });
@@ -244,7 +264,7 @@ export default function Events() {
         const registrationsMap: {
           [key: number]: {
             id: number;
-            status: "pending" | "accepted" | "rejected";
+            status: "pending" | "approved" | "rejected";
           };
         } = {};
         data.registrations.forEach((reg: any) => {
@@ -274,8 +294,10 @@ export default function Events() {
 
     // Filter by approval status first
     if (showPendingApproval) {
+      // Admin mode: show pending events only
       filtered = filtered.filter((event) => event.approvalStatus === "pending");
     } else {
+      // Normal mode: ONLY show approved events (hide pending completely)
       filtered = filtered.filter(
         (event) => event.approvalStatus === "approved"
       );
@@ -284,11 +306,6 @@ export default function Events() {
     // Filter by hidden status
     if (!showHidden) {
       filtered = filtered.filter((event) => !event.isHidden);
-    }
-
-    // For admin, show all events regardless of hidden status when managing
-    if (currentUser.role === "admin" && showHidden) {
-      filtered = events.filter((event) => event.approvalStatus === "approved");
     }
 
     if (searchTerm) {
@@ -501,7 +518,9 @@ export default function Events() {
       });
 
       // 2️⃣ GỬI REQUEST ĐẾN API
-      const response = await authFetch(`/user/joinEvent/${eventId}`);
+      const response = await authFetch(`/user/joinEvent/${eventId}`, {
+        method: "POST",
+      });
       const data = await response.json();
 
       // 3️⃣ ĐỒNG BỘ với server response
@@ -567,15 +586,44 @@ export default function Events() {
   };
 
   // Handle approve/reject event
-  const handleApproveEvent = (
+  const handleApproveEvent = async (
     eventId: number,
     status: "approved" | "rejected"
   ) => {
-    setEvents(
-      events.map((event) =>
-        event.id === eventId ? { ...event, approvalStatus: status } : event
-      )
-    );
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Vui lòng đăng nhập");
+        return;
+      }
+
+      const endpoint =
+        status === "approved"
+          ? `/api/admin/approveEvent/${eventId}`
+          : `/api/admin/rejectEvent/${eventId}`;
+
+      const response = await authFetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        // Reload lại toàn bộ danh sách events sau khi approve/reject
+        await fetchEvents();
+        alert(
+          status === "approved"
+            ? "Đã duyệt sự kiện thành công"
+            : "Đã từ chối sự kiện"
+        );
+      } else {
+        alert("Có lỗi xảy ra, vui lòng thử lại");
+      }
+    } catch (error) {
+      console.error("Error approving/rejecting event:", error);
+      alert("Có lỗi xảy ra, vui lòng thử lại");
+    }
   };
 
   // Handle create new event
@@ -642,7 +690,7 @@ export default function Events() {
         likes: 0,
         status: data.event.status || "upcoming",
         isHidden: false,
-        approvalStatus: "approved",
+        approvalStatus: data.event.status === "pending" ? "pending" : "approved",
         createdAt: new Date().toISOString().split("T")[0],
       };
 
@@ -668,10 +716,10 @@ export default function Events() {
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      upcoming: "bg-blue-100 text-blue-800",
-      ongoing: "bg-green-100 text-green-800",
-      completed: "bg-gray-100 text-gray-800",
-      cancelled: "bg-red-100 text-red-800",
+      upcoming: "text-blue-700",
+      ongoing: "text-green-700",
+      completed: "text-gray-700",
+      cancelled: "text-red-700",
     };
     const labels = {
       upcoming: "Sắp diễn ra",
@@ -681,7 +729,7 @@ export default function Events() {
     };
     return (
       <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${
+        className={`text-xs font-semibold ${
           badges[status as keyof typeof badges]
         }`}
       >
@@ -992,7 +1040,9 @@ export default function Events() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                   <div className="absolute top-4 left-4">
-                    {getStatusBadge(event.status)}
+                    <div className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md">
+                      {getStatusBadge(event.status)}
+                    </div>
                   </div>
                   <div className="absolute top-4 right-4">
                     <span className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-semibold text-gray-700 shadow-md">
@@ -1204,13 +1254,13 @@ export default function Events() {
                               <span>Chờ duyệt</span>
                             </button>
                           ) : myRegistrations[event.id]?.status ===
-                            "accepted" ? (
+                            "approved" ? (
                             <button
-                              disabled
-                              className="flex items-center space-x-1 px-3 py-2 text-sm text-green-700 bg-green-50 rounded-lg cursor-not-allowed"
+                              onClick={() => window.location.href = `/events/${event.id}/channel`}
+                              className="flex items-center space-x-1 px-3 py-2 text-sm text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-lg transition duration-200"
                             >
                               <FaCheckCircle />
-                              <span>Đã duyệt</span>
+                              <span>Đang tham gia</span>
                             </button>
                           ) : myRegistrations[event.id]?.status ===
                             "rejected" ? (
@@ -1290,7 +1340,30 @@ export default function Events() {
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     {selectedEvent.title}
                   </h2>
-                  {getStatusBadge(selectedEvent.status)}
+                  {/* Compute status dựa trên thời gian */}
+                  {(() => {
+                    const now = new Date();
+                    const start = new Date(selectedEvent.date);
+                    const end = new Date(selectedEvent.date);
+                    
+                    // Parse time để set hours và minutes
+                    const timeRange = selectedEvent.time.split(" - ");
+                    if (timeRange.length === 2) {
+                      const [startHour, startMin] = timeRange[0].split(":").map(Number);
+                      const [endHour, endMin] = timeRange[1].split(":").map(Number);
+                      start.setHours(startHour, startMin, 0, 0);
+                      end.setHours(endHour, endMin, 0, 0);
+                    }
+                    
+                    let computedStatus = selectedEvent.status;
+                    if (selectedEvent.status !== "cancelled") {
+                      if (now < start) computedStatus = "upcoming";
+                      else if (now > end) computedStatus = "completed";
+                      else computedStatus = "ongoing";
+                    }
+                    
+                    return getStatusBadge(computedStatus);
+                  })()}
                 </div>
               </div>
 
@@ -1339,31 +1412,47 @@ export default function Events() {
                   </div>
                 </div>
 
-                {selectedEvent.currentParticipants <
-                  selectedEvent.maxParticipants &&
-                  selectedEvent.status === "upcoming" && (
-                    <button
-                      onClick={() => handleJoinEvent(selectedEvent.id)}
-                      disabled={joiningEvents.has(selectedEvent.id)}
-                      className={`flex items-center space-x-2 px-6 py-3 font-medium rounded-lg transition duration-200 ${
-                        joiningEvents.has(selectedEvent.id)
-                          ? "bg-blue-400 text-white cursor-not-allowed"
-                          : "bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white"
-                      }`}
-                    >
-                      {joiningEvents.has(selectedEvent.id) ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                          <span>Đang gửi yêu cầu...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FaUserPlus />
-                          <span>Tham gia sự kiện</span>
-                        </>
-                      )}
-                    </button>
-                  )}
+                {(() => {
+                  const now = new Date();
+                  const start = new Date(selectedEvent.date);
+                  const timeRange = selectedEvent.time.split(" - ");
+                  if (timeRange.length === 2) {
+                    const [startHour, startMin] = timeRange[0].split(":").map(Number);
+                    start.setHours(startHour, startMin, 0, 0);
+                  }
+                  
+                  // Chỉ hiển thị nút tham gia nếu sự kiện chưa bắt đầu và còn chỗ
+                  if (
+                    selectedEvent.currentParticipants < selectedEvent.maxParticipants &&
+                    now < start &&
+                    selectedEvent.status !== "cancelled"
+                  ) {
+                    return (
+                      <button
+                        onClick={() => handleJoinEvent(selectedEvent.id)}
+                        disabled={joiningEvents.has(selectedEvent.id)}
+                        className={`flex items-center space-x-2 px-6 py-3 font-medium rounded-lg transition duration-200 ${
+                          joiningEvents.has(selectedEvent.id)
+                            ? "bg-blue-400 text-white cursor-not-allowed"
+                            : "bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white"
+                        }`}
+                      >
+                        {joiningEvents.has(selectedEvent.id) ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                            <span>Đang gửi yêu cầu...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaUserPlus />
+                            <span>Tham gia sự kiện</span>
+                          </>
+                        )}
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           </div>

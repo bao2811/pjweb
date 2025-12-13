@@ -127,10 +127,7 @@ class UserService
 
     public function getUserById($id)
     {
-        $id->validate([
-            'id' => 'required|integer|exists:users,id',
-        ]);
-        $result = $this->userRepo->find($id);
+        $result = $this->userRepo->getUserById($id);
         if ($result) {
             return [
                 'success' => true,
@@ -140,6 +137,56 @@ class UserService
         } else {
             throw new Exception('Failed to retrieve user');
         }
+    }
+
+    /**
+     * Lấy thông tin user kèm theo stats
+     */
+    public function getUserWithStats($userId)
+    {
+        $user = $this->userRepo->getUserById($userId);
+        
+        if (!$user) {
+            throw new Exception('User not found');
+        }
+
+        // Tính toán stats từ join_events
+        $eventsJoined = DB::table('join_events')->where('user_id', $userId)->count();
+        
+        $eventsCompleted = DB::table('join_events')
+            ->where('user_id', $userId)
+            ->where('status', 'completed')
+            ->count();
+        
+        // Tính tổng giờ từ các sự kiện đã hoàn thành
+        $totalHours = DB::table('join_events')
+            ->join('events', 'join_events.event_id', '=', 'events.id')
+            ->where('join_events.user_id', $userId)
+            ->where('join_events.status', 'completed')
+            ->whereNotNull('events.start_time')
+            ->whereNotNull('events.end_time')
+            ->selectRaw('SUM(EXTRACT(EPOCH FROM (events.end_time - events.start_time)) / 3600) as total')
+            ->value('total');
+
+        return [
+            'success' => true,
+            'message' => 'User retrieved successfully',
+            'data' => [
+                'id' => $user->id,
+                'username' => $user->username,
+                'email' => $user->email,
+                'role' => $user->role,
+                'image' => $user->image,
+                'phone' => $user->phone,
+                'address' => $user->address,
+                'address_card' => $user->address_card,
+                'status' => $user->status,
+                'created_at' => $user->created_at,
+                'events_joined' => $eventsJoined,
+                'events_completed' => $eventsCompleted,
+                'total_hours' => round($totalHours ?? 0, 1),
+            ]
+        ];
     }
 
     public function unbanUser($id)
@@ -161,16 +208,6 @@ class UserService
 
     public function updateUser($id, $data)
     {
-        $id->validate([
-            'id' => 'required|integer|exists:users,id',
-        ]);
-
-        $data->validate([
-            'username' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $id,
-            'password' => 'sometimes|required|string|min:8|confirmed',
-        ]);
-
         if (isset($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         }

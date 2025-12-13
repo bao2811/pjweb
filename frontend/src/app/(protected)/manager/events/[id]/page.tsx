@@ -50,7 +50,7 @@ interface Participant {
   id: number;
   user_id: number;
   event_id: number;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "cancelled";
   user: {
     id: number;
     username: string;
@@ -58,6 +58,7 @@ interface Participant {
     image?: string;
   };
   created_at: string;
+  joined_at?: string;
 }
 
 export default function ManagerEventDetailPage({
@@ -112,6 +113,7 @@ export default function ManagerEventDetailPage({
             image: user.image,
           },
           created_at: user.created_at,
+          joined_at: user.joined_at,
         }));
         setParticipants(transformedUsers);
       }
@@ -141,7 +143,8 @@ export default function ManagerEventDetailPage({
       
       if (data.success) {
         alert("Đã duyệt user tham gia sự kiện!");
-        fetchParticipants();
+        await fetchParticipants();
+        await fetchEventDetail(); // Cập nhật số lượng thành viên
       } else {
         alert(data.message || "Có lỗi xảy ra khi duyệt user");
       }
@@ -174,7 +177,8 @@ export default function ManagerEventDetailPage({
       
       if (data.success) {
         alert("Đã từ chối user tham gia sự kiện!");
-        fetchParticipants();
+        await fetchParticipants();
+        await fetchEventDetail(); // Cập nhật số lượng thành viên
       } else {
         alert(data.message || "Có lỗi xảy ra khi từ chối user");
       }
@@ -392,7 +396,9 @@ export default function ManagerEventDetailPage({
                             </p>
                             <p className="text-sm text-gray-600">{participant.user.email}</p>
                             <p className="text-xs text-gray-500 mt-1">
-                              Đăng ký: {new Date(participant.created_at).toLocaleDateString("vi-VN")}
+                              {participant.status === "approved" && participant.joined_at
+                                ? `Tham gia: ${new Date(participant.joined_at).toLocaleDateString("vi-VN")} ${new Date(participant.joined_at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`
+                                : `Đăng ký: ${new Date(participant.created_at).toLocaleDateString("vi-VN")}`}
                             </p>
                           </div>
                         </div>

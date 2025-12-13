@@ -18,8 +18,9 @@ class MessageController extends Controller
                 ->orderBy('sent_at', 'asc')
                 ->get();
 
-            return response()->json($messages);
+            return response()->json(['messages' => $messages], 200);
         } catch (\Exception $e) {
+            \Log::error('Get Messages Error:', ['error' => $e->getMessage(), 'channel_id' => $channelId]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

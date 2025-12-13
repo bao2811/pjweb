@@ -43,6 +43,7 @@ import {
 } from "react-icons/fa";
 import { authFetch } from "@/utils/auth";
 import { useRouter } from "next/navigation";
+import Navbar from "./Navbar";
 
 interface User {
   id: number;
@@ -136,14 +137,13 @@ interface GroupProps {
   role?: "user" | "manager" | "admin";
 }
 
-// Mock current user
-const currentUser: User = {
-  id: 1,
-  name: "Bạn",
-  avatar:
-    "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-  role: "user",
-};
+interface LoggedInUser {
+  id: number;
+  name: string;
+  email: string;
+  avatar: string | null;
+  role: "user" | "manager" | "admin";
+}
 
 // Mock events
 const mockEvents: Record<string, Event> = {
@@ -573,7 +573,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [newPostsCount, setNewPostsCount] = useState(0);
   const [channelId, setChannelId] = useState<number | null>(null);
-  const [currentUserData, setCurrentUserData] = useState<User>(currentUser);
+  const [currentUserData, setCurrentUserData] = useState<LoggedInUser | null>(null);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
@@ -594,13 +594,12 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
       if (!token) {
         console.warn("⚠️ No JWT token found! User not logged in.");
-        // Sử dụng mock user nếu không có token
-        setCurrentUserData(currentUser);
+        router.push("/login");
         return;
       }
 
       try {
-        const response = await authFetch("/me");
+        const response = await authFetch("/api/me");
         const data = await response.json();
         console.log("✅ /me response:", data);
 
@@ -611,24 +610,22 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           setCurrentUserData({
             id: userData.id,
             name: userData.name,
-            avatar: userData.avatar || currentUser.avatar,
+            email: userData.email,
+            avatar: userData.avatar || null,
             role: userData.role || "user",
           });
           console.log("✅ User data loaded:", userData);
         } else {
           console.warn("⚠️ Invalid user data structure:", data);
-          setCurrentUserData(currentUser);
+          router.push("/login");
         }
       } catch (error) {
         console.error("❌ Error fetching current user:", error);
-
-        // Fallback: Dùng mock user khi không fetch được
-        console.log("Using fallback user:", currentUser);
-        setCurrentUserData(currentUser);
+        router.push("/login");
       }
     };
     fetchCurrentUser();
-  }, []);
+  }, [router]);
 
   // Fetch event details and channel
   useEffect(() => {
@@ -683,7 +680,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           // Get channel for this event
           try {
             const channelResponse = await authFetch(
-              `/events/${eventId}/channel`
+              `/api/events/${eventId}/channel`
             );
             const channelData = await channelResponse.json();
             console.log("📡 Channel Response:", channelData);
@@ -722,80 +719,89 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
       try {
         const response = await authFetch(
-          `/posts/channel/${channelId}?user_id=${currentUserData.id}`
+          `/api/posts/channel/${channelId}`
         );
+        
+        if (!response.ok) {
+          console.error("Failed to fetch posts", response.status);
+          return;
+        }
+
         const data = await response.json();
+        const fetched = data.posts || data;
 
-        console.log("📥 Posts response:", data);
+        console.log("📥 Fetched posts:", fetched);
 
-        // Backend trả về {posts: [...]} hoặc [...] trực tiếp
-        const postsData = data.posts || data;
+        if (Array.isArray(fetched)) {
+          const normalized = fetched.map((p: any) => {
+            const isLikedVal =
+              typeof p.isLiked !== "undefined"
+                ? Number(p.isLiked)
+                : typeof p.isliked !== "undefined"
+                ? Number(p.isliked)
+                : typeof p.liked !== "undefined"
+                ? Number(p.liked)
+                : 0;
 
-        if (postsData && Array.isArray(postsData)) {
-          const normalizedPosts: Post[] = postsData.map((post: any) => ({
-            id: post.id,
-            eventId: eventId,
-            content: post.content || "",
-            author: {
-              id: post.user?.id || post.author_id,
-              name: post.user?.name || "User",
-              avatar:
-                post.user?.avatar ||
-                "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
-              role: post.user?.role || "user",
-            },
-            images: post.image ? [post.image] : [],
-            timestamp: new Date(post.created_at).toLocaleString("vi-VN"),
-            likes: post.likes_count || 0,
-            comments: (post.comments || []).map((c: any) => ({
-              id: c.id,
-              content: c.content,
-              timestamp: new Date(c.created_at).toLocaleString("vi-VN"),
+            return {
+              id: p.id,
+              eventId: eventId,
+              content: p.content || "",
+              title: p.title || "",
               author: {
-                id: c.user?.id || c.author?.id || c.author_id,
-                name: c.user?.name || c.author?.name || "User",
+                id: p.user?.id || p.author_id,
+                name: p.user?.name || p.name || "User",
                 avatar:
-                  c.user?.avatar ||
-                  c.author?.avatar ||
+                  p.user?.avatar ||
+                  p.avatar ||
                   "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
-                role: c.user?.role || c.author?.role || "user",
+                role: p.user?.role || p.role || "user",
               },
-              likes: 0,
-              isLiked: false,
-              replies: (c.replies || []).map((r: any) => ({
-                id: r.id,
-                content: r.content,
-                timestamp: new Date(r.created_at).toLocaleString("vi-VN"),
+              images: p.image ? [p.image] : [],
+              timestamp: new Date(p.created_at).toLocaleString("vi-VN"),
+              likes: Number(p.likes || p.likes_count || 0),
+              comments: (p.comments || []).map((c: any) => ({
+                id: c.id,
+                content: c.content,
+                timestamp: new Date(c.created_at).toLocaleString("vi-VN"),
                 author: {
-                  id: r.user?.id || r.author?.id || r.author_id,
-                  name: r.user?.name || r.author?.name || "User",
+                  id: c.user?.id || c.author?.id || c.author_id,
+                  name: c.user?.name || c.author?.name || "User",
                   avatar:
-                    r.user?.avatar ||
-                    r.author?.avatar ||
+                    c.user?.avatar ||
+                    c.author?.avatar ||
                     "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
-                  role: r.user?.role || r.author?.role || "user",
+                  role: c.user?.role || c.author?.role || "user",
                 },
                 likes: 0,
                 isLiked: false,
-                replies: [],
+                replies: (c.replies || []).map((r: any) => ({
+                  id: r.id,
+                  content: r.content,
+                  timestamp: new Date(r.created_at).toLocaleString("vi-VN"),
+                  author: {
+                    id: r.user?.id || r.author?.id || r.author_id,
+                    name: r.user?.name || r.author?.name || "User",
+                    avatar:
+                      r.user?.avatar ||
+                      r.author?.avatar ||
+                      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
+                    role: r.user?.role || r.author?.role || "user",
+                  },
+                  likes: 0,
+                  isLiked: false,
+                  replies: [],
+                })),
               })),
-            })),
-            shares: 0,
-            isLiked: post.is_liked || false,
-            isPinned: post.status === "pinned",
-            views: 0,
-          }));
+              shares: 0,
+              isLiked: isLikedVal === 1,
+              isPinned: p.status === "pinned",
+              views: 0,
+            };
+          });
 
-          console.log("✅ Normalized posts:", normalizedPosts.length, "posts");
-          console.log(
-            "🔍 Posts with likes:",
-            normalizedPosts.map((p) => ({
-              id: p.id,
-              likes: p.likes,
-              isLiked: p.isLiked,
-            }))
-          );
-          setPosts(normalizedPosts);
+          console.log("✅ Normalized posts:", normalized.length, "posts");
+          setPosts(normalized);
         } else {
           console.warn("⚠️ Invalid posts response format:", data);
         }
@@ -816,10 +822,21 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
       if (!channelId) return;
       try {
         setLoadingMessages(true);
-        const response = await authFetch(`/messages/channel/${channelId}`);
+        const response = await authFetch(`/api/messages/channel/${channelId}`);
+        
+        if (!response.ok) {
+          console.error("Failed to fetch messages", response.status);
+          return;
+        }
+        
         const data = await response.json();
-        if (data && Array.isArray(data)) {
-          const normalizedMessages: ChatMessage[] = data.map((msg: any) => ({
+        console.log("📥 Messages response:", data);
+        
+        // Backend trả về {messages: [...]}
+        const messagesData = data.messages || data;
+        
+        if (messagesData && Array.isArray(messagesData)) {
+          const normalizedMessages: ChatMessage[] = messagesData.map((msg: any) => ({
             id: msg.id,
             userId: msg.sender_id,
             userName: msg.sender?.name || "User",
@@ -831,12 +848,12 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
               hour: "2-digit",
               minute: "2-digit",
             }),
-            isCurrentUser: msg.sender_id === currentUserData.id,
+            isCurrentUser: currentUserData ? msg.sender_id === currentUserData.id : false,
           }));
           setMessages(normalizedMessages);
         }
       } catch (error) {
-        console.error("Error fetching messages:", error);
+        console.error("❌ Error fetching messages:", error);
       } finally {
         setLoadingMessages(false);
       }
@@ -850,7 +867,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
       const interval = setInterval(fetchMessages, 3000);
       return () => clearInterval(interval);
     }
-  }, [channelId, currentUserData.id]);
+  }, [channelId, currentUserData]);
 
   // Auto scroll chat
   useEffect(() => {
@@ -864,7 +881,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     if (postFilter === "organizer")
       return post.author.role === "manager" || post.author.role === "admin";
     if (postFilter === "media") return post.images && post.images.length > 0;
-    if (postFilter === "myposts") return post.author.id === currentUserData.id;
+    if (postFilter === "myposts") return post.author.id === currentUserData!.id;
     return true;
   });
 
@@ -884,63 +901,63 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
   // Handlers
   const handlePost = async () => {
-    if (!newPost.trim() || !channelId) return;
+    if (!newPost.trim() && newPostImages.length === 0) {
+      alert("Vui lòng nhập nội dung hoặc chọn ảnh!");
+      return;
+    }
 
-    // Optimistic Update - Hiển thị post ngay lập tức
-    const tempId = Date.now();
-    const optimisticPost: Post = {
-      id: tempId,
-      eventId,
-      content: newPost,
-      images: newPostImages.length > 0 ? newPostImages : undefined,
-      timestamp: "Vừa xong",
-      author: currentUserData,
-      likes: 0,
-      comments: [],
-      shares: 0,
-      isLiked: false,
-      views: 0,
-    };
+    if (!channelId || !currentUserData) {
+      alert("Không tìm thấy thông tin channel hoặc user!");
+      return;
+    }
 
     const postContent = newPost;
     const postImgs = [...newPostImages];
 
-    // Cập nhật UI ngay lập tức
-    setPosts([optimisticPost, ...posts]);
+    // Clear form ngay
     setNewPost("");
     setNewPostImages([]);
     setImageUrlInput("");
     setShowFAB(false);
+    setShowCreateModal(false);
 
     try {
-      const response = await authFetch("/posts/channel", {
+      // Gọi backend để lưu vào DB
+      const response = await authFetch("/api/posts/channel", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           channel_id: channelId,
-          title: postContent.substring(0, 100),
+          title: postContent.substring(0, 100) || "Post in channel",
           content: postContent,
           image: postImgs[0] || null,
           author_id: currentUserData.id,
+          status: "active",
         }),
       });
-      const data = await response.json();
 
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Failed to create post", response.status, text);
+        throw new Error("Failed to create post");
+      }
+
+      const data = await response.json();
+      console.log("✅ Post created successfully:", data);
+
+      // Refetch posts từ backend để có data mới nhất
       if (data && data.post) {
-        // Cập nhật với ID thật từ server
-        setPosts((prev) =>
-          prev.map((p) => (p.id === tempId ? { ...p, id: data.post.id } : p))
-        );
+        await fetchPosts();
+        alert("Đăng bài thành công! 🎉");
       }
     } catch (error) {
-      console.error("Error creating post:", error);
+      console.error("❌ Error creating post:", error);
 
-      // Rollback - Xóa post nếu thất bại
-      setPosts((prev) => prev.filter((p) => p.id !== tempId));
+      // Rollback form
       setNewPost(postContent);
-      setPostImages(postImgs);
+      setNewPostImages(postImgs);
       alert("Không thể đăng bài. Vui lòng thử lại!");
     }
   };
@@ -996,11 +1013,11 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
     try {
       if (post.isLiked) {
-        await authFetch(`/likes/post/unlike/${postId}`, {
+        await authFetch(`/api/likes/post/unlike/${postId}`, {
           method: "POST",
         });
       } else {
-        await authFetch(`/likes/post/like/${postId}`, {
+        await authFetch(`/api/likes/post/like/${postId}`, {
           method: "POST",
         });
       }
@@ -1046,7 +1063,12 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
       id: tempId,
       content: comment,
       timestamp: new Date().toLocaleString("vi-VN"),
-      author: currentUserData,
+      author: {
+        id: currentUserData!.id,
+        name: currentUserData!.name,
+        avatar: currentUserData!.avatar || "",
+        role: currentUserData!.role,
+      },
       likes: 0,
       isLiked: false,
       replies: [],
@@ -1092,7 +1114,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
     // Call API to save comment
     try {
-      const response = await authFetch("/posts/addCommentOfPost", {
+      const response = await authFetch("/api/posts/addCommentOfPost", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1101,7 +1123,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           post_id: postId,
           content: comment,
           parent_id: parentCommentId || null,
-          author_id: currentUserData.id, // Fallback for non-JWT
+          author_id: currentUserData!.id, // Fallback for non-JWT
         }),
       });
       const data = await response.json();
@@ -1241,7 +1263,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !channelId) return;
+    if (!newMessage.trim() || !channelId || !currentUserData) return;
 
     // Optimistic Update - Hiển thị tin nhắn ngay lập tức
     const tempId = Date.now();
@@ -1249,7 +1271,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
       id: tempId,
       userId: currentUserData.id,
       userName: currentUserData.name,
-      userAvatar: currentUserData.avatar,
+      userAvatar: currentUserData.avatar || "",
       message: newMessage,
       timestamp: new Date().toLocaleTimeString("vi-VN", {
         hour: "2-digit",
@@ -1272,7 +1294,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
         currentUserData,
       });
 
-      const response = await authFetch("/messages/send", {
+      const response = await authFetch("/api/messages/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1330,37 +1352,51 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     );
   }
 
+  if (!currentUserData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Đang tải thông tin người dùng...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-white">
-      {/* Header Bar - Xanh nhạt gradient */}
-      <div className="bg-gradient-to-r from-green-100/80 via-blue-100/80 to-teal-100/80 backdrop-blur-lg border-b border-white/50 sticky top-0 z-50 shadow-md">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Left: Back + Event Info */}
-            <div className="flex items-center space-x-4">
+      {/* Navbar Component */}
+      <Navbar />
+
+      {/* Header Bar - Improved spacing */}
+      <div className="bg-gradient-to-r from-green-100/80 via-blue-100/80 to-teal-100/80 backdrop-blur-lg border-b border-white/50 sticky top-[72px] z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          {/* Event Info Row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-3">
               <button
                 onClick={() => router.back()}
-                className="p-2.5 hover:bg-white/60 rounded-xl transition-all backdrop-blur-sm shadow-sm"
+                className="p-2 hover:bg-white/60 rounded-lg transition-all"
               >
-                <FaArrowLeft className="text-gray-700" />
+                <FaArrowLeft className="text-gray-700 text-lg" />
               </button>
-              <div className="flex items-center space-x-3 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 shadow-sm">
+              <div className="flex items-center space-x-3 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm">
                 <Image
                   src={event.image}
                   alt={event.title}
-                  width={48}
-                  height={48}
-                  className="rounded-lg object-cover ring-2 ring-white shadow-md"
+                  width={44}
+                  height={44}
+                  className="rounded-lg object-cover ring-2 ring-white shadow-sm"
                   unoptimized
                 />
                 <div>
-                  <h1 className="text-lg font-bold text-gray-900 line-clamp-1">
+                  <h1 className="text-base font-bold text-gray-900 line-clamp-1">
                     {event.title}
                   </h1>
-                  <div className="flex items-center space-x-3 text-sm text-gray-500">
+                  <div className="flex items-center space-x-2 text-xs text-gray-500">
                     <span className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      {onlineMembers} đang online
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                      {onlineMembers} online
                     </span>
                     <span>•</span>
                     <span>{event.currentParticipants} thành viên</span>
@@ -1368,158 +1404,160 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                 </div>
               </div>
             </div>
-
-            {/* Right: Removed unused buttons */}
           </div>
 
-          {/* Tabs - Cải thiện với background */}
-          <div className="flex items-center space-x-2 mt-5 bg-white/40 backdrop-blur-sm rounded-xl p-1.5 shadow-sm">
+          {/* Tabs Row */}
+          <div className="flex items-center space-x-1.5 bg-white/50 backdrop-blur-sm rounded-xl p-1 shadow-sm">
             <button
               onClick={() => setActiveTab("posts")}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
                 activeTab === "posts"
-                  ? "bg-white shadow-md text-green-600"
-                  : "text-gray-600 hover:text-gray-800 hover:bg-white/50"
+                  ? "bg-white shadow-sm text-green-600"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-white/60"
               }`}
             >
-              <FaHashtag />
+              <FaHashtag className="text-sm" />
               <span>Bảng tin</span>
             </button>
 
             <button
               onClick={() => setActiveTab("chat")}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
                 activeTab === "chat"
-                  ? "bg-white shadow-md text-blue-600"
-                  : "text-gray-600 hover:text-gray-800 hover:bg-white/50"
+                  ? "bg-white shadow-sm text-blue-600"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-white/60"
               }`}
             >
-              <FaComments />
+              <FaComments className="text-sm" />
               <span>Trò chuyện</span>
             </button>
 
             <button
               onClick={() => setActiveTab("resources")}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
                 activeTab === "resources"
-                  ? "bg-white shadow-md text-purple-600"
-                  : "text-gray-600 hover:text-gray-800 hover:bg-white/50"
+                  ? "bg-white shadow-sm text-purple-600"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-white/60"
               }`}
             >
-              <FaFileAlt />
+              <FaFileAlt className="text-sm" />
               <span>Tài liệu</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Content - Cải thiện layout */}
-      <div className="flex gap-6 w-full max-w-7xl mx-auto px-6 py-6 relative">
-        {/* Center Content Area - Full Width */}
-        <div className="flex-1 max-w-4xl mx-auto">
-          {/* POSTS TAB */}
-          {activeTab === "posts" && (
-            <div className="space-y-5">
-              {/* Filter Bar */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-bold text-gray-900 flex items-center gap-2.5">
-                    <div className="p-2 bg-gradient-to-br from-green-500 to-blue-500 rounded-xl">
-                      <FaFilter className="text-white text-sm" />
-                    </div>
-                    <span>Bộ lọc bài viết</span>
-                  </h2>
-                  <div className="flex gap-2.5">
-                    <button
-                      onClick={() => setPostFilter("all")}
-                      className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md ${
-                        postFilter === "all"
-                          ? "bg-gradient-to-r from-green-500 to-blue-500 text-white scale-105"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      Tất cả
-                    </button>
-                    <button
-                      onClick={() => setPostFilter("organizer")}
-                      className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md ${
-                        postFilter === "organizer"
-                          ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white scale-105"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      Từ BTC
-                    </button>
-                    <button
-                      onClick={() => setPostFilter("media")}
-                      className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md ${
-                        postFilter === "media"
-                          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white scale-105"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      Ảnh & Video
-                    </button>
-                    <button
-                      onClick={() => setPostFilter("myposts")}
-                      className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md ${
-                        postFilter === "myposts"
-                          ? "bg-gradient-to-r from-orange-500 to-red-500 text-white scale-105"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      Bài viết của tôi
-                    </button>
-                  </div>
+      {/* Main Content - Improved layout */}
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        {/* POSTS TAB */}
+        {activeTab === "posts" && (
+          <div className="space-y-4">
+            {/* Filter Bar - Compact */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-gray-100 p-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="font-semibold text-gray-800 flex items-center gap-2 text-sm">
+                  <FaFilter className="text-green-500" />
+                  <span>Bộ lọc bài viết</span>
+                </h2>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => setPostFilter("all")}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      postFilter === "all"
+                        ? "bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Tất cả
+                  </button>
+                  <button
+                    onClick={() => setPostFilter("organizer")}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      postFilter === "organizer"
+                        ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Từ BTC
+                  </button>
+                  <button
+                    onClick={() => setPostFilter("media")}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      postFilter === "media"
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Ảnh & Video
+                  </button>
+                  <button
+                    onClick={() => setPostFilter("myposts")}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      postFilter === "myposts"
+                        ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Bài của tôi
+                  </button>
                 </div>
               </div>
+            </div>
 
-              {/* Create Post Button */}
-              <button
-                onClick={() => setShowCreatePostModal(true)}
-                className="w-full bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all group"
-              >
-                <div className="flex items-center gap-4">
+            {/* Create Post Button - Compact */}
+            <button
+              onClick={() => setShowCreatePostModal(true)}
+              className="w-full bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-gray-100 p-4 hover:shadow-lg transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                {currentUserData.avatar ? (
                   <Image
                     src={currentUserData.avatar}
                     alt={currentUserData.name}
-                    width={52}
-                    height={52}
-                    className="rounded-full ring-4 ring-white shadow-sm"
+                    width={44}
+                    height={44}
+                    className="rounded-full ring-2 ring-white shadow-sm"
                     unoptimized
                   />
-                  <div className="flex-1 text-left px-5 py-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors">
-                    <p className="text-gray-500">
-                      {currentUserData.name} ơi, bạn đang nghĩ gì về sự kiện
-                      này?
-                    </p>
+                ) : (
+                  <div className="w-11 h-11 bg-gradient-to-br from-green-400 to-blue-400 rounded-full flex items-center justify-center ring-2 ring-white shadow-sm">
+                    <FaUserCircle className="text-white text-xl" />
                   </div>
+                )}
+                <div className="flex-1 text-left px-4 py-2.5 bg-gray-50 group-hover:bg-gray-100 rounded-full transition-colors">
+                  <p className="text-sm text-gray-500">
+                    {currentUserData.name} ơi, bạn đang nghĩ gì về sự kiện này?
+                  </p>
                 </div>
-              </button>
+              </div>
+            </button>
 
-              {/* Posts Feed */}
-              {posts.length === 0 ? (
-                <div className="space-y-5">
-                  {/* Skeleton Loading */}
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 animate-pulse"
-                    >
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                        <div className="flex-1">
-                          <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-                          <div className="h-3 bg-gray-200 rounded w-1/6"></div>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="h-3 bg-gray-200 rounded w-full"></div>
-                        <div className="h-3 bg-gray-200 rounded w-5/6"></div>
-                        <div className="h-3 bg-gray-200 rounded w-4/6"></div>
-                      </div>
+            {/* Posts Feed */}
+            {posts.length === 0 ? (
+              <div className="space-y-4">
+                {/* Welcome Card - Improved design */}
+                <div className="bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 rounded-xl shadow-md border border-green-200 p-8 text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                    <FaComment className="text-3xl text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    Chào mừng đến với kênh sự kiện! 🎉
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-5 max-w-lg mx-auto">
+                    Đây là nơi tất cả thành viên có thể chia sẻ, trao đổi về sự kiện. 
+                    Hãy là người đầu tiên tạo bài viết để bắt đầu cuộc trò chuyện!
+                  </p>
+                  <div className="flex justify-center gap-6">
+                    <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                      <FaUsers className="text-green-500 text-sm" />
+                      <span>{event?.currentParticipants || 0} thành viên</span>
                     </div>
-                  ))}
+                    <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                      <FaCalendarAlt className="text-blue-500 text-sm" />
+                      <span>{event?.date}</span>
+                    </div>
+                    </div>
+                  </div>
                 </div>
               ) : filteredPosts.length === 0 ? (
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-20 text-center">
@@ -1679,14 +1717,20 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                     <div className="px-6 py-5 space-y-4 bg-gray-50/50">
                       {/* Add Comment */}
                       <div className="flex gap-3">
-                        <Image
-                          src={currentUserData.avatar}
-                          alt={currentUserData.name}
-                          width={40}
-                          height={40}
-                          className="rounded-full ring-2 ring-white shadow-sm"
-                          unoptimized
-                        />
+                        {currentUserData.avatar ? (
+                          <Image
+                            src={currentUserData.avatar}
+                            alt={currentUserData.name}
+                            width={40}
+                            height={40}
+                            className="rounded-full ring-2 ring-white shadow-sm"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-400 rounded-full flex items-center justify-center ring-2 ring-white shadow-sm">
+                            <FaUserCircle className="text-white" />
+                          </div>
+                        )}
                         <div className="flex-1 flex gap-2">
                           <input
                             type="text"
@@ -1728,7 +1772,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                               <button
                                 onClick={() =>
                                   router.push(
-                                    `/user/profile/${comment.author.id}`
+                                    `/user/profile`
                                   )
                                 }
                                 className="flex-shrink-0 hover:opacity-80 transition"
@@ -1814,14 +1858,20 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                                 {/* Reply Input */}
                                 {showComments[`${post.id}-${comment.id}`] && (
                                   <div className="flex gap-2 mt-3 pl-1">
-                                    <Image
-                                      src={currentUserData.avatar}
-                                      alt={currentUserData.name}
-                                      width={32}
-                                      height={32}
-                                      className="rounded-full flex-shrink-0"
-                                      unoptimized
-                                    />
+                                    {currentUserData.avatar ? (
+                                      <Image
+                                        src={currentUserData.avatar}
+                                        alt={currentUserData.name}
+                                        width={32}
+                                        height={32}
+                                        className="rounded-full flex-shrink-0"
+                                        unoptimized
+                                      />
+                                    ) : (
+                                      <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-400 rounded-full flex items-center justify-center">
+                                        <FaUserCircle className="text-white text-sm" />
+                                      </div>
+                                    )}
                                     <div className="flex-1 flex gap-2">
                                       <input
                                         type="text"
@@ -2197,159 +2247,6 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           )}
         </div>
 
-        {/* Right Sidebar - Activity Users (Toggle) */}
-        {showActivitySidebar && (
-          <div className="hidden xl:block w-80 flex-shrink-0">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/50 p-5 sticky top-24 space-y-4">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                  <FaUsers className="text-green-600" />
-                  <span>Hoạt động</span>
-                </h3>
-                <button
-                  onClick={() => setShowActivitySidebar(false)}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition"
-                >
-                  <FaTimes className="text-gray-400" />
-                </button>
-              </div>
-
-              {/* Online Members */}
-              <div>
-                <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">
-                  Online (
-                  {
-                    activityUsers.filter((u) => u.lastActive === "Online")
-                      .length
-                  }
-                  )
-                </h4>
-                <div className="space-y-2">
-                  {activityUsers
-                    .filter((u) => u.lastActive === "Online")
-                    .map((activityUser) => (
-                      <div
-                        key={activityUser.user.id}
-                        className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition cursor-pointer"
-                      >
-                        <div className="relative">
-                          <Image
-                            src={activityUser.user.avatar}
-                            alt={activityUser.user.name}
-                            width={40}
-                            height={40}
-                            className="rounded-full ring-2 ring-white shadow-sm"
-                            unoptimized
-                          />
-                          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1">
-                            {activityUser.user.name}
-                            {activityUser.user.role === "manager" && (
-                              <span className="px-1.5 py-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs rounded font-bold">
-                                BTC
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-xs text-green-600 font-medium">
-                            Đang online
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* Top Contributors */}
-              <div className="pt-3 border-t border-gray-200">
-                <h4 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-1">
-                  <FaMedal className="text-orange-500" />
-                  Top Contributor
-                </h4>
-                <div className="space-y-2">
-                  {activityUsers
-                    .sort((a, b) => b.contribution - a.contribution)
-                    .slice(0, 3)
-                    .map((activityUser, index) => (
-                      <div
-                        key={activityUser.user.id}
-                        className="flex items-center gap-3 p-2 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl"
-                      >
-                        <div className="relative">
-                          <Image
-                            src={activityUser.user.avatar}
-                            alt={activityUser.user.name}
-                            width={36}
-                            height={36}
-                            className="rounded-full ring-2 ring-white shadow-sm"
-                            unoptimized
-                          />
-                          <div
-                            className={`absolute -top-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                              index === 0
-                                ? "bg-yellow-500"
-                                : index === 1
-                                ? "bg-gray-400"
-                                : "bg-orange-600"
-                            }`}
-                          >
-                            {index + 1}
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {activityUser.user.name}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            <FaFire className="inline text-orange-500 mr-1" />
-                            {activityUser.contribution} điểm
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* Recently Active */}
-              <div className="pt-3 border-t border-gray-200">
-                <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">
-                  Hoạt động gần đây
-                </h4>
-                <div className="space-y-2">
-                  {activityUsers
-                    .filter((u) => u.lastActive !== "Online")
-                    .map((activityUser) => (
-                      <div
-                        key={activityUser.user.id}
-                        className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition cursor-pointer"
-                      >
-                        <Image
-                          src={activityUser.user.avatar}
-                          alt={activityUser.user.name}
-                          width={36}
-                          height={36}
-                          className="rounded-full ring-2 ring-white shadow-sm"
-                          unoptimized
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {activityUser.user.name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {activityUser.lastActive}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Create Post Modal */}
       {showCreatePostModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -2381,14 +2278,20 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
             <div className="p-6 space-y-4">
               {/* Author Info */}
               <div className="flex items-center gap-3">
-                <Image
-                  src={currentUserData.avatar}
-                  alt={currentUserData.name}
-                  width={52}
-                  height={52}
-                  className="rounded-full ring-2 ring-gray-200"
-                  unoptimized
-                />
+                {currentUserData.avatar ? (
+                  <Image
+                    src={currentUserData.avatar}
+                    alt={currentUserData.name}
+                    width={52}
+                    height={52}
+                    className="rounded-full ring-2 ring-gray-200"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-[52px] h-[52px] bg-gradient-to-br from-green-400 to-blue-400 rounded-full flex items-center justify-center ring-2 ring-gray-200">
+                    <FaUserCircle className="text-white text-2xl" />
+                  </div>
+                )}
                 <div>
                   <h3 className="font-semibold text-gray-900">
                     {currentUserData.name}
