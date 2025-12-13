@@ -628,29 +628,29 @@ export default function Navbar() {
               Bảng tin
             </Link>
 
-            <Link
-              href={`/events`}
-              className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
-            >
-              Sự kiện
-            </Link>
-
             {/* User role: Sự kiện đã tham gia */}
             {currentUser?.role === "user" && (
-              <Link
-                href="/user/eventsattended"
+              <>
+                <Link
+                href={`/events`}
                 className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
               >
-                Sự kiện đã tham gia
+                Sự kiện
               </Link>
+                <Link
+                  href="/user/eventsattended"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+                >
+                  Sự kiện đã tham gia
+                </Link>
+              </>
             )}
 
             {/* Manager role: Quản lý sự kiện */}
             {currentUser?.role === "manager" && (
               <>
                 <Link
-                  href="/
-                    /manage-events"
+                  href="/manager/events"
                   className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
                 >
                   Quản lý sự kiện
@@ -812,7 +812,7 @@ export default function Navbar() {
                     className="flex items-center space-x-3 hover:bg-gray-100 rounded-full pl-1 pr-4 py-1 transition-colors duration-200"
                   >
                     <div className="relative">
-                      {currentUser.image ? (
+                      {currentUser.image && currentUser.image.startsWith('http') ? (
                         <Image
                           src={currentUser.image}
                           alt={currentUser.username}

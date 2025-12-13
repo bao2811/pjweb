@@ -26,42 +26,86 @@ class ManagerController extends Controller
     public function getListUserByEvent($id): JsonResponse
     {
         try {
-            $event = $this->managerService->getEventById($id);
-            if (!$event) {
-                return response()->json(['message' => 'Event not found'], Response::HTTP_NOT_FOUND);
-            }
-            return response()->json($event, Response::HTTP_OK);
+            $users = $this->managerService->getListUserByEvent($id);
+            return response()->json([
+                'success' => true,
+                'users' => $users
+            ], Response::HTTP_OK);
         } catch (Exception $e) {
-            Log::error('Error fetching Event: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal Server Error'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            Log::error('Error fetching users for event: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
     
-    public function acceptUserJoinEvent(Request $request, $id): JsonResponse
+    public function acceptUserJoinEvent(Request $request): JsonResponse
     {
         try {
-            $userId = $request->get('userId');
-            $event = $this->managerService->acceptUserJoinEvent($userId, $id, $request->managerId);
-            return response()->json($event, Response::HTTP_OK);
+            $request->validate([
+                'user_id' => 'required|integer',
+                'event_id' => 'required|integer',
+            ]);
+
+            $userId = $request->input('user_id');
+            $eventId = $request->input('event_id');
+            $managerId = $request->user()->id; // Lấy manager ID từ user đang authenticated
+            
+            $result = $this->managerService->acceptUserJoinEvent($userId, $eventId, $managerId);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'User approved successfully',
+                'data' => $result
+            ], Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Event not found'], Response::HTTP_NOT_FOUND);
+            return response()->json([
+                'success' => false,
+                'message' => 'Event not found'
+            ], Response::HTTP_NOT_FOUND);
         } catch (Exception $e) {
             Log::error('Error accepting user join event: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal Server Error'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    public function rejectUserJoinEvent(Request $request, $id): JsonResponse
+    public function rejectUserJoinEvent(Request $request): JsonResponse
     {
         try {
-            $userId = $request->get('userId');
-            $event = $this->managerService->rejectUserJoinEvent($id, $userId, $request->managerId);
-            return response()->json($event, Response::HTTP_OK);
+            $request->validate([
+                'user_id' => 'required|integer',
+                'event_id' => 'required|integer',
+            ]);
+
+            $userId = $request->input('user_id');
+            $eventId = $request->input('event_id');
+            $managerId = $request->user()->id; // Lấy manager ID từ user đang authenticated
+            
+            $result = $this->managerService->rejectUserJoinEvent($eventId, $userId, $managerId);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'User rejected successfully',
+                'data' => $result
+            ], Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Event not found'], Response::HTTP_NOT_FOUND);
+            return response()->json([
+                'success' => false,
+                'message' => 'Event not found'
+            ], Response::HTTP_NOT_FOUND);
         } catch (Exception $e) {
             Log::error('Error rejecting user join event: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal Server Error'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -73,19 +117,24 @@ class ManagerController extends Controller
             'address' => 'required|string|max:255',
             'start_time' => 'required|date',
             'end_time' => 'required|date|after_or_equal:start_time',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|string|max:500', // Changed to accept URL string
             'comanager' => 'nullable|array',
             'comanager.*' => 'integer|exists:users,id',
             'max_participants' => 'required|integer|min:1',
             'category' => 'required|string|max:100',
         ]);
 
-        $eventData = $request->only(['title', 'content', 'start_time', 'end_time', 'address', 'image', 'max_participants', 'category']);
+        $eventData = $request->only(['title', 'content', 'start_time', 'end_time', 'address', 'max_participants', 'category']);
         $eventData['author_id'] = $request->user()->id;
-        if ($request->hasFile('image')) {
-            $eventData['image'] = $request->file('image')->store('events');
+        $eventData['status'] = 'pending'; // Manager created events need admin approval
         
+        // Handle image: use provided URL or default
+        if (!empty($request->input('image'))) {
+            $eventData['image'] = $request->input('image');
+        } else {
+            $eventData['image'] = 'https://images.unsplash.com/photo-1559027615-cd4628902d4a';
         }
+        
         $event = $this->managerService->createEvent($eventData, $request->input('comanager', []));
 
         return response()->json(['event' => $event], 201);
@@ -127,5 +176,27 @@ class ManagerController extends Controller
     //         'event' => $event
     //     ], 201);
     // }
+
+    /**
+     * Lấy danh sách events của manager hiện tại
+     */
+    public function getMyEvents(Request $request): JsonResponse
+    {
+        try {
+            $managerId = $request->user()->id;
+            $events = $this->managerService->getEventsByManagerId($managerId);
+            
+            return response()->json([
+                'success' => true,
+                'events' => $events
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            Log::error('Error fetching manager events: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 
 }

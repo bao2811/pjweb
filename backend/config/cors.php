@@ -7,6 +7,7 @@ return [
         'admin/*', 
         'manager/*',
         'user/*',
+        'events/*',
         'sanctum/csrf-cookie', 
         'broadcasting/auth',
     ],

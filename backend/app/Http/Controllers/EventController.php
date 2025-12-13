@@ -104,6 +104,7 @@ class EventController extends Controller
         $event = $this->managerService->createEvent($eventData, $request->input('comanager', []));
 
         return response()->json(['event' => $event], 201);
+        
     }
 
     public function updateEvent(Request $request, $id)

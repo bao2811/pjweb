@@ -181,4 +181,124 @@ class LikeService
             return [];
         }
     }
+
+    // ===== EVENT LIKES =====
+
+    /**
+     * Like an event
+     * @param int $userId
+     * @param int $eventId
+     * @return bool
+     */
+    public function likeEvent($userId, $eventId): bool
+    {
+        DB::beginTransaction();
+        try {
+            // Kiểm tra event có tồn tại không
+            $event = DB::table('events')->where('id', $eventId)->first();
+            if (!$event) {
+                throw new Exception('Event not found');
+            }
+
+            // Kiểm tra user đã like event này chưa
+            $like = DB::table('likes')
+                ->where('user_id', $userId)
+                ->where('event_id', $eventId)
+                ->first();
+
+            if ($like) {
+                // Đã like rồi → bật lại status = 1
+                DB::table('likes')
+                    ->where('user_id', $userId)
+                    ->where('event_id', $eventId)
+                    ->update(['status' => 1]);
+            } else {
+                // Chưa like → tạo mới
+                DB::table('likes')->insert([
+                    'user_id' => $userId,
+                    'event_id' => $eventId,
+                    'post_id' => null,
+                    'status' => 1,
+                    'created_at' => now(),
+                ]);
+            }
+
+            // Cập nhật like count của event
+            DB::table('events')
+                ->where('id', $eventId)
+                ->increment('likes');
+
+            DB::commit();
+            return true;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error in likeEvent: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Unlike an event
+     * @param int $userId
+     * @param int $eventId
+     * @return bool
+     */
+    public function unlikeEvent($userId, $eventId): bool
+    {
+        DB::beginTransaction();
+        try {
+            // Kiểm tra event có tồn tại không
+            $event = DB::table('events')->where('id', $eventId)->first();
+            if (!$event) {
+                throw new Exception('Event not found');
+            }
+
+            // Update like status to 0 (unliked)
+            $updated = DB::table('likes')
+                ->where('user_id', $userId)
+                ->where('event_id', $eventId)
+                ->update(['status' => 0]);
+
+            if (!$updated) {
+                throw new Exception('Like not found');
+            }
+
+            // Cập nhật like count của event (giảm 1)
+            DB::table('events')
+                ->where('id', $eventId)
+                ->where('likes', '>', 0)
+                ->decrement('likes');
+
+            DB::commit();
+            return true;
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error unliking event: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Get list of users who liked an event
+     * @param int $eventId
+     * @return array
+     */
+    public function getListLikeOfEvent($eventId)
+    {
+        try {
+            $likes = DB::select(
+                "SELECT u.username, u.id as user_id, u.image 
+                 FROM users u
+                 JOIN likes l ON u.id = l.user_id
+                 WHERE l.event_id = ? AND l.status = 1",
+                [$eventId]
+            );
+            return $likes;
+        } catch (Exception $e) {
+            Log::error('Error fetching likes for event: ' . $e->getMessage());
+            return [];
+        }
+    }
 }

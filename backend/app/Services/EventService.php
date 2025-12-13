@@ -40,6 +40,11 @@ class EventService
         return $this->eventRepo->getAllEvents($userId);
     }
 
+    public function getEventById($id)
+    {
+        return $this->eventRepo->getEventById($id);
+    }
+
     public function createEvent(array $data, array $comanager = [], $authorId = null)
     {
         try {
@@ -52,6 +57,11 @@ class EventService
             $event = $this->eventRepo->createEvent($data);
             $this->eventManagementRepo->addComanagerByEventId($event->id, $comanager);
             // tạo kênh sự kiện nữa
+            $this->channelRepo->createChannel([
+                'event_id' => $event->id,
+                'name' => 'Kênh sự kiện: ' . $event->name,
+                'created_at' => Carbon::now(),
+            ]);
             DB::commit();
 
             $this->notifyAllUsersNewEvent($event);
@@ -149,9 +159,5 @@ class EventService
             throw new Exception('Failed to reject event');
         }
         return $result;
-    }
-    public function getEventById($id)
-    {
-        return $this->eventRepo->getEventById($id);
     }
 }

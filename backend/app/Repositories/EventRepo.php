@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use App\Models\Event;
 use App\Models\EventManagement;
 use App\Models\Noti;
+use App\Models\User;
 
 class EventRepo
 {
@@ -99,11 +100,36 @@ class EventRepo
 
     public function createEvent($data, $comanager = []) : Event
     {
-        
         $event = Event::create($data);
+        
         // Attach comanagers to the event
-        $event->comanagers()->attach($comanager);
-        Noti::sendpush();
+        if (!empty($comanager)) {
+            $event->comanagers()->attach($comanager);
+        }
+        
+        // Gửi notification cho tất cả admin yêu cầu duyệt sự kiện
+        $admins = User::where('role', 'admin')->get();
+        foreach ($admins as $admin) {
+            $notification = Noti::create([
+                'title' => 'Yêu cầu duyệt sự kiện mới',
+                'message' => 'Manager đã tạo sự kiện "' . $event->title . '" cần phê duyệt.',
+                'sender_id' => $data['author_id'],
+                'receiver_id' => $admin->id,
+                'type' => 'event_approval',
+                'data' => [
+                    'event_id' => $event->id,
+                    'url' => '/admin/events',
+                    'icon' => '/icons/event-pending.png',
+                ],
+            ]);
+            
+            // Broadcast notification qua WebSocket
+            broadcast(new \App\Events\NotificationSent($notification, $admin->id))->toOthers();
+            
+            // Gửi push notification
+            $notification->sendPush();
+        }
+        
         return $event;
     }
 
@@ -169,5 +195,38 @@ class EventRepo
         broadcast(new \App\Events\NotificationSent($notification, $event->author_id))->toOthers();
         $notification->sendPush();
         return $event;
-    }   
+    }
+
+    /**
+     * Lấy danh sách events của một manager cụ thể (author_id)
+     */
+    public function getEventsByManagerId($managerId)
+    {
+        return Event::with('author:id,username,email,image')
+            ->where('author_id', $managerId)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($event) {
+                return [
+                    'id' => $event->id,
+                    'title' => $event->title, // Fixed: was 'name'
+                    'content' => $event->content, // Fixed: was 'description'
+                    'address' => $event->address, // Fixed: was 'location'
+                    'category' => $event->category,
+                    'start_time' => $event->start_time,
+                    'end_time' => $event->end_time,
+                    'max_participants' => $event->max_participants,
+                    'status' => $event->status,
+                    'image' => $event->image,
+                    'author' => $event->author ? [
+                        'id' => $event->author->id,
+                        'username' => $event->author->username,
+                        'email' => $event->author->email,
+                        'image' => $event->author->image,
+                    ] : null,
+                    'created_at' => $event->created_at,
+                    'updated_at' => $event->updated_at,
+                ];
+            });
+    }
 }

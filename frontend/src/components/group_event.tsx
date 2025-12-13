@@ -635,7 +635,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     const fetchEventDetail = async () => {
       try {
         setIsLoading(true);
-        const response = await authFetch(`/events/getEventDetails/${eventId}`);
+        const response = await authFetch(`/api/events/getEventDetails/${eventId}`);
         const data = await response.json();
         if (data && data.event) {
           const eventData = data.event;
