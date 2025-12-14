@@ -80,13 +80,6 @@ export default function NavbarAdmin() {
     initializePushState();
   }, []);
 
-  // useReverbNotification({
-  //   userId: currentUser?.id || null,
-  //   authToken: token,
-  //   onNewNotification: handleNewNotification,
-  //   onNotificationRead: handleNotificationRead,
-  // });
-
   const initializePushState = async () => {
     try {
       console.log("[Web Push Admin] Initializing push state...");

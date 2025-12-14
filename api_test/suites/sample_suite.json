@@ -1,0 +1,29 @@
+[
+  {
+    "config": {
+      "variables": {
+        "base_url": "http://localhost:8000",
+        "auth_token": ""
+      }
+    }
+  },
+  {
+    "test": {
+      "name": "List events",
+      "url": "$base_url/api/events",
+      "method": "GET",
+      "expected_status": 200,
+      "save": {
+        "first_event_id": "body[0].id"
+      }
+    }
+  },
+  {
+    "test": {
+      "name": "Get event detail",
+      "url": "$base_url/api/events/$first_event_id",
+      "method": "GET",
+      "expected_status": 200
+    }
+  }
+]
