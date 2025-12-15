@@ -157,14 +157,12 @@ class EventController extends Controller
                 return response()->json(['error' => 'Event not found'], 404);
             }
 
-            $channel = $event->channel;
-            if (!$channel) {
-                // Create channel if it doesn't exist
-                $channel = \App\Models\Channel::create([
-                    'title' => 'Channel - ' . $event->title,
-                    'event_id' => $event->id,
-                ]);
-            }
+            // Use firstOrCreate to avoid creating duplicate channels
+            // This will find existing channel or create new one atomically
+            $channel = \App\Models\Channel::firstOrCreate(
+                ['event_id' => $event->id], // Search by event_id
+                ['title' => 'Channel - ' . $event->title] // Create with this title if not found
+            );
 
             return response()->json(['channel' => $channel]);
         } catch (\Exception $e) {

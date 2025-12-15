@@ -42,23 +42,39 @@ class UserController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
          }
 
+         // Validation với messages rõ ràng hơn
          $validated = $request->validate([
-             'username' => 'sometimes|string|max:255',
-             'email' => 'sometimes|email|max:255',
-             'phone' => 'sometimes|string|max:20',
-             'address' => 'sometimes|string|max:255',
-             'image' => 'sometimes|string|max:255',
-             'address_card' => 'sometimes|string|max:255',
+             'username' => 'required|string|max:255|min:3',
+             'email' => 'required|email|max:255',
+             'phone' => 'nullable|string|max:20',
+             'address' => 'nullable|string|max:500',
+             'image' => 'nullable|string',
+             'address_card' => 'nullable|string|max:500',
+         ], [
+             'username.required' => 'Tên người dùng không được để trống',
+             'username.min' => 'Tên người dùng phải có ít nhất 3 ký tự',
+             'username.max' => 'Tên người dùng không được vượt quá 255 ký tự',
+             'email.required' => 'Email không được để trống',
+             'email.email' => 'Email không đúng định dạng',
+             'email.max' => 'Email không được vượt quá 255 ký tự',
+             'phone.max' => 'Số điện thoại không được vượt quá 20 ký tự',
+             'address.max' => 'Địa chỉ không được vượt quá 500 ký tự',
+             'address_card.max' => 'Địa chỉ thẻ không được vượt quá 500 ký tự',
          ]);
          
          $updatedUser = $this->userService->updateUser($id, $validated);
-         return response()->json($updatedUser);
+         return response()->json([
+            'success' => true,
+            'message' => 'Cập nhật thành công',
+            'data' => $updatedUser
+         ]);
       } catch (\Illuminate\Validation\ValidationException $e) {
          return response()->json([
              'error' => 'Validation error',
              'messages' => $e->errors()
          ], 422);
       } catch (\Exception $e) {
+         \Log::error('Update profile error: ' . $e->getMessage());
          return response()->json([
              'error' => 'Update failed',
              'message' => $e->getMessage()

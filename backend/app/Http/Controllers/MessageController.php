@@ -14,7 +14,7 @@ class MessageController extends Controller
     {
         try {
             $messages = Message::where('channel_id', $channelId)
-                ->with('sender:id,name,avatar')
+                ->with('sender:id,username,image')
                 ->orderBy('sent_at', 'asc')
                 ->get();
 
@@ -55,7 +55,7 @@ class MessageController extends Controller
                 'sent_at' => now(),
             ]);
 
-            $message->load('sender:id,name,avatar');
+            $message->load('sender:id,username,image');
 
             return response()->json($message, 201);
         } catch (\Exception $e) {

@@ -24,14 +24,12 @@ import {
   FaFire,
   FaThumbtack,
   FaMedal,
+  FaUserCircle,
+  FaCalendarAlt,
 } from "react-icons/fa";
 import { authFetch } from "@/utils/auth";
 import { useRouter } from "next/navigation";
-<<<<<<< HEAD
-import Navbar from "./Navbar";
-=======
 import { useAuth } from "@/hooks/useAuth";
->>>>>>> origin/main
 
 interface User {
   id: number;
@@ -44,6 +42,7 @@ interface Post {
   id: number;
   eventId: string;
   content: string;
+  title?: string;
   author: User;
   images?: string[];
   timestamp: string;
@@ -166,13 +165,39 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
   const [currentUserData, setCurrentUserData] = useState<User | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // ✅ Sync currentUserData từ useAuth
+  useEffect(() => {
+    if (user) {
+      setCurrentUserData({
+        id: user.id,
+        name: user.username || "User",
+        avatar: user.image || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
+        role: user.role || "user",
+      });
+    }
+  }, [user]);
+
   // ✅ STEP 1: Kiểm tra quyền truy cập TRƯỚC KHI fetch bất kỳ dữ liệu nào
   useEffect(() => {
     const checkAccess = async () => {
       try {
         console.log("🔐 Checking access for event:", eventId);
 
-        // Lấy danh sách tất cả registrations của user
+        // BƯỚC 1: Kiểm tra xem user có phải là manager của sự kiện không
+        const eventResponse = await authFetch(`/api/events/getEventDetails/${eventId}`);
+        if (eventResponse.ok) {
+          const eventData = await eventResponse.json();
+          console.log("📊 Event details:", eventData);
+
+          // Nếu user là manager của sự kiện, cho phép truy cập ngay
+          if (user && eventData.manager_id === user.id) {
+            console.log("✅ User is the event manager - access granted!");
+            setHasAccess(true);
+            return;
+          }
+        }
+
+        // BƯỚC 2: Nếu không phải manager, kiểm tra registration
         const response = await authFetch("/user/my-registrations");
 
         if (!response.ok) {
@@ -208,8 +233,8 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           return;
         }
 
-        // Kiểm tra trạng thái đăng ký
-        if (registration.status !== "approved") {
+        // Kiểm tra trạng thái đăng ký - chấp nhận cả "approved" và "accepted"
+        if (registration.status !== "approved" && registration.status !== "accepted") {
           console.warn(`⏳ Registration status: ${registration.status}`);
           setHasAccess(false);
           setAccessError(
@@ -233,7 +258,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     };
 
     checkAccess();
-  }, [eventId]);
+  }, [eventId, user]);
 
   // Fetch event details and channel - CHỈ KHI ĐÃ CÓ QUYỀN TRUY CẬP
   useEffect(() => {
@@ -299,12 +324,16 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
             );
             const channelData = await channelResponse.json();
             console.log("📡 Channel Response:", channelData);
-            if (channelData && channelData.channel) {
-              const fetchedChannelId = channelData.channel.id;
+            // Backend có thể trả về {channel: {...}} hoặc trực tiếp {...}
+            const channel = channelData.channel || channelData;
+            if (channel && channel.id) {
+              const fetchedChannelId = channel.id;
               console.log(
                 `✅ Event ID: ${eventId} → Channel ID: ${fetchedChannelId}`
               );
               setChannelId(fetchedChannelId);
+            } else {
+              console.error("❌ No channel ID found in response:", channelData);
             }
           } catch (error) {
             console.error("Error fetching channel:", error);
@@ -324,17 +353,19 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
   // Fetch posts when channel is available
   useEffect(() => {
     const fetchPosts = async () => {
-      if (!channelId) return;
+      if (!channelId || !currentUserData) return;
 
       console.log("🔄 Fetching posts for channel:", channelId);
+      setLoadingPosts(true);
 
       try {
         const response = await authFetch(
-          `/api/posts/channel/${channelId}?user_id=${currentUserData.id}`
+          `/api/posts/channel/${channelId}`
         );
         
         if (!response.ok) {
-          console.error("Failed to fetch posts", response.status);
+          console.error("❌ Failed to fetch posts", response.status);
+          setPosts([]); // Clear posts on error
           return;
         }
 
@@ -345,15 +376,6 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
         if (Array.isArray(fetched)) {
           const normalized = fetched.map((p: any) => {
-            const isLikedVal =
-              typeof p.isLiked !== "undefined"
-                ? Number(p.isLiked)
-                : typeof p.isliked !== "undefined"
-                ? Number(p.isliked)
-                : typeof p.liked !== "undefined"
-                ? Number(p.liked)
-                : 0;
-
             return {
               id: p.id,
               eventId: eventId,
@@ -361,25 +383,29 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
               title: p.title || "",
               author: {
                 id: p.user?.id || p.author_id,
-                name: p.user?.name || p.name || "User",
+                name: p.user?.username || p.username || p.name || "User",
                 avatar:
+                  p.user?.image ||
                   p.user?.avatar ||
+                  p.image ||
                   p.avatar ||
                   "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
                 role: p.user?.role || p.role || "user",
               },
               images: p.image ? [p.image] : [],
               timestamp: new Date(p.created_at).toLocaleString("vi-VN"),
-              likes: Number(p.likes || p.likes_count || 0),
+              likes: Number(p.likes_count || p.likes || 0),
               comments: (p.comments || []).map((c: any) => ({
                 id: c.id,
                 content: c.content,
                 timestamp: new Date(c.created_at).toLocaleString("vi-VN"),
                 author: {
                   id: c.user?.id || c.author?.id || c.author_id,
-                  name: c.user?.name || c.author?.name || "User",
+                  name: c.user?.username || c.user?.name || c.author?.username || c.author?.name || "User",
                   avatar:
+                    c.user?.image ||
                     c.user?.avatar ||
+                    c.author?.image ||
                     c.author?.avatar ||
                     "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
                   role: c.user?.role || c.author?.role || "user",
@@ -392,9 +418,11 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                   timestamp: new Date(r.created_at).toLocaleString("vi-VN"),
                   author: {
                     id: r.user?.id || r.author?.id || r.author_id,
-                    name: r.user?.name || r.author?.name || "User",
+                    name: r.user?.username || r.user?.name || r.author?.username || r.author?.name || "User",
                     avatar:
+                      r.user?.image ||
                       r.user?.avatar ||
+                      r.author?.image ||
                       r.author?.avatar ||
                       "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
                     role: r.user?.role || r.author?.role || "user",
@@ -405,7 +433,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                 })),
               })),
               shares: 0,
-              isLiked: isLikedVal === 1,
+              isLiked: p.is_liked === true || p.is_liked === 1,
               isPinned: p.status === "pinned",
               views: 0,
             };
@@ -415,9 +443,13 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           setPosts(normalized);
         } else {
           console.warn("⚠️ Invalid posts response format:", data);
+          setPosts([]); // Clear posts if invalid format
         }
       } catch (error) {
         console.error("❌ Error fetching posts:", error);
+        setPosts([]); // Clear posts on error
+      } finally {
+        setLoadingPosts(false);
       }
     };
 
@@ -425,7 +457,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     if (channelId) {
       fetchPosts();
     }
-  }, [channelId, eventId]);
+  }, [channelId, eventId, currentUserData]);
 
   // Fetch messages when channel is available
   useEffect(() => {
@@ -444,8 +476,9 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           const normalizedMessages: ChatMessage[] = messagesData.map((msg: any) => ({
             id: msg.id,
             userId: msg.sender_id,
-            userName: msg.sender?.name || "User",
+            userName: msg.sender?.username || msg.sender?.name || "User",
             userAvatar:
+              msg.sender?.image ||
               msg.sender?.avatar ||
               "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
             message: msg.content,
@@ -524,7 +557,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     setNewPostImages([]);
     setImageUrlInput("");
     setShowFAB(false);
-    setShowCreateModal(false);
+    setShowCreatePostModal(false);
 
     try {
       const response = await authFetch("/api/posts/channel", {
@@ -535,11 +568,9 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
         },
         body: JSON.stringify({
           channel_id: channelId,
-          title: postContent.substring(0, 100) || "Post in channel",
           content: postContent,
           image: postImgs[0] || null,
-          author_id: currentUserData.id,
-          status: "active",
+          author_id: currentUserData.id, // Thêm author_id để fallback nếu JWT không có auth()->id()
         }),
       });
 
@@ -552,9 +583,30 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
       const data = await response.json();
       console.log("✅ Post created successfully:", data);
 
-      // Refetch posts từ backend để có data mới nhất
+      // Tạo post object mới và thêm vào đầu danh sách với đầy đủ dữ liệu
       if (data && data.post) {
-        await fetchPosts();
+        const createdPost = data.post;
+        const newPostObj: Post = {
+          id: createdPost.id,
+          eventId: eventId,
+          content: createdPost.content || postContent,
+          title: createdPost.title || "",
+          author: {
+            id: createdPost.author_id || currentUserData.id,
+            name: createdPost.user?.name || currentUserData.name,
+            avatar: createdPost.user?.avatar || currentUserData.avatar,
+            role: createdPost.user?.role || currentUserData.role,
+          },
+          images: createdPost.image ? [createdPost.image] : [],
+          timestamp: new Date(createdPost.created_at || Date.now()).toLocaleString("vi-VN"),
+          likes: Number(createdPost.likes_count || createdPost.likes || 0),
+          comments: [],
+          shares: 0,
+          isLiked: false,
+          isPinned: createdPost.status === "pinned",
+          views: 0,
+        };
+        setPosts([newPostObj, ...posts]);
         alert("Đăng bài thành công! 🎉");
       }
     } catch (error) {
@@ -617,25 +669,23 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     );
 
     try {
-      if (post.isLiked) {
-        await authFetch(`/api/likes/post/unlike/${postId}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      } else {
-        await authFetch(`/api/likes/post/like/${postId}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const endpoint = post.isLiked 
+        ? `/api/likes/unlike/${postId}`
+        : `/api/likes/like/${postId}`;
+      
+      const response = await authFetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to toggle like");
       }
     } catch (error) {
-      console.error("Error toggling like:", error);
+      console.error("❌ Error toggling like:", error);
       // Rollback on error
       setPosts(
         posts.map((p) =>
@@ -1029,9 +1079,6 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-white">
-      {/* Navbar Component */}
-      <Navbar />
-
       {/* Header Bar - Improved spacing */}
       <div className="bg-gradient-to-r from-green-100/80 via-blue-100/80 to-teal-100/80 backdrop-blur-lg border-b border-white/50 sticky top-[72px] z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
@@ -1197,7 +1244,19 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
             </button>
 
             {/* Posts Feed */}
-            {posts.length === 0 ? (
+            {loadingPosts ? (
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-20 text-center">
+                <div className="w-16 h-16 mx-auto mb-4">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500"></div>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                  Đang tải bài viết...
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Vui lòng chờ trong giây lát
+                </p>
+              </div>
+            ) : posts.length === 0 ? (
               <div className="space-y-4">
                 {/* Welcome Card - Improved design */}
                 <div className="bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 rounded-xl shadow-md border border-green-200 p-8 text-center">

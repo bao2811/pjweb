@@ -6,11 +6,7 @@ export default function ManagerLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col h-screen">
       <Navbar />
-<<<<<<< HEAD
       <main className="flex-1 overflow-y-auto p-4">{children}</main>
-=======
-      {children}
->>>>>>> origin/main
     </div>
   );
 }

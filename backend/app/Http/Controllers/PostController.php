@@ -231,27 +231,33 @@ class PostController extends Controller
     public function addPostToChannel(Request $request): JsonResponse
     {
         try {
-            $user = $request->user();
             $request->validate([
                 'channel_id' => 'required|exists:channels,id',
-                'title' => 'required|string|max:255',
-                'content' => 'nullable|string',
+                'content' => 'required|string',
                 'image' => 'nullable|string',
-                'author_id' => 'nullable|exists:users,id', // Tạm thời cho phép gửi author_id
+                'author_id' => 'nullable|integer', // Allow author_id from frontend as fallback
             ]);
+
+            // Try to get author_id from JWT auth, fallback to request
+            $authorId = auth()->id() ?? $request->input('author_id');
+            
+            if (!$authorId) {
+                \Log::error('Create post failed: No author_id', [
+                    'auth_id' => auth()->id(),
+                    'request_author' => $request->input('author_id'),
+                    'has_user' => auth()->user() ? 'yes' : 'no'
+                ]);
+                return response()->json(['error' => 'Author ID is required'], 400);
+            }
 
             $postData = [
                 'channel_id' => $request->input('channel_id'),
-                'title' => $request->input('title'),
                 'content' => $request->input('content'),
                 'image' => $request->input('image'),
-                'author_id' => $request->input('author_id', $user->id), // Ưu tiên auth, fallback về auth()->id()
+                'author_id' => $authorId,
                 'status' => 'active',
+                'title' => '',
             ];
-            
-            if (!$postData['author_id']) {
-                return response()->json(['error' => 'Author ID is required'], 400);
-            }
 
             $post = $this->postService->createPost($postData);
             return response()->json(['post' => $post], 201);

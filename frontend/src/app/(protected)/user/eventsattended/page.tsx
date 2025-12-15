@@ -66,8 +66,9 @@ interface UserEvent {
     | "participating"
     | "rejected"
     | "completed"
-    | "cancelled";
-  eventStatus: "upcoming" | "ongoing" | "completed" | "cancelled";
+    | "cancelled"
+    | "accepted";
+  eventStatus: "upcoming" | "ongoing" | "completed" | "cancelled" | "accepted";
   appliedAt: string;
   approvedAt?: string;
   completedAt?: string;
@@ -240,6 +241,14 @@ export default function EventsAttendedPage() {
           event.userStatus === "participating")
       );
     }
+    if (selectedTab === "completed") {
+      // "Hoàn thành" includes both "completed" and "accepted" status
+      return (
+        matchesSearch &&
+        (event.userStatus === "completed" ||
+          event.userStatus === "accepted")
+      );
+    }
     return matchesSearch && event.userStatus === selectedTab;
   });
 
@@ -252,10 +261,16 @@ export default function EventsAttendedPage() {
         bgColor: "bg-yellow-100",
         label: "Chờ duyệt",
       },
-      approved: {
+      accepted: {
         icon: FaCheckCircle,
         color: "text-green-600",
         bgColor: "bg-green-100",
+        label: "Đã hoàn thành",
+      },
+      approved: {
+        icon: FaCheckCircle,
+        color: "text-blue-600",
+        bgColor: "bg-blue-100",
         label: "Đang tham gia",
       },
       rejected: {
@@ -266,8 +281,8 @@ export default function EventsAttendedPage() {
       },
       completed: {
         icon: FaCheck,
-        color: "text-blue-600",
-        bgColor: "bg-blue-100",
+        color: "text-purple-600",
+        bgColor: "bg-purple-100",
         label: "Đã hoàn thành",
       },
       cancelled: {
@@ -307,7 +322,7 @@ export default function EventsAttendedPage() {
         (e) => e.userStatus === "approved" || e.userStatus === "participating"
       ).length,
       rejected: events.filter((e) => e.userStatus === "rejected").length,
-      completed: events.filter((e) => e.userStatus === "completed").length,
+      completed: events.filter((e) => e.userStatus === "completed" || e.userStatus === "accepted").length,
     };
   };
 
@@ -627,6 +642,25 @@ export default function EventsAttendedPage() {
                         </>
                       )}
 
+                      {event.userStatus === "accepted" && (
+                        <>
+                          <button
+                            onClick={() => showEventDetails(event)}
+                            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg rounded-lg transition duration-200 font-medium"
+                          >
+                            <FaEye />
+                            <span>Xem chi tiết sự kiện</span>
+                          </button>
+                          <button
+                            onClick={() => handleAccessChannel(event.id)}
+                            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition duration-200 font-medium"
+                          >
+                            <FaComments />
+                            <span>Truy cập kênh</span>
+                          </button>
+                        </>
+                      )}
+
                       {(event.userStatus === "approved" ||
                         event.userStatus === "participating") && (
                         <>
@@ -680,6 +714,16 @@ export default function EventsAttendedPage() {
                             <span>Đánh giá</span>
                           </button>
                         </div>
+                      )}
+
+                      {event.userStatus === "rejected" && (
+                        <button
+                          onClick={() => showEventDetails(event)}
+                          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition duration-200 font-medium"
+                        >
+                          <FaEye />
+                          <span>Xem chi tiết</span>
+                        </button>
                       )}
                     </div>
                   </div>
