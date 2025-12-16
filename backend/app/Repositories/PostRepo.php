@@ -129,27 +129,27 @@ class PostRepo
         $currentUserId = $userId ?? auth()->id();
         
         $posts = Post::with([
-                'user:id,name,avatar,role',
+                'user:id,username,image,role',
                 'comments' => function($query) {
                     $query->whereNull('parent_id') // Chỉ lấy comment gốc
-                          ->with(['user:id,name,avatar,role', 'replies.user:id,name,avatar,role'])
+                          ->with(['user:id,username,image,role', 'replies.user:id,username,image,role'])
                           ->orderBy('created_at', 'asc');
-                },
-                'likes:id,post_id,user_id'
+                }
             ])
             ->where('channel_id', $channelId)
             ->where('status', 'active')
-            ->withCount(['comments', 'likes'])
+            ->withCount(['comments', 'likes']) // Chỉ dùng withCount, không with likes collection
             ->orderBy('created_at', 'desc')
-            ->limit(20) // Limit để load nhanh hơn
+            ->limit(20)
             ->get()
             ->map(function ($post) use ($currentUserId) {
+                // Check if user liked this post by querying likes table directly
                 $post->is_liked = $currentUserId 
-                    ? $post->likes->contains('user_id', $currentUserId)
+                    ? \DB::table('likes')
+                        ->where('post_id', $post->id)
+                        ->where('user_id', $currentUserId)
+                        ->exists()
                     : false;
-                    
-                // Unset likes collection to reduce response size
-                unset($post->likes);
                 
                 return $post;
             });

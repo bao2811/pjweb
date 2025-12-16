@@ -35,21 +35,17 @@ class PostService
     public function createPost($data)
     {
         try {
-            $data->validate([
-                'title' => 'required|string|max:255',
-                'content' => 'required|string',
-                'image' => 'sometimes|image|max:2048',
-                'user_id' => 'required|integer|exists:users,id',
-                'event_id' => 'sometimes|integer|exists:events,id',
-            ]);
+            // Controller đã validate rồi, không cần validate lại
+            // $data là array, không phải Request object
             
-            $data['like'] = 0;
-            $data['comment'] = 0;
-            $data['status'] = 1;
+            // Set default values
+            $data['like'] = $data['like'] ?? 0;
+            $data['comment'] = $data['comment'] ?? 0;
+            $data['status'] = $data['status'] ?? 'active';
 
             return $this->postRepo->createPost($data);
         } catch (Exception $e) {
-            // Handle exception
+            \Log::error('PostService createPost error:', ['error' => $e->getMessage()]);
             return null;
         }
     }
@@ -187,12 +183,12 @@ class PostService
         }
     }
 
-    public function getPostsByChannel($channelId)
+    public function getPostsByChannel($channelId, $userId = null)
     {
         try {
-            return $this->postRepo->getPostsByChannel($channelId);
+            return $this->postRepo->getPostsByChannel($channelId, $userId);
         } catch (Exception $e) {
-            // Handle exception
+            \Log::error('PostService getPostsByChannel error:', ['error' => $e->getMessage()]);
             return [];
         }
     }

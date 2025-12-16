@@ -106,4 +106,12 @@ class Event extends Model
     {
         return $this->belongsToMany(User::class, 'event_management', 'event_id', 'user_id');
     }
+
+    /**
+     * Get the channel for this event (one-to-one)
+     */
+    public function channel()
+    {
+        return $this->hasOne(Channel::class, 'event_id');
+    }
 }

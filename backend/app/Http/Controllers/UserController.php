@@ -18,37 +18,68 @@ class UserController extends Controller
 
    function getUser(Request $request)
    {
-      $user = $request-user();
-      return response()->json($user);
+      $user = $request->user();
+      if (!$user) {
+         return response()->json(['error' => 'User not found'], 404);
+      }
+      
+      $result = $this->userService->getUserWithStats($user->id);
+      return response()->json($result['data']);
    }
 
    public function getUserDetails(Request $request, $id)
    {
-      $userId = $request->session()->get('user_id');
-      $user = $this->userService->getUserById($id);
-      return response()->json($user);
+      $result = $this->userService->getUserWithStats($id);
+      return response()->json($result['data']);
    }
 
    public function updateUserProfile(Request $request, $id)
    {
       try{
-         $request->validate([
-             'name' => 'sometimes|string|max:255',
-             'email' => 'sometimes|email|max:255',
-             'password' => 'sometimes|string|min:6',
+         // Verify user chỉ có thể update chính mình
+         $currentUser = $request->user();
+         if ($currentUser->id != $id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+         }
+
+         // Validation với messages rõ ràng hơn
+         $validated = $request->validate([
+             'username' => 'required|string|max:255|min:3',
+             'email' => 'required|email|max:255',
+             'phone' => 'nullable|string|max:20',
+             'address' => 'nullable|string|max:500',
+             'image' => 'nullable|string',
+             'address_card' => 'nullable|string|max:500',
+         ], [
+             'username.required' => 'Tên người dùng không được để trống',
+             'username.min' => 'Tên người dùng phải có ít nhất 3 ký tự',
+             'username.max' => 'Tên người dùng không được vượt quá 255 ký tự',
+             'email.required' => 'Email không được để trống',
+             'email.email' => 'Email không đúng định dạng',
+             'email.max' => 'Email không được vượt quá 255 ký tự',
+             'phone.max' => 'Số điện thoại không được vượt quá 20 ký tự',
+             'address.max' => 'Địa chỉ không được vượt quá 500 ký tự',
+             'address_card.max' => 'Địa chỉ thẻ không được vượt quá 500 ký tự',
          ]);
          
-         $userId = $request->session()->get('user_id');
-         $data = $request->only(['name', 'email', 'password']);
-         $updatedUser = $this->userService->updateUser($userId, $data);
-         return response()->json($updatedUser);
+         $updatedUser = $this->userService->updateUser($id, $validated);
+         return response()->json([
+            'success' => true,
+            'message' => 'Cập nhật thành công',
+            'data' => $updatedUser
+         ]);
       } catch (\Illuminate\Validation\ValidationException $e) {
          return response()->json([
              'error' => 'Validation error',
              'messages' => $e->errors()
          ], 422);
+      } catch (\Exception $e) {
+         \Log::error('Update profile error: ' . $e->getMessage());
+         return response()->json([
+             'error' => 'Update failed',
+             'message' => $e->getMessage()
+         ], 500);
       }
-      
    }
 
    public function createUser(Request $request)

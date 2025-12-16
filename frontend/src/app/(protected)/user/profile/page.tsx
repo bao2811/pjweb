@@ -13,264 +13,314 @@ import {
   FaCheckCircle,
   FaClock,
   FaHeart,
-  FaLock,
   FaEdit,
   FaBirthdayCake,
   FaVenusMars,
   FaIdCard,
-  FaTimes,
+  FaUserShield,
 } from "react-icons/fa";
-import Image from "next/image";
-import { useParams } from "next/navigation";
 
 interface User {
-  id?: number | null;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  avatar: string | null;
-  joinedDate: string | null;
-  points: number | null;
-  eventsCompleted: number | null;
-  totalHours: number | null;
-  eventsJoined: number | null;
-  dateOfBirth?: string | null;
-  gender?: string | null;
-  studentId?: string | null;
-  bio?: string | null;
-}
-
-interface Activity {
-  id: number;
-  event: string;
-  date: string;
-  hours: string;
+  id?: number;
+  username: string;
+  email: string;
+  phone: string;
+  address: string;
+  image: string;
+  role: string;
+  created_at: string;
+  address_card?: string;
+  status?: string;
+  events_completed?: number;
+  total_hours?: number;
+  events_joined?: number;
 }
 
 export default function ProfilePage() {
-  const params = useParams();
-  const userId = params.id as string;
-  const [user, setUser] = useState<User>({
-    id: null,
-    name: null,
-    email: null,
-    phone: null,
-    address: null,
-    avatar: null,
-    joinedDate: null,
-    points: null,
-    eventsCompleted: null,
-    totalHours: null,
-    eventsJoined: null,
-    dateOfBirth: null,
-    gender: null,
-    studentId: null,
-    bio: null,
-  });
-
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<User>({
-    id: null,
-    name: null,
-    email: null,
-    phone: null,
-    address: null,
-    avatar: null,
-    joinedDate: null,
-    points: null,
-    eventsCompleted: null,
-    totalHours: null,
-    eventsJoined: null,
-    dateOfBirth: null,
-    gender: null,
-    studentId: null,
-    bio: null,
-  });
-  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  const [loading, setLoading] = useState(true);
   const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const [isOwnProfile, setIsOwnProfile] = useState(false);
 
-  // Fetch current user để check xem có phải profile của mình không
+  const [user, setUser] = useState<User>({
+    id: 0,
+    username: "",
+    email: "",
+    phone: "",
+    address: "",
+    image: "https://i.pravatar.cc/150",
+    role: "user",
+    created_at: "",
+    address_card: "",
+    status: "active",
+    events_completed: 0,
+    total_hours: 0,
+    events_joined: 0,
+  });
+
+  const [formData, setFormData] = useState<User>(user);
+
+  // Fetch profile của chính mình từ /user/getuser
   useEffect(() => {
-    const fetchCurrentUser = async () => {
+    const fetchProfile = async () => {
       try {
-        const response = await authFetch("/user/me");
+        setLoading(true);
+        const response = await authFetch("/user/getuser");
+
         if (response.ok) {
-          const data = await response.json();
-          const currentUser = data.user || data;
-          setCurrentUserId(currentUser.id);
-          setIsOwnProfile(currentUser.id.toString() === userId);
-        }
-      } catch (error) {
-        console.error("Fetch current user error:", error);
-      }
-    };
+          const userData = await response.json();
 
-    fetchCurrentUser();
-  }, [userId]);
+          console.log("User data from /user/getuser:", userData);
 
-  // Fetch user data theo userId từ params
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        // Nếu là profile của mình thì lấy từ localStorage
-        if (isOwnProfile) {
-          const UserData = localStorage.getItem("user");
-          if (UserData) {
-            const parsedUser = JSON.parse(UserData);
-            setUser(parsedUser);
-            setFormData(parsedUser);
-          }
+          const profileData: User = {
+            id: userData.id || 0,
+            username: userData.username || "",
+            email: userData.email || "",
+            phone: userData.phone || "",
+            address: userData.address || "",
+            image: userData.image || "https://i.pravatar.cc/150",
+            role: userData.role || "user",
+            created_at: userData.created_at || "",
+            address_card: userData.address_card || "",
+            status: userData.status || "active",
+            events_completed: userData.events_completed || 0,
+            total_hours: userData.total_hours || 0,
+            events_joined: userData.events_joined || 0,
+          };
+
+          setUser(profileData);
+          setFormData(profileData);
         } else {
-          // Nếu xem profile người khác thì fetch từ API
-          const response = await authFetch(`/user/profile/${userId}`);
-          if (response.ok) {
-            const data = await response.json();
-            const userData = data.user || data;
-            setUser(userData);
-            setFormData(userData);
-          }
+          console.error("Failed to fetch profile:", response.status);
         }
       } catch (error) {
-        console.error("Fetch user data error:", error);
+        console.error("Fetch profile error:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    if (userId && currentUserId !== null) {
-      fetchUserData();
-    }
-  }, [userId, currentUserId, isOwnProfile]);
-
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const response = await authFetch("/events/getAllEvents");
-        if (response.ok) {
-          const data = await response.json();
-          const events = data.events ?? data;
-
-          const clean = events
-            .map((ev: any) => {
-              const parts = ev.start_date.split(" ");
-
-              return {
-                id: ev.id,
-                event: ev.title,
-                date: parts[0],
-                hours: parts[1] ? parts[1].slice(0, 5) : "--:--",
-              };
-            })
-            .slice(0, 5);
-
-          setRecentActivities(clean);
-        }
-      } catch (error) {
-        console.log(" Fetch events error:", error);
-      }
-    };
-
-    fetchEvent();
+    fetchProfile();
   }, []);
 
   const handleAvatarClick = () => {
-    fileInputRef.current?.click();
+    if (isEditing) fileInputRef.current?.click();
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Kiểm tra kích thước file (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Ảnh quá lớn! Vui lòng chọn ảnh nhỏ hơn 5MB");
+        return;
+      }
+
+      // Kiểm tra định dạng file
+      if (!file.type.startsWith("image/")) {
+        alert("Vui lòng chọn file ảnh!");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewAvatar(reader.result as string);
-        setFormData({ ...formData, avatar: reader.result as string });
+        const img = new Image();
+        img.onload = () => {
+          // Resize image nếu quá lớn
+          const maxWidth = 800;
+          const maxHeight = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height *= maxWidth / width;
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width *= maxHeight / height;
+              height = maxHeight;
+            }
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Convert to base64 với quality 0.8
+          const resizedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+          setPreviewAvatar(resizedBase64);
+          setFormData({ ...formData, image: resizedBase64 });
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleSave = async () => {
-    try {
-      const response = await authFetch("/user/update-profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        setFormData(data.user);
-        localStorage.setItem("user", JSON.stringify(data.user));
-
-        setIsEditing(false);
-        setPreviewAvatar(null);
-      }
-    } catch (error) {
-      console.error("Update failed:", error);
-    }
-  };
-
-  const handlePasswordChange = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("Mật khẩu mới không khớp!");
+    // ✅ Validation frontend trước khi gửi
+    if (!formData.username || formData.username.trim() === "") {
+      alert("Tên người dùng không được để trống!");
       return;
     }
 
+    if (!formData.email || formData.email.trim() === "") {
+      alert("Email không được để trống!");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      alert("Email không đúng định dạng!");
+      return;
+    }
+
+    // Validate phone (optional)
+    if (formData.phone && formData.phone.length > 0) {
+      const phoneRegex = /^[0-9]{10,11}$/;
+      if (!phoneRegex.test(formData.phone.replace(/\s/g, ""))) {
+        alert("Số điện thoại không hợp lệ! (10-11 chữ số)");
+        return;
+      }
+    }
+
     try {
-      const response = await authFetch("/user/change-password", {
-        method: "PUT",
+      // Chuẩn bị data để gửi
+      const updateData: any = {
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+      };
+
+      // Chỉ thêm các field không rỗng
+      if (formData.phone && formData.phone.trim()) {
+        updateData.phone = formData.phone.trim();
+      }
+      if (formData.address && formData.address.trim()) {
+        updateData.address = formData.address.trim();
+      }
+      if (formData.address_card && formData.address_card.trim()) {
+        updateData.address_card = formData.address_card.trim();
+      }
+
+      // Chỉ gửi image nếu có thay đổi (preview)
+      if (previewAvatar) {
+        // Giới hạn kích thước base64 image (max 2MB)
+        if (previewAvatar.length > 2 * 1024 * 1024) {
+          alert("Ảnh quá lớn! Vui lòng chọn ảnh nhỏ hơn 2MB");
+          return;
+        }
+        updateData.image = previewAvatar;
+      } else if (formData.image !== user.image) {
+        updateData.image = formData.image;
+      }
+
+      console.log("📤 Sending update data:", updateData);
+
+      const response = await authFetch(`/user/updateUserProfile/${user.id}`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          current_password: passwordData.currentPassword,
-          new_password: passwordData.newPassword,
-        }),
+        body: JSON.stringify(updateData),
       });
 
       if (response.ok) {
-        setShowPasswordModal(false);
-        setPasswordData({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-        alert("Đổi mật khẩu thành công!");
+        const result = await response.json();
+        alert("✅ Cập nhật hồ sơ thành công!");
+
+        // Fetch lại profile để cập nhật dữ liệu mới nhất
+        const profileResponse = await authFetch("/user/getuser");
+        if (profileResponse.ok) {
+          const userData = await profileResponse.json();
+          const profileData: User = {
+            id: userData.id || 0,
+            username: userData.username || "",
+            email: userData.email || "",
+            phone: userData.phone || "",
+            address: userData.address || "",
+            image: userData.image || "https://i.pravatar.cc/150",
+            role: userData.role || "user",
+            created_at: userData.created_at || "",
+            address_card: userData.address_card || "",
+            status: userData.status || "active",
+            events_completed: userData.events_completed || 0,
+            total_hours: userData.total_hours || 0,
+            events_joined: userData.events_joined || 0,
+          };
+          setUser(profileData);
+          setFormData(profileData);
+        }
+        setIsEditing(false);
+        setPreviewAvatar(null);
+      } else {
+        const error = await response.json();
+        console.error("❌ Update error response:", error);
+
+        // Hiển thị chi tiết lỗi validation
+        if (error.messages) {
+          const errorMessages = Object.values(error.messages).flat().join("\n");
+          alert("❌ Lỗi validation:\n" + errorMessages);
+        } else {
+          alert(
+            "❌ Cập nhật thất bại: " +
+              (error.error || error.message || "Lỗi không xác định")
+          );
+        }
       }
     } catch (error) {
-      console.error("Password change failed:", error);
-      alert("Đổi mật khẩu thất bại!");
+      console.error("❌ Update profile error:", error);
+      alert("❌ Cập nhật thất bại! Vui lòng kiểm tra lại thông tin.");
     }
   };
 
+  const handleCancel = () => {
+    setFormData(user);
+    setPreviewAvatar(null);
+    setIsEditing(false);
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "Chưa cập nhật";
+    try {
+      return new Date(dateString).toLocaleDateString("vi-VN");
+    } catch {
+      return "Chưa cập nhật";
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600 mb-2">
             Hồ Sơ Cá Nhân
           </h1>
           <p className="text-gray-600">
-            Quản lý thông tin và xem lịch sử hoạt động của bạn
+            Quản lý thông tin và xem hoạt động của bạn
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Column - Profile Card */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 sticky top-4">
               {/* Hidden File Input */}
               <input
                 type="file"
@@ -283,11 +333,11 @@ export default function ProfilePage() {
               {/* Avatar */}
               <div className="relative w-32 h-32 mx-auto mb-4">
                 <img
-                  src={previewAvatar || (user.avatar ?? "/default-avatar.png")}
+                  src={previewAvatar || user.image}
                   alt="Avatar"
                   className="w-full h-full rounded-full object-cover border-4 border-green-500"
                 />
-                {isOwnProfile && (
+                {isEditing && (
                   <button
                     type="button"
                     onClick={handleAvatarClick}
@@ -298,392 +348,219 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Save Avatar Button - Chỉ hiển thị nếu là profile của mình */}
-              {previewAvatar && isOwnProfile && (
-                <div className="mb-4 flex gap-2">
-                  <button
-                    onClick={async () => {
-                      try {
-                        const response = await authFetch(
-                          "/user/update-profile",
-                          {
-                            method: "PUT",
-                            headers: {
-                              "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                              ...user,
-                              avatar: previewAvatar,
-                            }),
-                          }
-                        );
+              {/* User Info */}
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-1">
+                  {user.username}
+                </h2>
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium mb-2">
+                  <FaUserShield />
+                  {user.role === "user" ? "Người dùng" : user.role}
+                </div>
+                <p className="text-gray-500 text-sm flex items-center justify-center gap-2">
+                  <FaCalendarAlt className="text-green-500" />
+                  Tham gia từ {formatDate(user.created_at)}
+                </p>
+              </div>
 
-                        if (response.ok) {
-                          const data = await response.json();
-                          setUser(data.user);
-                          setFormData(data.user);
-                          localStorage.setItem(
-                            "user",
-                            JSON.stringify(data.user)
-                          );
-                          setPreviewAvatar(null);
-                          alert("Đã cập nhật avatar!");
-                        }
-                      } catch (error) {
-                        console.error("Update avatar failed:", error);
-                        alert("Lưu avatar thất bại!");
-                      }
-                    }}
-                    className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 text-white py-2 px-4 rounded-lg hover:shadow-lg transition-all font-semibold text-sm"
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-xl text-center">
+                  <FaHeart className="text-2xl text-blue-600 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-blue-700">
+                    {user.events_joined || 0}
+                  </p>
+                  <p className="text-xs text-gray-600">Tham gia</p>
+                </div>
+                <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-xl text-center">
+                  <FaCheckCircle className="text-2xl text-green-600 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-green-700">
+                    {user.events_completed || 0}
+                  </p>
+                  <p className="text-xs text-gray-600">Hoàn thành</p>
+                </div>
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-xl text-center">
+                  <FaClock className="text-2xl text-purple-600 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-purple-700">
+                    {user.total_hours || 0}h
+                  </p>
+                  <p className="text-xs text-gray-600">Giờ</p>
+                </div>
+              </div>
+
+              {/* Edit Button */}
+              {!isEditing ? (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 rounded-xl hover:shadow-lg transition-all font-semibold flex items-center justify-center gap-2"
+                >
+                  <FaEdit />
+                  Chỉnh sửa hồ sơ
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <button
+                    onClick={handleSave}
+                    className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 rounded-xl hover:shadow-lg transition-all font-semibold flex items-center justify-center gap-2"
                   >
-                    Lưu avatar
+                    <FaSave />
+                    Lưu thay đổi
                   </button>
                   <button
-                    onClick={() => setPreviewAvatar(null)}
-                    className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-all font-semibold text-sm"
+                    onClick={handleCancel}
+                    className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl hover:bg-gray-300 transition-all font-semibold"
                   >
                     Hủy
                   </button>
                 </div>
               )}
-
-              {/* User Info */}
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-1">
-                  {user.name}
-                </h2>
-                <p className="text-gray-500 flex items-center justify-center gap-2">
-                  <FaCalendarAlt className="text-green-500" />
-                  Tham gia từ {user.joinedDate}
-                </p>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl text-center">
-                  <FaTrophy className="text-3xl text-green-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-green-700">
-                    {user.points}
-                  </p>
-                  <p className="text-sm text-gray-600">Điểm</p>
-                </div>
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl text-center">
-                  <FaCheckCircle className="text-3xl text-blue-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-blue-700">
-                    {user.eventsCompleted}
-                  </p>
-                  <p className="text-sm text-gray-600">Hoàn thành</p>
-                </div>
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl text-center">
-                  <FaClock className="text-3xl text-purple-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-purple-700">
-                    {user.totalHours}h
-                  </p>
-                  <p className="text-sm text-gray-600">Giờ tình nguyện</p>
-                </div>
-                <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-4 rounded-xl text-center">
-                  <FaHeart className="text-3xl text-pink-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-pink-700">
-                    {user.eventsJoined}
-                  </p>
-                  <p className="text-sm text-gray-600">Sự kiện</p>
-                </div>
-              </div>
-
-              {/* Edit Button - Chỉ hiển thị nếu là profile của mình */}
-              {isOwnProfile && (
-                <>
-                  {!isEditing ? (
-                    <div className="space-y-3">
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 rounded-xl hover:shadow-lg transition-all font-semibold flex items-center justify-center gap-2"
-                      >
-                        <FaEdit />
-                        Chỉnh sửa hồ sơ
-                      </button>
-                      <button
-                        onClick={() => setShowPasswordModal(true)}
-                        className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-xl hover:bg-gray-50 transition-all font-semibold flex items-center justify-center gap-2"
-                      >
-                        <FaLock />
-                        Đổi mật khẩu
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleSave}
-                        className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 rounded-xl hover:shadow-lg transition-all font-semibold flex items-center justify-center gap-2"
-                      >
-                        <FaSave />
-                        Lưu
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsEditing(false);
-                          setFormData({ ...user });
-                          setPreviewAvatar(null);
-                        }}
-                        className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl hover:bg-gray-300 transition-all font-semibold"
-                      >
-                        Hủy
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
           </div>
 
-          {/* Right Column */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Information Form */}
+          {/* Right Column - Information */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Thông tin cơ bản */}
             <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
               <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
                 <FaUser className="text-green-500" />
-                Thông tin cá nhân
+                Thông tin cơ bản
               </h3>
 
-              <div className="space-y-4">
-                {/* Name */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Username */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Họ và tên
+                    Tên người dùng
                   </label>
                   <input
                     type="text"
-                    value={isEditing ? formData.name ?? "" : user.name ?? ""}
+                    value={isEditing ? formData.username : user.username}
                     onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
+                      setFormData({ ...formData, username: e.target.value })
                     }
-                    disabled={!isEditing || !isOwnProfile}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:text-black transition-all"
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition-all"
                   />
                 </div>
 
                 {/* Email */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <FaEnvelope className="inline mr-2 text-green-500" />
                     Email
                   </label>
                   <input
                     type="email"
-                    value={isEditing ? formData.email ?? "" : user.email ?? ""}
+                    value={isEditing ? formData.email : user.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
                     }
-                    disabled={!isEditing || !isOwnProfile}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:text-black transition-all"
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition-all"
                   />
                 </div>
 
                 {/* Phone */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <FaPhone className="inline mr-2 text-blue-500" />
                     Số điện thoại
                   </label>
                   <input
                     type="tel"
-                    value={isEditing ? formData.phone ?? "" : user.phone ?? ""}
+                    value={isEditing ? formData.phone : user.phone}
                     onChange={(e) =>
                       setFormData({ ...formData, phone: e.target.value })
                     }
-                    disabled={!isEditing || !isOwnProfile}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:text-black transition-all"
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition-all"
                   />
                 </div>
 
-                {/* Address */}
+                {/* Address Card */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <FaIdCard className="inline mr-2 text-purple-500" />
+                    Mã sinh viên / CCCD
+                  </label>
+                  <input
+                    type="text"
+                    value={
+                      isEditing
+                        ? formData.address_card || ""
+                        : user.address_card || ""
+                    }
+                    onChange={(e) =>
+                      setFormData({ ...formData, address_card: e.target.value })
+                    }
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition-all"
+                  />
+                </div>
+
+                {/* Role */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <FaUserShield className="inline mr-2 text-orange-500" />
+                    Vai trò
+                  </label>
+                  <input
+                    type="text"
+                    value={user.role}
+                    disabled
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black bg-gray-100 transition-all capitalize"
+                  />
+                </div>
+
+                {/* Address - Full width */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <FaMapMarkerAlt className="inline mr-2 text-red-500" />
                     Địa chỉ
                   </label>
                   <textarea
-                    value={
-                      isEditing ? formData.address ?? "" : user.address ?? ""
-                    }
+                    value={isEditing ? formData.address : user.address}
                     onChange={(e) =>
                       setFormData({ ...formData, address: e.target.value })
                     }
-                    disabled={!isEditing || !isOwnProfile}
+                    disabled={!isEditing}
                     rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:text-black transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition-all"
                   />
                 </div>
-
-                {/* Save/Cancel Buttons - Chỉ hiển thị nếu đang edit và là profile của mình */}
-                {isEditing && isOwnProfile && (
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleSave}
-                      className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 rounded-xl hover:shadow-lg transition-all font-semibold flex items-center justify-center gap-2"
-                    >
-                      <FaSave />
-                      Lưu thay đổi
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsEditing(false);
-                        setFormData({ ...user });
-                      }}
-                      className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl hover:bg-gray-300 transition-all font-semibold"
-                    >
-                      Hủy
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Activity History */}
+            {/* Thông tin tài khoản */}
             <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                  <FaCalendarAlt className="text-green-500" />
-                  Hoạt động gần đây
-                </h3>
-                <button
-                  onClick={() => (window.location.href = "/user/history")}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all font-medium text-sm"
-                >
-                  <FaTrophy />
-                  <span>Xem lịch sử đầy đủ</span>
-                </button>
-              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                <FaUserShield className="text-blue-500" />
+                Thông tin tài khoản
+              </h3>
 
-              <div className="space-y-4">
-                {recentActivities.length > 0 ? (
-                  recentActivities.map((activity) => (
-                    <div
-                      key={activity.id}
-                      className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-100 hover:shadow-md transition-all"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                          <FaCheckCircle className="text-white text-xl" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-800">
-                            {activity.event}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {activity.date} {activity.hours} giờ
-                          </p>
-                        </div>
-                      </div>
-                      <span className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-                        Hoàn thành
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <FaClock className="mx-auto text-4xl mb-2 text-gray-300" />
-                    <p>Chưa có hoạt động nào</p>
-                  </div>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-xl">
+                  <p className="text-sm text-gray-600 mb-1">ID Người dùng</p>
+                  <p className="text-lg font-semibold text-gray-800">
+                    {user.id}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl">
+                  <p className="text-sm text-gray-600 mb-1">Vai trò</p>
+                  <p className="text-lg font-semibold text-gray-800 capitalize">
+                    {user.role}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl md:col-span-2">
+                  <p className="text-sm text-gray-600 mb-1">Ngày tham gia</p>
+                  <p className="text-lg font-semibold text-gray-800">
+                    {formatDate(user.created_at)}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Password Change Modal */}
-        {showPasswordModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center">
-                    <FaLock className="text-white" />
-                  </div>
-                  Đổi mật khẩu
-                </h3>
-                <button
-                  onClick={() => setShowPasswordModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <FaTimes className="text-2xl" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Mật khẩu hiện tại
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordData.currentPassword}
-                    onChange={(e) =>
-                      setPasswordData({
-                        ...passwordData,
-                        currentPassword: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Mật khẩu mới
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordData.newPassword}
-                    onChange={(e) =>
-                      setPasswordData({
-                        ...passwordData,
-                        newPassword: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Xác nhận mật khẩu mới
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) =>
-                      setPasswordData({
-                        ...passwordData,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                  />
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={handlePasswordChange}
-                    className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 rounded-xl hover:shadow-lg transition-all font-semibold"
-                  >
-                    Đổi mật khẩu
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowPasswordModal(false);
-                      setPasswordData({
-                        currentPassword: "",
-                        newPassword: "",
-                        confirmPassword: "",
-                      });
-                    }}
-                    className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl hover:bg-gray-300 transition-all font-semibold"
-                  >
-                    Hủy
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

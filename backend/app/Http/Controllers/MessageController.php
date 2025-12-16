@@ -14,12 +14,13 @@ class MessageController extends Controller
     {
         try {
             $messages = Message::where('channel_id', $channelId)
-                ->with('sender:id,name,avatar')
+                ->with('sender:id,username,image')
                 ->orderBy('sent_at', 'asc')
                 ->get();
 
-            return response()->json($messages);
+            return response()->json(['messages' => $messages], 200);
         } catch (\Exception $e) {
+            \Log::error('Get Messages Error:', ['error' => $e->getMessage(), 'channel_id' => $channelId]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -54,7 +55,7 @@ class MessageController extends Controller
                 'sent_at' => now(),
             ]);
 
-            $message->load('sender:id,name,avatar');
+            $message->load('sender:id,username,image');
 
             return response()->json($message, 201);
         } catch (\Exception $e) {
