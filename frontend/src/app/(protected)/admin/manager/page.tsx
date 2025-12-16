@@ -65,7 +65,7 @@ type SortField =
   | "eventsManaged";
 type SortOrder = "asc" | "desc";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function ManagerManagement() {
   const { user: currentUser, isLoading: authLoading, hasRole } = useAuth();
@@ -304,12 +304,13 @@ export default function ManagerManagement() {
     try {
       if (selectedManager) {
         // Delete single manager
-        const response = await fetch(
-          `${API_URL}/admin/users/${selectedManager.id}`,
+        const response = await authFetch(
+          `/admin/deleteUser/${selectedManager.id}`,
           {
             method: "DELETE",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -321,10 +322,11 @@ export default function ManagerManagement() {
       } else {
         // Bulk delete
         const deletePromises = selectedManagers.map((id) =>
-          authFetch(`/admin/users/${id}`, {
+          authFetch(`/admin/deleteUser/${id}`, {
             method: "DELETE",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
           })
         );

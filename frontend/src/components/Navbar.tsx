@@ -644,6 +644,12 @@ export default function Navbar() {
                 >
                   Sự kiện đã tham gia
                 </Link>
+                <Link
+                  href="/user/history"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+                >
+                  Lịch sử
+                </Link>
               </>
             )}
 
@@ -957,15 +963,26 @@ export default function Navbar() {
 
                         {/* User specific links */}
                         {currentUser?.role === "user" && (
-                          <Link
-                            href="/user/eventsattended"
-                            className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                          >
-                            <FaCalendarAlt className="text-gray-500" />
-                            <span className="text-gray-700 font-medium">
-                              Sự kiện của tôi
-                            </span>
-                          </Link>
+                          <>
+                            <Link
+                              href="/user/eventsattended"
+                              className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <FaCalendarAlt className="text-gray-500" />
+                              <span className="text-gray-700 font-medium">
+                                Sự kiện của tôi
+                              </span>
+                            </Link>
+                            <Link
+                              href="/user/history"
+                              className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <FaTrophy className="text-gray-500" />
+                              <span className="text-gray-700 font-medium">
+                                Lịch sử tham gia
+                              </span>
+                            </Link>
+                          </>
                         )}
 
                         {/* Manager specific links */}

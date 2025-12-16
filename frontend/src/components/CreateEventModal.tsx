@@ -73,8 +73,10 @@ export default function CreateEventModal({
     }
 
     // Validate image URL (no base64)
-    if (formData.image && formData.image.startsWith('data:')) {
-      setError("⚠️ Vui lòng nhập URL ảnh từ internet (không hỗ trợ base64). Có thể để trống để dùng ảnh mặc định.");
+    if (formData.image && formData.image.startsWith("data:")) {
+      setError(
+        "⚠️ Vui lòng nhập URL ảnh từ internet (không hỗ trợ base64). Có thể để trống để dùng ảnh mặc định."
+      );
       return;
     }
 
@@ -102,7 +104,7 @@ export default function CreateEventModal({
       if (response.ok) {
         const data = await response.json();
         console.log("Event created:", data);
-        
+
         // Reset form
         setFormData({
           title: "",
@@ -118,13 +120,13 @@ export default function CreateEventModal({
 
         // Show success message
         alert("✅ Tạo sự kiện thành công! Đang chờ admin phê duyệt.");
-        
+
         onSuccess?.();
         onClose();
       } else {
         const errorData = await response.json();
-        console.error('Backend error:', errorData);
-        
+        console.error("Backend error:", errorData);
+
         // Display more detailed error
         if (errorData.errors) {
           const firstError = Object.values(errorData.errors)[0];
@@ -149,7 +151,9 @@ export default function CreateEventModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-purple-100 bg-gradient-to-r from-purple-500 to-pink-500 rounded-t-3xl">
           <div>
-            <h2 className="text-2xl font-bold text-white">✨ Tạo sự kiện mới</h2>
+            <h2 className="text-2xl font-bold text-white">
+              ✨ Tạo sự kiện mới
+            </h2>
             <p className="text-sm text-purple-100 mt-1">
               Sự kiện sẽ được gửi đến admin để phê duyệt
             </p>
@@ -163,7 +167,10 @@ export default function CreateEventModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-8 bg-white/80 backdrop-blur-sm">
+        <form
+          onSubmit={handleSubmit}
+          className="p-8 bg-white/80 backdrop-blur-sm"
+        >
           {error && (
             <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg text-red-700 text-sm flex items-start gap-3">
               <span className="text-red-500 text-xl">⚠️</span>
@@ -356,19 +363,29 @@ export default function CreateEventModal({
             <div className="flex items-start gap-3">
               <FaFileAlt className="text-purple-600 mt-1 text-xl" />
               <div className="text-sm text-gray-700">
-                <p className="font-semibold mb-2 text-purple-700">💡 Lưu ý quan trọng:</p>
+                <p className="font-semibold mb-2 text-purple-700">
+                  💡 Lưu ý quan trọng:
+                </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2">
                     <span className="text-purple-500 mt-0.5">✓</span>
-                    <span>Sự kiện sẽ ở trạng thái <strong>"Chờ duyệt"</strong> sau khi tạo</span>
+                    <span>
+                      Sự kiện sẽ ở trạng thái <strong>"Chờ duyệt"</strong> sau
+                      khi tạo
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-purple-500 mt-0.5">✓</span>
-                    <span>Admin sẽ xem xét và phê duyệt trong vòng <strong>24-48 giờ</strong></span>
+                    <span>
+                      Admin sẽ xem xét và phê duyệt trong vòng{" "}
+                      <strong>24-48 giờ</strong>
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-purple-500 mt-0.5">✓</span>
-                    <span>Bạn sẽ nhận thông báo khi sự kiện được duyệt/từ chối</span>
+                    <span>
+                      Bạn sẽ nhận thông báo khi sự kiện được duyệt/từ chối
+                    </span>
                   </li>
                 </ul>
               </div>

@@ -9,7 +9,12 @@ services:
       - ../backend:/var/www/html:cached
       - /var/www/html/vendor
     # use artisan serve as a simple HTTP server so nginx can proxy to it
-    command: ["sh", "-lc", "composer install && php artisan serve --host=0.0.0.0 --port=8000"]
+    command:
+      [
+        "sh",
+        "-lc",
+        "composer install && php artisan serve --host=0.0.0.0 --port=8000",
+      ]
     environment:
       - APP_ENV=local
       - DB_CONNECTION=pgsql
@@ -80,7 +85,12 @@ services:
     volumes:
       - ../backend:/var/www/html:cached
       - /var/www/html/vendor
-    command: ["sh", "-c", "composer install && php artisan reverb:start --host=0.0.0.0 --port=8080"]
+    command:
+      [
+        "sh",
+        "-c",
+        "composer install && php artisan reverb:start --host=0.0.0.0 --port=8080",
+      ]
     environment:
       - APP_ENV=local
       - DB_CONNECTION=pgsql
@@ -103,7 +113,11 @@ services:
       - ../backend:/var/www/html:cached
       - /var/www/html/vendor
     command:
-      ["sh", "-c", "composer install && php artisan queue:work --tries=3 --timeout=90 --sleep=3"]
+      [
+        "sh",
+        "-c",
+        "composer install && php artisan queue:work --tries=3 --timeout=90 --sleep=3",
+      ]
     environment:
       - APP_ENV=local
       - DB_CONNECTION=pgsql

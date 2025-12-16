@@ -486,7 +486,13 @@ export default function AdminEventsPage() {
   const handleDeleteEvent = async (eventId: number) => {
     setIsLoading(true);
     try {
-      const response = await authFetch(`/admin/deleteEvent/${eventId}`);
+      const response = await authFetch(`/admin/deleteEvent/${eventId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) throw new Error("Failed to delete event");
 
