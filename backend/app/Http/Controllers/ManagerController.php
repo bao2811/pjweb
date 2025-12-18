@@ -199,4 +199,108 @@ class ManagerController extends Controller
         }
     }
 
+    /**
+     * Đánh dấu tình nguyện viên đã hoàn thành sự kiện
+     */
+    public function markUserAsCompleted(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'user_id' => 'required|integer',
+                'event_id' => 'required|integer',
+            ]);
+
+            $userId = $request->input('user_id');
+            $eventId = $request->input('event_id');
+            $managerId = $request->user()->id;
+            
+            $result = $this->managerService->markUserAsCompleted($userId, $eventId, $managerId);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'User marked as completed successfully',
+                'data' => $result
+            ], Response::HTTP_OK);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User or Event not found'
+            ], Response::HTTP_NOT_FOUND);
+        } catch (Exception $e) {
+            Log::error('Error marking user as completed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Bỏ đánh dấu hoàn thành của tình nguyện viên
+     */
+    public function markUserAsIncomplete(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'user_id' => 'required|integer',
+                'event_id' => 'required|integer',
+            ]);
+
+            $userId = $request->input('user_id');
+            $eventId = $request->input('event_id');
+            $managerId = $request->user()->id;
+            
+            $result = $this->managerService->markUserAsIncomplete($userId, $eventId, $managerId);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'User marked as incomplete successfully',
+                'data' => $result
+            ], Response::HTTP_OK);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User or Event not found'
+            ], Response::HTTP_NOT_FOUND);
+        } catch (Exception $e) {
+            Log::error('Error marking user as incomplete: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Lấy báo cáo tình nguyện viên cho sự kiện
+     */
+    public function getEventReport(Request $request, $eventId): JsonResponse
+    {
+        try {
+            $managerId = $request->user()->id;
+            $completed = $request->query('completed'); // 'true' hoặc 'false' hoặc null (tất cả)
+            
+            $report = $this->managerService->getEventReport($eventId, $managerId, $completed);
+            
+            return response()->json([
+                'success' => true,
+                'report' => $report
+            ], Response::HTTP_OK);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Event not found'
+            ], Response::HTTP_NOT_FOUND);
+        } catch (Exception $e) {
+            Log::error('Error fetching event report: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

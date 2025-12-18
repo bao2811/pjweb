@@ -205,5 +205,83 @@ class JoinEventRepo
         return false;
     }
 
+    /**
+     * Đánh dấu tình nguyện viên đã hoàn thành sự kiện
+     */
+    public function markUserAsCompleted($userId, $eventId)
+    {
+        $joinEvent = JoinEvent::where('user_id', $userId)
+            ->where('event_id', $eventId)
+            ->where('status', 'approved')
+            ->first();
+
+        if ($joinEvent) {
+            $joinEvent->completed = true;
+            $joinEvent->completion_date = now();
+            $joinEvent->save();
+            return $joinEvent;
+        }
+
+        throw new Exception('User or JoinEvent not found');
+    }
+
+    /**
+     * Bỏ đánh dấu hoàn thành của tình nguyện viên
+     */
+    public function markUserAsIncomplete($userId, $eventId)
+    {
+        $joinEvent = JoinEvent::where('user_id', $userId)
+            ->where('event_id', $eventId)
+            ->where('status', 'approved')
+            ->first();
+
+        if ($joinEvent) {
+            $joinEvent->completed = false;
+            $joinEvent->completion_date = null;
+            $joinEvent->save();
+            return $joinEvent;
+        }
+
+        throw new Exception('User or JoinEvent not found');
+    }
+
+    /**
+     * Lấy báo cáo tình nguyện viên cho sự kiện
+     * @param int $eventId
+     * @param string|null $completed - 'true', 'false', hoặc null (tất cả)
+     * @return array
+     */
+    public function getEventReport($eventId, $completed = null)
+    {
+        $query = "SELECT 
+                    je.id,
+                    je.user_id,
+                    je.event_id,
+                    je.status,
+                    je.completed,
+                    je.completion_date,
+                    je.created_at,
+                    je.joined_at,
+                    u.id as user_id,
+                    u.username,
+                    u.email,
+                    u.image
+                FROM join_events je
+                JOIN users u ON je.user_id = u.id
+                WHERE je.event_id = ? AND je.status = 'approved'";
+        
+        $params = [$eventId];
+
+        if ($completed === 'true') {
+            $query .= " AND je.completed = true";
+        } elseif ($completed === 'false') {
+            $query .= " AND (je.completed = false OR je.completed IS NULL)";
+        }
+
+        $query .= " ORDER BY je.completed DESC, je.created_at DESC";
+
+        return DB::select($query, $params);
+    }
+
 
 }

@@ -22,6 +22,8 @@ class JoinEvent extends Model
         'status',
         'joined_at',
         'created_at',
+        'completed',
+        'completion_date',
     ];
 
     public function event()

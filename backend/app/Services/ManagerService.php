@@ -62,4 +62,46 @@ class ManagerService {
     {
         return $this->eventRepo->getEventsByManagerId($managerId);
     }
+
+    /**
+     * Đánh dấu tình nguyện viên đã hoàn thành sự kiện
+     */
+    public function markUserAsCompleted($userId, $eventId, $managerId)
+    {
+        // Kiểm tra manager có quyền quản lý sự kiện này không
+        $event = $this->eventRepo->findById($eventId);
+        if ($event->author_id !== $managerId) {
+            throw new Exception('Unauthorized: You are not the manager of this event');
+        }
+
+        return $this->joinEventRepo->markUserAsCompleted($userId, $eventId);
+    }
+
+    /**
+     * Bỏ đánh dấu hoàn thành của tình nguyện viên
+     */
+    public function markUserAsIncomplete($userId, $eventId, $managerId)
+    {
+        // Kiểm tra manager có quyền quản lý sự kiện này không
+        $event = $this->eventRepo->findById($eventId);
+        if ($event->author_id !== $managerId) {
+            throw new Exception('Unauthorized: You are not the manager of this event');
+        }
+
+        return $this->joinEventRepo->markUserAsIncomplete($userId, $eventId);
+    }
+
+    /**
+     * Lấy báo cáo tình nguyện viên cho sự kiện
+     */
+    public function getEventReport($eventId, $managerId, $completed = null)
+    {
+        // Kiểm tra manager có quyền quản lý sự kiện này không
+        $event = $this->eventRepo->findById($eventId);
+        if ($event->author_id !== $managerId) {
+            throw new Exception('Unauthorized: You are not the manager of this event');
+        }
+
+        return $this->joinEventRepo->getEventReport($eventId, $completed);
+    }
 }
