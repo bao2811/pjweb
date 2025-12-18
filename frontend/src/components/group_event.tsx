@@ -578,6 +578,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     setShowFAB(false);
     setShowCreatePostModal(false);
 
+    console.log("📝 Creating post with content:", postContent, postImgs);
     try {
       const response = await authFetch("/api/posts/channel", {
         method: "POST",

@@ -1,67 +1,111 @@
----
 # ============================================================================
-# CÁCH 2: Custom Runner với Performance Block (Async Mode)
-# Chạy: python run_api_tests.py api_test/suites/test_suite_7_performance_async_advanced.yaml --perf --async
-# Hoặc: python abc.py api_test/suites/test_suite_7_performance_async_advanced.yaml --perf --async
+# TEST SUITE 7: Advanced Performance Async High Throughput (Optimized)
 # ============================================================================
+# Chạy với async performance:
+#   python run_api_tests.py api_test/suites/test_suite_7_performance_async_optimized.yaml --perf --async
+# ============================================================================
+
 - config:
-    testset: "Performance Async Mode (Advanced - High Throughput)"
+    testset: "Performance Async Mode (Advanced - High Throughput Optimized)"
     timeout: 60
 
+# Login trước để lấy token
 - test:
-    name: "Perf-Async-Bench: Login API"
+    name: "Login (Async Token Setup)"
     url: http://localhost:8000/api/login
     method: POST
     headers:
       Content-Type: application/json
+      Accept: application/json
     body: '{"email":"1@gmail.com","password":"Bao12345"}'
     expected_status: [200]
-    performance:
-      mode: async
-      repeat: 10
-      concurrency: 20
-      threshold_ms: 250
+    extract_binds:
+      - token: { jsonpath_mini: access_token }
 
-- test:
-    name: "Perf-Async-Bench: Get User Info"
+# Benchmark: Get User Info
+- benchmark:
+    name: "Benchmark - Get User Info (Async)"
+    method: GET
     url: http://localhost:8000/api/me
-    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
     expected_status: [200, 401]
-    performance:
-      mode: async
-      repeat: 20
-      concurrency: 50
-      threshold_ms: 150
+    mode: async
+    benchmark_runs: 200
+    concurrency: 20 # giảm concurrency
+    ramp_up_seconds: 15
+    throttle_ms: 50
+    threshold_ms: 150
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json
 
-- test:
-    name: "Perf-Async-Bench: Get All Likes"
+# Benchmark: Get All Likes
+- benchmark:
+    name: "Benchmark - Get All Likes (Async)"
+    method: GET
     url: http://localhost:8000/api/getAllLikes
-    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
     expected_status: [200, 401]
-    performance:
-      mode: async
-      repeat: 20
-      concurrency: 25
-      threshold_ms: 400
+    mode: async
+    benchmark_runs: 200
+    concurrency: 20
+    ramp_up_seconds: 15
+    throttle_ms: 50
+    threshold_ms: 400
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json
 
-- test:
-    name: "Perf-Async-Bench: Get Post By ID"
+# Benchmark: Get Post By ID
+- benchmark:
+    name: "Benchmark - Get Post By ID (Async)"
+    method: GET
     url: http://localhost:8000/api/getPostById/1
-    method: GET
+    headers: { template: { "Authorization": "Bearer $token" } }
     expected_status: [200, 404]
-    performance:
-      mode: async
-      repeat: 30
-      concurrency: 30
-      threshold_ms: 200
+    mode: async
+    benchmark_runs: 150
+    concurrency: 15
+    ramp_up_seconds: 15
+    throttle_ms: 50
+    threshold_ms: 200
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json
 
-- test:
-    name: "Perf-Async-Bench: Mixed Endpoints"
-    url: http://localhost:8000/api/getPostById/5
+# Benchmark: Mixed Endpoints
+- benchmark:
+    name: "Benchmark - Mixed Endpoints (Async)"
     method: GET
+    url: http://localhost:8000/api/getPostById/5
+    headers: { template: { "Authorization": "Bearer $token" } }
     expected_status: [200, 404]
-    performance:
-      mode: async
-      repeat: 20
-      concurrency: 40
-      threshold_ms: 180
+    mode: async
+    benchmark_runs: 120
+    concurrency: 20
+    ramp_up_seconds: 15
+    throttle_ms: 50
+    threshold_ms: 180
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json

@@ -7,6 +7,8 @@ class Message extends Model
 {
     /** @use HasFactory<\Database\Factories\MessageFactory> */
     use HasFactory; 
+
+     public $timestamps = false;
     /**
      * The attributes that are mass assignable.
      *
@@ -18,6 +20,7 @@ class Message extends Model
         'content',
         'sent_at',
     ];
+
 
     public function sender()
     {

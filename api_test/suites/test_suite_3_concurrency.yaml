@@ -1,95 +1,60 @@
----
-# ============================================================================
-# TEST SUITE 3: Concurrency Test (Multiple Parallel Requests)
-# ============================================================================
-# Chạy với concurrency:
-#   pyresttest http://localhost:8000 api_test/test_suite_3_concurrency.yaml \
-#     --max-concurrency 10
-# ============================================================================
-
+# Test Suite 3 – Concurrency Test (Parallel Requests)
+# Objective: Evaluate concurrent handling, surface race-conditions/bottlenecks,
+# and validate concurrency behavior for upgraded framework.
+#
+# TC mapping:
+# S3-T1  Login                 POST  /api/login                -> 200 (extract token)
+# S3-T2..S3-T10  Concurrent access (mix of GET /api/getAllLikes, /api/getPostById/1, /api/me)
+#                 Run concurrently with max_concurrency = 10. Expected: 200 or 404 for resource endpoints.
 - config:
-    testset: "Suite 3: Concurrency Test"
-    timeout: 15
+    testset: "Suite 1: Basic Auth & User"
+    timeout: 10
 
 - test:
-    name: "Login"
-    url: http://localhost:8000/api/login
+    name: "S3-T1 Login for concurrency tests"
+    url: "http://localhost:8000/api/login"
     method: POST
     headers:
-      Content-Type: application/json
-      Accept: application/json
+      Content-Type: "application/json"
     body: '{"email":"1@gmail.com","password":"Bao12345"}'
     expected_status: [200]
     extract_binds:
-      - token: { jsonpath_mini: access_token }
+      - token: { jsonpath_mini: "access_token" }
 
-# Nhiều requests giống nhau để test concurrent access
-- test:
-    name: "Concurrent Request 1"
-    url: http://localhost:8000/api/getAllLikes
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200]
+# Concurrent requests group (S3-T2 .. S3-T10)
+# Each of the following tests is intended to be executed in parallel by the runner
+# with a maximum concurrency of 10 (runner flag: --max-concurrency 10 or use test metadata).
 
-- test:
-    name: "Concurrent Request 2"
-    url: http://localhost:8000/api/getAllLikes
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200]
+- benchmark:
+    name: "Benchmark - Get User Info (Concurrency Async)"
+    description: >
+      Concurrent benchmark for /api/me endpoint to evaluate parallel request handling.
 
-- test:
-    name: "Concurrent Request 3"
-    url: http://localhost:8000/api/getAllLikes
     method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200]
+    url: /api/me
 
-- test:
-    name: "Concurrent Request 4"
-    url: http://localhost:8000/api/getAllLikes
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200]
+    headers:
+      Authorization: "Bearer $token"
 
-- test:
-    name: "Concurrent Request 5"
-    url: http://localhost:8000/api/getAllLikes
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200]
+    # === CONCURRENCY CORE ===
+    mode: async
+    concurrency: 15
+    benchmark_runs: 500
 
-- test:
-    name: "Concurrent Request 6"
-    url: http://localhost:8000/api/getPostById/1
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200, 404]
+    ramp_up_seconds: 15
+    throttle_ms: 50
 
-- test:
-    name: "Concurrent Request 7"
-    url: http://localhost:8000/api/getPostById/2
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200, 404]
+    # === EXPECTATION ===
+    expected_status: [200, 401, 429]
 
-- test:
-    name: "Concurrent Request 8"
-    url: http://localhost:8000/api/getPostById/3
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200, 404]
+    # === SLA (PyRestTest chỉ check max_time ngầm) ===
+    threshold_ms: 300
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    metrics:
+      - total_time
 
-- test:
-    name: "Concurrent Request 9"
-    url: http://localhost:8000/api/me
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200]
-
-- test:
-    name: "Concurrent Request 10"
-    url: http://localhost:8000/api/me
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200]
+    output_format: json

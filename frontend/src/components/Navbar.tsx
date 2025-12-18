@@ -658,13 +658,13 @@ export default function Navbar() {
               <>
                 <Link
                   href="/manager/events"
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
                 >
                   Quản lý sự kiện
                 </Link>
                 <Link
                   href="/manager/reports"
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
                 >
                   Báo cáo
                 </Link>
@@ -676,7 +676,7 @@ export default function Navbar() {
               <>
                 <Link
                   href="/admin/manager"
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
                   // className={`text-xs sm:text-sm lg:text-base whitespace-nowrap px-2 sm:px-3 py-1 rounded-lg transition-colors hover:bg-blue-100 ${
                   //   pathname === "/admin/manager"
                   //     ? "bg-blue-500 text-white font-semibold"
@@ -692,9 +692,20 @@ export default function Navbar() {
                   //     ? "bg-blue-500 text-white font-semibold"
                   //     : "text-gray-700"
                   // }`}
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
                 >
                   Người dùng
+                </Link>
+                <Link
+                  href="/admin/events"
+                  // className={`text-xs sm:text-sm lg:text-base whitespace-nowrap px-2 sm:px-3 py-1 rounded-lg transition-colors hover:bg-blue-100 ${
+                  //   pathname === "/admin/users"
+                  //     ? "bg-blue-500 text-white font-semibold"
+                  //     : "text-gray-700"
+                  // }`}
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+                >
+                  Quản lý sự kiện
                 </Link>
               </>
             )}

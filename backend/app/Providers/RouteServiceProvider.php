@@ -13,8 +13,9 @@ class RouteServiceProvider extends ServiceProvider
 
     protected function configureRateLimiting(): void
     {
-        RateLimiter::for('api', function ($request) {
-            return Limit::perMinute(200)->by($request->user()?->id ?: $request->ip());
+        RateLimiter::for('global', function ($request) {
+            return Limit::perMinute(500)
+                ->by($request->user()?->id ?: $request->ip());
         });
     }
 
@@ -23,30 +24,28 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->configureRateLimiting(); // ⚡ Thêm dòng này
+        $this->configureRateLimiting();
 
         $this->routes(function () {
-            // Route web chính
-            Route::middleware('web')
+
+            Route::middleware(['web', 'throttle:global'])
                 ->group(base_path('routes/web.php'));
 
-            // Route API
-            Route::middleware('api')
+            Route::middleware(['api', 'throttle:global'])
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
-            // ⚡ Route cho admin
-            Route::middleware(['web', 'auth'])
+            Route::middleware(['web', 'auth', 'throttle:global'])
                 ->prefix('admin')
                 ->name('admin.')
                 ->group(base_path('routes/admin.php'));
-                
-            Route::middleware(['web', 'auth'])
+
+            Route::middleware(['web', 'auth', 'throttle:global'])
                 ->prefix('manager')
                 ->name('manager.')
                 ->group(base_path('routes/manager.php'));
 
-            Route::middleware(['web', 'auth'])
+            Route::middleware(['web', 'auth', 'throttle:global'])
                 ->prefix('user')
                 ->name('user.')
                 ->group(base_path('routes/user.php'));

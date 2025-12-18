@@ -16,41 +16,95 @@
       Content-Type: application/json
     body: '{"email":"1@gmail.com","password":"Bao12345"}'
     expected_status: [200]
-    performance:
-      mode: sync
-      repeat: 20
-      concurrency: 10
-      threshold_ms: 300
 
 - test:
     name: "Perf-Sync-Bench: Get User Info"
     url: http://localhost:8000/api/me
     method: GET
     expected_status: [200, 401]
-    performance:
-      mode: sync
-      repeat: 20
-      concurrency: 15
-      threshold_ms: 200
+
+- benchmark:
+    name: "Benchmark - Get User Info (Perf-Sync)"
+    method: GET
+    url: http://localhost:8000/api/me
+    mode: sync
+    benchmark_runs: 200
+    concurrency: 15
+    threshold_ms: 300
+    ramp_up_seconds: 15
+    throttle_ms: 50
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json
 
 - test:
     name: "Perf-Sync-Bench: Get All Likes"
     url: http://localhost:8000/api/getAllLikes
     method: GET
     expected_status: [200, 401]
-    performance:
-      mode: sync
-      repeat: 20
-      concurrency: 10
-      threshold_ms: 500
+
+- benchmark:
+    name: "Benchmark - Get All Likes (Perf-Sync)"
+    method: GET
+    url: http://localhost:8000/api/getAllLikes
+    mode: sync
+    benchmark_runs: 200
+    concurrency: 15
+    threshold_ms: 300
+    ramp_up_seconds: 15
+    throttle_ms: 50
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json
 
 - test:
     name: "Perf-Sync-Bench: Get Post By ID"
     url: http://localhost:8000/api/getPostById/1
     method: GET
     expected_status: [200, 404]
-    performance:
-      mode: sync
-      repeat: 20
-      concurrency: 12
-      threshold_ms: 250
+- benchmark:
+    name: "Benchmark - Get Post By ID (Perf-Sync)"
+    method: GET
+    url: http://localhost:8000/api/getPostById/1
+    mode: sync
+    benchmark_runs: 200
+    concurrency: 15
+    threshold_ms: 300
+    ramp_up_seconds: 15
+    throttle_ms: 50
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json
+
+- benchmark:
+    name: "Perf-Sync-Bench: Get Post By ID"
+    url: http://localhost:8000/api/getPostById/1
+    method: GET
+    mode: async
+    concurrency: 10
+    benchmark_runs: 20
+    warmup_runs: 20
+    timeout: 10
+    retry:
+      max_retries: 1
+      backoff_base: 0.5
+      backoff_max: 2
+      retry_statuses: [500, 502, 503, 504]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json

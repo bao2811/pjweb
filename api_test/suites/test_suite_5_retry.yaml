@@ -5,14 +5,13 @@
 # Chạy với retry enabled:
 #   pyresttest http://localhost:8000 api_test/test_suite_5_retry.yaml \
 #     --max-retries 5 --retry-backoff-base 0.5 --retry-backoff-max 30
-#
-# Test này bao gồm các endpoint có thể thất bại để demo retry logic
 # ============================================================================
 
 - config:
     testset: "Suite 5: Retry Logic Test"
     timeout: 20
 
+# Login chuẩn bị token
 - test:
     name: "Login"
     url: http://localhost:8000/api/login
@@ -25,13 +24,18 @@
     extract_binds:
       - token: { jsonpath_mini: access_token }
 
-# Các endpoint stable - nên pass ngay lần đầu
+# Các endpoint stable - pass ngay lần đầu
 - test:
     name: "Stable Endpoint 1"
     url: http://localhost:8000/api/me
     method: GET
     headers: { template: { "Authorization": "Bearer $token" } }
     expected_status: [200]
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [500]
 
 - test:
     name: "Stable Endpoint 2"
@@ -39,26 +43,46 @@
     method: GET
     headers: { template: { "Authorization": "Bearer $token" } }
     expected_status: [200]
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [500]
 
-# Endpoint có thể trả về 404 - test retry với multiple expected status
+# Endpoint có thể trả về 404 - bắt retry trên 404
 - test:
     name: "Optional Resource 1"
     url: http://localhost:8000/api/getPostById/999
     method: GET
     headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200, 404]
+    expected_status: [200] # bỏ 404 ra khỏi expected_status
+    retry:
+      max_retries: 3
+      backoff_base: 1
+      backoff_max: 10
+      retry_statuses: [404, 500]
 
 - test:
     name: "Optional Resource 2"
     url: http://localhost:8000/api/getPostById/1000
     method: GET
     headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200, 404]
+    expected_status: [200] # bỏ 404 ra khỏi expected_status
+    retry:
+      max_retries: 4
+      backoff_base: 1
+      backoff_max: 10
+      retry_statuses: [404, 500]
 
-# Logout có thể trả về 500 - test retry
+# Logout có thể fail - test retry thực tế
 - test:
     name: "Logout (May Fail)"
     url: http://localhost:8000/api/logout
     method: POST
     headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200, 500]
+    expected_status: [200]
+    retry:
+      max_retries: 3
+      backoff_base: 1
+      backoff_max: 5
+      retry_statuses: [500]

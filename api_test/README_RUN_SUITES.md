@@ -252,3 +252,5 @@ PERFORMANCE TESTS
 📄 Detailed results saved to: api_test/reports/all_suites_results.json
 ================================================================================
 ```
+
+pyresttest --url http://localhost:8000 --tests "api_test/suites/\*.yaml" --workers 2

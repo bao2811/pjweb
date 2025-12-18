@@ -10,7 +10,7 @@
   {
     "test": {
       "name": "List events",
-      "url": "$base_url/api/events",
+      "url": "/api/events",
       "method": "GET",
       "expected_status": 200,
       "save": {
@@ -21,7 +21,7 @@
   {
     "test": {
       "name": "Get event detail",
-      "url": "$base_url/api/events/$first_event_id",
+      "url": "/api/events/$first_event_id",
       "method": "GET",
       "expected_status": 200
     }

@@ -39,7 +39,6 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             //  \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class, // quan trọng
             // \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
@@ -66,7 +65,6 @@ class Kernel extends HttpKernel
         'password.confirm' => \Illuminate\Session\Middleware\RequirePassword::class,
         'precognitive' => \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
         'signed' => \App\Http\Middleware\ValidateSignature::class,
-        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
     ];
 }

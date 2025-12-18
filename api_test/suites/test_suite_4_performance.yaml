@@ -32,11 +32,24 @@
     headers:
       template: { "Authorization": "Bearer $token" }
     expected_status: [200]
-    performance:
-      mode: sync
-      repeat: 10
-      concurrency: 10
-      threshold_ms: 250
+  benchmark:
+    name: "Benchmark - Get User Info (Fast)"
+    method: GET
+    url: http://localhost:8000/api/me
+    mode: sync
+    benchmark_runs: 100
+    concurrency: 10
+    threshold_ms: 200
+    ramp_up_seconds: 10
+    throttle_ms: 50
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json
 
 # Performance test - endpoint có thể chậm hơn
 - test:
@@ -46,11 +59,24 @@
     headers:
       template: { "Authorization": "Bearer $token" }
     expected_status: [200]
-    performance:
-      mode: sync
-      repeat: 10
-      concurrency: 20
-      threshold_ms: 400
+  benchmark:
+    name: "Benchmark - Get All Likes (Medium)"
+    method: GET
+    url: http://localhost:8000/api/getAllLikes
+    mode: sync
+    benchmark_runs: 100
+    concurrency: 15
+    threshold_ms: 300
+    ramp_up_seconds: 10
+    throttle_ms: 50
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json
 
 - test:
     name: "Performance Test - Get Post By ID (Fast)"
@@ -59,8 +85,23 @@
     headers:
       template: { "Authorization": "Bearer $token" }
     expected_status: [200, 404]
-    performance:
-      mode: sync
-      repeat: 10
-      concurrency: 5
-      threshold_ms: 200
+  benchmark:
+    name: "Benchmark - Get Post By ID (Fast)"
+    method: GET
+    url: http://localhost:8000/api/getPostById/1
+    headers:
+      template: { "Authorization": "Bearer $token" }
+    mode: sync
+    benchmark_runs: 100
+    concurrency: 10
+    threshold_ms: 250
+    ramp_up_seconds: 10
+    throttle_ms: 50
+    retry:
+      max_retries: 2
+      backoff_base: 0.5
+      backoff_max: 5
+      retry_statuses: [429, 500]
+    rps_mode: response
+    metrics: [total_time]
+    output_format: json
