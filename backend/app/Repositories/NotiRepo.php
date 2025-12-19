@@ -22,7 +22,7 @@ class NotiRepo
      */
     public function findByUserId($userId)
     {
-        return DB::table('notis')
+        $notifications = DB::table('notis')
             ->leftJoin('users as sender', 'notis.sender_id', '=', 'sender.id')
             ->where('notis.receiver_id', $userId)
             ->select(
@@ -34,6 +34,14 @@ class NotiRepo
             )
             ->orderBy('notis.created_at', 'desc')
             ->get();
+        
+        // Parse JSON data field
+        return $notifications->map(function ($noti) {
+            if (is_string($noti->data)) {
+                $noti->data = json_decode($noti->data, true) ?? [];
+            }
+            return $noti;
+        });
     }
 
     /**

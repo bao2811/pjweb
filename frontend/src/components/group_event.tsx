@@ -165,15 +165,25 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
   const [currentUserData, setCurrentUserData] = useState<User | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Helper function to validate and get safe avatar URL
+  const getSafeAvatarUrl = (imageUrl: string | null | undefined): string => {
+    const defaultAvatar =
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop";
+    if (!imageUrl) return defaultAvatar;
+    // Check if it's a valid URL (starts with http:// or https://)
+    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+      return imageUrl;
+    }
+    return defaultAvatar;
+  };
+
   // ✅ Sync currentUserData từ useAuth
   useEffect(() => {
     if (user) {
       setCurrentUserData({
         id: user.id,
         name: user.username || "User",
-        avatar:
-          user.image ||
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
+        avatar: getSafeAvatarUrl(user.image),
         role: user.role || "user",
       });
     }
@@ -185,16 +195,32 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
       try {
         console.log("🔐 Checking access for event:", eventId);
 
-        // BƯỚC 1: Kiểm tra xem user có phải là manager của sự kiện không
+        // BƯỚC 1: Kiểm tra xem event đã được admin duyệt chưa
         const eventResponse = await authFetch(
           `/api/events/getEventDetails/${eventId}`
         );
         if (eventResponse.ok) {
           const eventData = await eventResponse.json();
-          console.log("📊 Event details:", eventData);
+          const event = eventData.event || eventData;
+          console.log("📊 Event details:", event);
 
-          // Nếu user là manager của sự kiện, cho phép truy cập ngay
-          if (user && eventData.manager_id === user.id) {
+          // ⛔ Kiểm tra sự kiện đã được admin duyệt chưa (status phải là approved/accepted/ongoing/completed)
+          const eventStatus = event.status;
+          if (eventStatus === "pending" || eventStatus === "rejected") {
+            setHasAccess(false);
+            setAccessError(
+              eventStatus === "pending"
+                ? "Sự kiện này chưa được admin duyệt. Vui lòng chờ."
+                : "Sự kiện này đã bị từ chối."
+            );
+            return;
+          }
+
+          // Nếu user là manager (author) của sự kiện, cho phép truy cập ngay
+          if (
+            user &&
+            (event.author_id === user.id || event.manager_id === user.id)
+          ) {
             console.log("✅ User is the event manager - access granted!");
             setHasAccess(true);
             return;
@@ -366,7 +392,10 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
       setLoadingPosts(true);
 
       try {
-        const response = await authFetch(`/api/posts/channel/${channelId}`);
+        // Gửi user_id để backend check is_liked
+        const response = await authFetch(
+          `/api/posts/channel/${channelId}?user_id=${currentUserData.id}`
+        );
 
         if (!response.ok) {
           console.error("❌ Failed to fetch posts", response.status);
@@ -389,12 +418,9 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
               author: {
                 id: p.user?.id || p.author_id,
                 name: p.user?.username || p.username || p.name || "User",
-                avatar:
-                  p.user?.image ||
-                  p.user?.avatar ||
-                  p.image ||
-                  p.avatar ||
-                  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
+                avatar: getSafeAvatarUrl(
+                  p.user?.image || p.user?.avatar || p.image || p.avatar
+                ),
                 role: p.user?.role || p.role || "user",
               },
               images: p.image ? [p.image] : [],
@@ -412,12 +438,12 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                     c.author?.username ||
                     c.author?.name ||
                     "User",
-                  avatar:
+                  avatar: getSafeAvatarUrl(
                     c.user?.image ||
-                    c.user?.avatar ||
-                    c.author?.image ||
-                    c.author?.avatar ||
-                    "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
+                      c.user?.avatar ||
+                      c.author?.image ||
+                      c.author?.avatar
+                  ),
                   role: c.user?.role || c.author?.role || "user",
                 },
                 likes: 0,
@@ -434,12 +460,12 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                       r.author?.username ||
                       r.author?.name ||
                       "User",
-                    avatar:
+                    avatar: getSafeAvatarUrl(
                       r.user?.image ||
-                      r.user?.avatar ||
-                      r.author?.image ||
-                      r.author?.avatar ||
-                      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
+                        r.user?.avatar ||
+                        r.author?.image ||
+                        r.author?.avatar
+                    ),
                     role: r.user?.role || r.author?.role || "user",
                   },
                   likes: 0,
@@ -493,10 +519,9 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
               id: msg.id,
               userId: msg.sender_id,
               userName: msg.sender?.username || msg.sender?.name || "User",
-              userAvatar:
-                msg.sender?.image ||
-                msg.sender?.avatar ||
-                "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
+              userAvatar: getSafeAvatarUrl(
+                msg.sender?.image || msg.sender?.avatar
+              ),
               message: msg.content,
               timestamp: new Date(msg.sent_at).toLocaleTimeString("vi-VN", {
                 hour: "2-digit",
@@ -578,7 +603,6 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     setShowFAB(false);
     setShowCreatePostModal(false);
 
-    console.log("📝 Creating post with content:", postContent, postImgs);
     try {
       const response = await authFetch("/api/posts/channel", {
         method: "POST",
@@ -806,10 +830,9 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          post_id: postId,
+          postId: postId,
           content: comment,
-          parent_id: parentCommentId || null,
-          author_id: currentUserData!.id, // Fallback for non-JWT
+          parentId: parentCommentId || null,
         }),
       });
       const data = await response.json();
@@ -1348,9 +1371,15 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() =>
-                          router.push(`/user/profile/${post.author.id}`)
-                        }
+                        onClick={() => {
+                          const profilePath =
+                            post.author.role === "manager"
+                              ? `/manager/profile`
+                              : post.author.role === "admin"
+                              ? `/admin/profile`
+                              : `/user/profile}`;
+                          router.push(profilePath);
+                        }}
                         className="flex-shrink-0 hover:opacity-80 transition"
                       >
                         <Image
@@ -1365,9 +1394,15 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                       <div>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() =>
-                              router.push(`/user/profile/${post.author.id}`)
-                            }
+                            onClick={() => {
+                              const profilePath =
+                                post.author.role === "manager"
+                                  ? `/manager/profile`
+                                  : post.author.role === "admin"
+                                  ? `/admin/profile`
+                                  : `/user/profile`;
+                              router.push(profilePath);
+                            }}
                             className="font-semibold text-gray-900 hover:text-blue-600 transition"
                           >
                             {post.author.name}
@@ -1518,7 +1553,15 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                           {/* Main Comment */}
                           <div className="flex gap-3 items-start">
                             <button
-                              onClick={() => router.push(`/user/profile`)}
+                              onClick={() => {
+                                const profilePath =
+                                  comment.author.role === "manager"
+                                    ? `/manager/profile`
+                                    : comment.author.role === "admin"
+                                    ? `/admin/profile`
+                                    : `/user/profile`;
+                                router.push(profilePath);
+                              }}
                               className="flex-shrink-0 hover:opacity-80 transition"
                             >
                               <Image
@@ -1535,11 +1578,15 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                                 <div className="flex items-start justify-between gap-2 mb-1">
                                   <div className="flex items-center gap-2">
                                     <button
-                                      onClick={() =>
-                                        router.push(
-                                          `/user/profile/${comment.author.id}`
-                                        )
-                                      }
+                                      onClick={() => {
+                                        const profilePath =
+                                          comment.author.role === "manager"
+                                            ? `/manager/profile`
+                                            : comment.author.role === "admin"
+                                            ? `/admin/profile`
+                                            : `/user/profile`;
+                                        router.push(profilePath);
+                                      }}
                                       className="font-semibold text-gray-900 text-sm hover:text-blue-600 transition"
                                     >
                                       {comment.author.name}
@@ -1670,11 +1717,15 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                                         className="flex gap-2 items-start"
                                       >
                                         <button
-                                          onClick={() =>
-                                            router.push(
-                                              `/user/profile/${reply.author.id}`
-                                            )
-                                          }
+                                          onClick={() => {
+                                            const profilePath =
+                                              reply.author.role === "manager"
+                                                ? `/manager/profile`
+                                                : reply.author.role === "admin"
+                                                ? `/admin/profile`
+                                                : `/user/profile`;
+                                            router.push(profilePath);
+                                          }}
                                           className="flex-shrink-0 hover:opacity-80 transition"
                                         >
                                           <Image
@@ -1691,11 +1742,17 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                                             <div className="flex items-start justify-between gap-2 mb-1">
                                               <div className="flex items-center gap-2">
                                                 <button
-                                                  onClick={() =>
-                                                    router.push(
-                                                      `/user/profile/${reply.author.id}`
-                                                    )
-                                                  }
+                                                  onClick={() => {
+                                                    const profilePath =
+                                                      reply.author.role ===
+                                                      "manager"
+                                                        ? `/manager/profile`
+                                                        : reply.author.role ===
+                                                          "admin"
+                                                        ? `/admin/profile`
+                                                        : `/user/profile`;
+                                                    router.push(profilePath);
+                                                  }}
                                                   className="font-semibold text-gray-900 text-xs hover:text-blue-600 transition"
                                                 >
                                                   {reply.author.name}

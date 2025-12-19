@@ -10,17 +10,24 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Repositories\CommentRepo;
 use App\Models\Post;
+use App\Repositories\LikeRepo;
+use Illuminate\Support\Facades\Log;
+
 
 class PostService
 {
     protected $postRepo;
     protected $commentRepo;
+    protected $likeRepo;
 
-    public function __construct(PostRepo $postRepo, CommentRepo $commentRepo)
+
+
+    public function __construct(PostRepo $postRepo, CommentRepo $commentRepo, LikeRepo $likeRepo)
     {
         $this->postRepo = $postRepo;
         $this->commentRepo = $commentRepo;
-    }       
+        $this->likeRepo = $likeRepo;
+    }
 
     public function getPostById($id)
     {
@@ -45,7 +52,7 @@ class PostService
 
             return $this->postRepo->createPost($data);
         } catch (Exception $e) {
-            \Log::error('PostService createPost error:', ['error' => $e->getMessage()]);
+            Log::error('PostService createPost error:', ['error' => $e->getMessage()]);
             return null;
         }
     }
@@ -166,7 +173,7 @@ class PostService
     public function getLikesOfPost($postId)
     {
         try {
-            return $this->postRepo->getLikesByPostId($postId);
+            return $this->likeRepo->getListLikeByPost($postId);
         } catch (Exception $e) {
             // Handle exception
             return [];
@@ -188,7 +195,7 @@ class PostService
         try {
             return $this->postRepo->getPostsByChannel($channelId, $userId);
         } catch (Exception $e) {
-            \Log::error('PostService getPostsByChannel error:', ['error' => $e->getMessage()]);
+            Log::error('PostService getPostsByChannel error:', ['error' => $e->getMessage()]);
             return [];
         }
     }
@@ -250,7 +257,7 @@ class PostService
 
             return $trendingPosts;
         } catch (Exception $e) {
-            \Log::error('Error getting trending posts: ' . $e->getMessage());
+            Log::error('Error getting trending posts: ' . $e->getMessage());
             return collect([]);
         }
     }

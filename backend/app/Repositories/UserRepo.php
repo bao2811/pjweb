@@ -37,6 +37,11 @@ class UserRepo
             ->get();
     }
 
+    public function findByEmail($email)
+    {
+        return User::where('email', $email)->first();
+    }
+
     public function getUsersByRole($role)
     {
         return User::where('role', $role)->get();
@@ -49,6 +54,12 @@ class UserRepo
             throw new Exception('User not found');
         }
         $user->update($data);
+        return $user;
+    }
+
+    public function find($id) : ?User
+    {
+        $user = $this->getUserById($id);
         return $user;
     }
 

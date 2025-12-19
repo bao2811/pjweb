@@ -7,6 +7,8 @@ use App\Models\Noti;
 use App\Models\PushSubscription;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+
 use Exception;
 
 class NotiService
@@ -27,6 +29,15 @@ class NotiService
         } catch (Exception $e) {
             // Handle exception
             return [];
+        }
+    }
+
+    public function getNotificationById($id)
+    {
+        try {
+            return $this->notiRepo->findById($id);
+        } catch (Exception $e) {
+            return null;
         }
     }
 
@@ -234,7 +245,7 @@ class NotiService
     public function sendNotificationToEventParticipants(int $eventId, array $notificationData): array
     {
         // Lấy tất cả users đã join event (status = 'accepted')
-        $userIds = \DB::table('join_events')
+        $userIds = DB::table('join_events')
             ->where('event_id', $eventId)
             ->where('status', 'accepted')
             ->pluck('user_id')

@@ -23,6 +23,21 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// Helper function to validate and get safe avatar URL
+const getSafeAvatarUrl = (imageUrl: string | null | undefined): string => {
+  const defaultAvatar = "/default-profile.png";
+  if (!imageUrl) return defaultAvatar;
+  // Check if it's a valid URL (starts with http:// or https:// or /)
+  if (
+    imageUrl.startsWith("http://") ||
+    imageUrl.startsWith("https://") ||
+    imageUrl.startsWith("/")
+  ) {
+    return imageUrl;
+  }
+  return defaultAvatar;
+};
+
 export default function Dashboard() {
   const { user: currentUser } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
@@ -594,7 +609,7 @@ export default function Dashboard() {
                       <div className="relative">
                         <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white font-bold text-xl ring-2 ring-blue-100">
                           <Image
-                            src={post.avatar || "/default-profile.png"}
+                            src={getSafeAvatarUrl(post.avatar)}
                             alt={post.name || "User"}
                             width={56}
                             height={56}
@@ -758,10 +773,7 @@ export default function Dashboard() {
                                 className="flex space-x-3"
                               >
                                 <Image
-                                  src={
-                                    comment.author?.image ||
-                                    "/default-profile.png"
-                                  }
+                                  src={getSafeAvatarUrl(comment.author?.image)}
                                   alt={
                                     comment.author?.username ||
                                     comment.userName ||

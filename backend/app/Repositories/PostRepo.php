@@ -126,7 +126,7 @@ class PostRepo
 
      public function getPostsByChannel($channelId, $userId = null)
     {
-        $currentUserId = $userId ?? auth()->id();
+        $currentUserId = $userId;
         
         $posts = Post::with([
                 'user:id,username,image,role',
@@ -144,10 +144,12 @@ class PostRepo
             ->get()
             ->map(function ($post) use ($currentUserId) {
                 // Check if user liked this post by querying likes table directly
+                // FIX: Phải check status = 1 vì unlike chỉ update status = 0, không xóa record
                 $post->is_liked = $currentUserId 
-                    ? \DB::table('likes')
+                    ? DB::table('likes')
                         ->where('post_id', $post->id)
                         ->where('user_id', $currentUserId)
+                        ->where('status', 1)
                         ->exists()
                     : false;
                 

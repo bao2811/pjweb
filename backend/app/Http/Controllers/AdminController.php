@@ -2,12 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Service\UserService;
-use App\Service\EventService;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 use App\Services\AdminService;
 use Illuminate\Validation\ValidationException;
 

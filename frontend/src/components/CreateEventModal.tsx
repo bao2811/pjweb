@@ -146,42 +146,38 @@ export default function CreateEventModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto animate-fadeIn">
-      <div className="bg-gradient-to-br from-white via-purple-50/30 to-pink-50/30 rounded-3xl shadow-2xl max-w-4xl w-full my-8 animate-slideUp border border-purple-100">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-purple-100 bg-gradient-to-r from-purple-500 to-pink-500 rounded-t-3xl">
+        <div className="flex items-center justify-between p-5 border-b bg-gradient-to-r from-blue-500 to-green-500 rounded-t-2xl sticky top-0">
           <div>
-            <h2 className="text-2xl font-bold text-white">
-              ✨ Tạo sự kiện mới
-            </h2>
-            <p className="text-sm text-purple-100 mt-1">
+            <h2 className="text-xl font-bold text-white">📝 Tạo sự kiện mới</h2>
+            <p className="text-sm text-blue-100 mt-0.5">
               Sự kiện sẽ được gửi đến admin để phê duyệt
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:text-purple-100 transition p-2 hover:bg-white/10 rounded-full"
+            className="w-10 h-10 flex items-center justify-center text-white hover:bg-white/20 transition rounded-full"
+            title="Đóng"
           >
-            <FaTimes size={24} />
+            <FaTimes size={20} />
           </button>
         </div>
 
         {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="p-8 bg-white/80 backdrop-blur-sm"
-        >
+        <form onSubmit={handleSubmit} className="p-6 bg-white">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg text-red-700 text-sm flex items-start gap-3">
-              <span className="text-red-500 text-xl">⚠️</span>
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+              <span>⚠️</span>
               <span>{error}</span>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Tên sự kiện */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">
                 Tên sự kiện <span className="text-red-500">*</span>
               </label>
               <input
@@ -191,14 +187,14 @@ export default function CreateEventModal({
                   setFormData({ ...formData, title: e.target.value })
                 }
                 placeholder="VD: Chiến dịch trồng cây xanh"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800"
                 required
               />
             </div>
 
             {/* Mô tả */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">
                 Mô tả <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -207,15 +203,15 @@ export default function CreateEventModal({
                   setFormData({ ...formData, content: e.target.value })
                 }
                 placeholder="Mô tả chi tiết về sự kiện..."
-                rows={4}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none"
+                rows={3}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none text-gray-800"
                 required
               />
             </div>
 
             {/* Danh mục */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">
                 Danh mục <span className="text-red-500">*</span>
               </label>
               <select
@@ -223,7 +219,7 @@ export default function CreateEventModal({
                 onChange={(e) =>
                   setFormData({ ...formData, category: e.target.value })
                 }
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800"
               >
                 {categories.map((cat) => (
                   <option key={cat.value} value={cat.value}>
@@ -235,11 +231,11 @@ export default function CreateEventModal({
 
             {/* Địa điểm */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">
                 Địa điểm <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <FaMapMarkerAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <FaMapMarkerAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500" />
                 <input
                   type="text"
                   value={formData.address}
@@ -247,7 +243,7 @@ export default function CreateEventModal({
                     setFormData({ ...formData, address: e.target.value })
                   }
                   placeholder="VD: Công viên Thống Nhất, Hà Nội"
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800"
                   required
                 />
               </div>
@@ -255,11 +251,11 @@ export default function CreateEventModal({
 
             {/* Ngày */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">
                 Ngày tổ chức <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <FaCalendarAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <FaCalendarAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500" />
                 <input
                   type="date"
                   value={formData.date}
@@ -267,7 +263,7 @@ export default function CreateEventModal({
                     setFormData({ ...formData, date: e.target.value })
                   }
                   min={new Date().toISOString().split("T")[0]}
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800"
                   required
                 />
               </div>
@@ -275,18 +271,18 @@ export default function CreateEventModal({
 
             {/* Giờ bắt đầu */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">
                 Giờ bắt đầu <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <FaClock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <FaClock className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500" />
                 <input
                   type="time"
                   value={formData.start_time}
                   onChange={(e) =>
                     setFormData({ ...formData, start_time: e.target.value })
                   }
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800"
                   required
                 />
               </div>
@@ -294,18 +290,18 @@ export default function CreateEventModal({
 
             {/* Giờ kết thúc */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">
                 Giờ kết thúc <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <FaClock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <FaClock className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500" />
                 <input
                   type="time"
                   value={formData.end_time}
                   onChange={(e) =>
                     setFormData({ ...formData, end_time: e.target.value })
                   }
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800"
                   required
                 />
               </div>
@@ -313,11 +309,11 @@ export default function CreateEventModal({
 
             {/* Số người tham gia */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Số người tham gia tối đa <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                Số người tối đa <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <FaUsers className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <FaUsers className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500" />
                 <input
                   type="number"
                   value={formData.max_participants}
@@ -329,7 +325,7 @@ export default function CreateEventModal({
                   }
                   placeholder="VD: 50"
                   min="1"
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800"
                   required
                 />
               </div>
@@ -337,11 +333,11 @@ export default function CreateEventModal({
 
             {/* Ảnh */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">
                 URL Ảnh (tùy chọn)
               </label>
               <div className="relative">
-                <FaImage className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <FaImage className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-500" />
                 <input
                   type="url"
                   value={formData.image}
@@ -349,63 +345,44 @@ export default function CreateEventModal({
                     setFormData({ ...formData, image: e.target.value })
                   }
                   placeholder="https://example.com/image.jpg"
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                💡 Nếu bỏ trống, hệ thống sẽ dùng ảnh mặc định
+              <p className="text-xs text-gray-500 mt-1">
+                Nếu bỏ trống, hệ thống sẽ dùng ảnh mặc định
               </p>
             </div>
           </div>
 
           {/* Info Box */}
-          <div className="mt-6 p-5 bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-purple-500 rounded-r-xl shadow-sm">
+          <div className="mt-5 p-4 bg-blue-50 border border-blue-200 rounded-xl">
             <div className="flex items-start gap-3">
-              <FaFileAlt className="text-purple-600 mt-1 text-xl" />
+              <FaFileAlt className="text-blue-600 mt-0.5" />
               <div className="text-sm text-gray-700">
-                <p className="font-semibold mb-2 text-purple-700">
-                  💡 Lưu ý quan trọng:
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-500 mt-0.5">✓</span>
-                    <span>
-                      Sự kiện sẽ ở trạng thái <strong>"Chờ duyệt"</strong> sau
-                      khi tạo
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-500 mt-0.5">✓</span>
-                    <span>
-                      Admin sẽ xem xét và phê duyệt trong vòng{" "}
-                      <strong>24-48 giờ</strong>
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-500 mt-0.5">✓</span>
-                    <span>
-                      Bạn sẽ nhận thông báo khi sự kiện được duyệt/từ chối
-                    </span>
-                  </li>
+                <p className="font-medium mb-1.5 text-gray-800">Lưu ý:</p>
+                <ul className="space-y-1 text-gray-600">
+                  <li>• Sự kiện sẽ ở trạng thái "Chờ duyệt" sau khi tạo</li>
+                  <li>• Admin sẽ xem xét trong vòng 24-48 giờ</li>
+                  <li>• Bạn sẽ nhận thông báo khi sự kiện được duyệt</li>
                 </ul>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-4 mt-8">
+          <div className="flex gap-3 mt-6">
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`flex-1 flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all shadow-lg transform hover:scale-105 ${
+              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
                 isSubmitting
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 hover:from-purple-700 hover:via-pink-600 hover:to-purple-700 text-white shadow-purple-500/50"
+                  ? "bg-gray-300 cursor-not-allowed text-gray-500"
+                  : "bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white shadow-md"
               }`}
             >
               {isSubmitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
                   Đang tạo...
                 </>
               ) : (
@@ -419,7 +396,7 @@ export default function CreateEventModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-8 py-4 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-xl hover:from-gray-200 hover:to-gray-300 transition-all font-semibold shadow-md"
+              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium border border-gray-300"
             >
               Hủy
             </button>

@@ -6,6 +6,7 @@ use App\Services\UserService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -74,8 +75,8 @@ class UserController extends Controller
              'messages' => $e->errors()
          ], 422);
       } catch (\Exception $e) {
-         \Log::error('Update profile error: ' . $e->getMessage());
-         return response()->json([
+            Log::error('Update profile error: ' . $e->getMessage());
+            return response()->json([
              'error' => 'Update failed',
              'message' => $e->getMessage()
          ], 500);
@@ -154,7 +155,7 @@ class UserController extends Controller
            ]);
 
        } catch (\Exception $e) {
-           \Log::error('Error getting event history: ' . $e->getMessage());
+           Log::error('Error getting event history: ' . $e->getMessage());
            return response()->json([
                'success' => false,
                'message' => 'Failed to get event history',
@@ -183,7 +184,7 @@ class UserController extends Controller
            ]);
 
        } catch (\Exception $e) {
-           \Log::error('Error getting my registrations: ' . $e->getMessage());
+           Log::error('Error getting my registrations: ' . $e->getMessage());
            return response()->json([
                'success' => false,
                'message' => 'Failed to get registrations',

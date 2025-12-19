@@ -7,6 +7,8 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Noti;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class NotificationSent implements ShouldBroadcast
 {
@@ -23,13 +25,6 @@ class NotificationSent implements ShouldBroadcast
      */
     public function __construct(Noti $notification, int $userId)
     {
-        \Log::info("=== 📡 NotificationSent Event Created ===");
-        \Log::info("User ID:", ['userId' => $userId]);
-        \Log::info("Notification:", [
-            'id' => $notification->id,
-            'title' => $notification->title,
-            'receiver_id' => $notification->receiver_id
-        ]);
         
         $this->notification = $notification;
         $this->userId = $userId;
@@ -44,7 +39,7 @@ class NotificationSent implements ShouldBroadcast
     public function broadcastOn(): PrivateChannel
     {
         $channel = 'notifications.' . $this->userId;
-        \Log::info("📢 Broadcasting on channel:", ['channel' => $channel]);
+        Log::info("📢 Broadcasting on channel:", ['channel' => $channel]);
         return new PrivateChannel($channel);
     }
 
@@ -71,8 +66,9 @@ class NotificationSent implements ShouldBroadcast
             'created_at' => $this->notification->created_at->toIso8601String(),
             'sender_id' => $this->notification->sender_id,
         ];
-        
-        \Log::info("📦 Broadcast data:", $data);
+        if ($this->notification->is_read) {
+            $data['read_at'] = $this->notification->updated_at->toIso8601String();
+        }
         return $data;
     }
 }

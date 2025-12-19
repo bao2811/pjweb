@@ -49,10 +49,10 @@ class EventRepo
         $query = Event::with('author:id,username,email,image'); // Eager load author info
 
         if ($userId) {
-            // Thêm trường is_liked: 1 nếu user đã like, 0 nếu chưa
+            // Thêm trường is_liked: 1 nếu user đã like (với status=1), 0 nếu chưa
             $query->withExists([
                 'likes as is_liked' => function ($q) use ($userId) {
-                    $q->where('user_id', $userId);
+                    $q->where('user_id', $userId)->where('status', 1);
                 }
             ]);
         } else {
@@ -61,30 +61,6 @@ class EventRepo
         }
 
         $events = $query->get();
-
-        // // Thêm computed_status dựa trên thời gian
-        // $events = $query->get()->map(function ($event) {
-        //     $now = Carbon::now();
-        //     $startTime = Carbon::parse($event->start_time);
-        //     $endTime = Carbon::parse($event->end_time);
-
-        //     // Tính toán computed_status
-        //     if ($event->status === 'pending' && $endTime->isPast()) {
-        //         $event->computed_status = 'expired';
-        //     } elseif ($event->status === 'accepted' || $event->status === 'completed') {
-        //         if ($now->lt($startTime)) {
-        //             $event->computed_status = 'upcoming';
-        //         } elseif ($now->between($startTime, $endTime)) {
-        //             $event->computed_status = 'ongoing';
-        //         } elseif ($now->gt($endTime)) {
-        //             $event->computed_status = 'completed';
-        //         }
-        //     } else {
-        //         $event->computed_status = $event->status;
-        //     }
-
-        //     return $event;
-        // });
 
         return $events;
     }
@@ -199,25 +175,39 @@ class EventRepo
 
     /**
      * Lấy danh sách events của một manager cụ thể (author_id)
+     * FIX #6: Thêm withCount để đếm số người tham gia (sử dụng status 'approved' thay vì 'participating')
      */
     public function getEventsByManagerId($managerId)
     {
         return Event::with('author:id,username,email,image')
+            ->withCount([
+                // FIX #6: Đếm số người đã được duyệt
+                'joinEvents as approved_participants' => function ($query) {
+                    $query->where('status', 'approved');
+                },
+                // Đếm tổng số người tham gia (bao gồm completed/failed)
+                'joinEvents as participants_count' => function ($query) {
+                    $query->whereIn('status', ['approved', 'completed', 'failed']);
+                }
+            ])
             ->where('author_id', $managerId)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($event) {
                 return [
                     'id' => $event->id,
-                    'title' => $event->title, // Fixed: was 'name'
-                    'content' => $event->content, // Fixed: was 'description'
-                    'address' => $event->address, // Fixed: was 'location'
+                    'title' => $event->title,
+                    'content' => $event->content,
+                    'address' => $event->address,
                     'category' => $event->category,
                     'start_time' => $event->start_time,
                     'end_time' => $event->end_time,
                     'max_participants' => $event->max_participants,
                     'status' => $event->status,
                     'image' => $event->image,
+                    // FIX #6: Trả về số người tham gia đã đếm
+                    'approved_participants' => $event->approved_participants ?? 0,
+                    'participants_count' => $event->participants_count ?? 0,
                     'author' => $event->author ? [
                         'id' => $event->author->id,
                         'username' => $event->author->username,
@@ -228,5 +218,13 @@ class EventRepo
                     'updated_at' => $event->updated_at,
                 ];
             });
+    }
+
+    public function searchEventsByKeyword($keyword) {
+        return Event::where(function($query) use ($keyword) {
+            $query->where('title', 'like', '%' . $keyword . '%')
+                  ->orWhere('content', 'like', '%' . $keyword . '%');
+        })
+            ->get();
     }
 }

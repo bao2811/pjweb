@@ -7,6 +7,6 @@ export default function GroupEventPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params); // ✅ Dùng use() để unwrap
+  const { id } = use(params);
   return <Group eventId={id} role="user" />;
 }

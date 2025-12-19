@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Log;
 
 // Đăng ký broadcasting authentication route với JWT middleware
 // Laravel sẽ tự động tạo POST /broadcasting/auth
@@ -27,7 +28,7 @@ Broadcast::channel('chat.{groupId}', function ($user, $groupId) {
  * Chỉ user được phép nghe notifications của chính họ
  */
 Broadcast::channel('notifications.{userId}', function ($user, $userId) {
-    \Log::info('🔐 [Channel Auth] notifications.{userId}', [
+    Log::info('🔐 [Channel Auth] notifications.{userId}', [
         'requested_userId' => $userId,
         'authenticated_user' => $user ? [
             'id' => $user->id,

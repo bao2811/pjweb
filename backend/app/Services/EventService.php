@@ -10,10 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\Event;
-use App\Models\PushSubscription;
 use App\Models\Noti;
-use App\Models\User;
 use App\Repositories\PushRepo;
+use App\Repositories\ChannelRepo;
 use App\Services\NotiService;
 
 class EventService
@@ -23,16 +22,20 @@ class EventService
     protected $pushRepo;
     protected $notiService;
 
+    protected $channelRepo;
+
     public function __construct(
         EventRepo $eventRepo, 
         EventManagementRepo $eventManagementRepo, 
         PushRepo $pushRepo,
-        NotiService $notiService
+        NotiService $notiService,
+        ChannelRepo $channelRepo
     ) {
         $this->eventRepo = $eventRepo;
         $this->eventManagementRepo = $eventManagementRepo;
         $this->pushRepo = $pushRepo;
         $this->notiService = $notiService;
+        $this->channelRepo = $channelRepo;
     }
 
     public function getAllEvents($userId = null)
@@ -138,7 +141,7 @@ class EventService
 
             return $trendingEvents;
         } catch (Exception $e) {
-            \Log::error('Error getting trending events: ' . $e->getMessage());
+            Log::error('Error getting trending events: ' . $e->getMessage());
             return collect([]);
         }
     }
@@ -160,4 +163,10 @@ class EventService
         }
         return $result;
     }
+
+    public function searchEvents($keyword)
+    {
+        $result = $this->eventRepo->searchEventsByKeyword($keyword);
+        return $result;
+    }   
 }

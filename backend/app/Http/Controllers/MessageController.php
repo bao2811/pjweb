@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 
 class MessageController extends Controller
 {
-    
     public function getMessagesByChannel($channelId): JsonResponse
     {
         try {

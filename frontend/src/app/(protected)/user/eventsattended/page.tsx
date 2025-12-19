@@ -68,6 +68,8 @@ interface UserEvent {
     | "completed"
     | "cancelled"
     | "accepted";
+  completionStatus?: "pending" | "completed" | "failed";
+  completionNote?: string;
   eventStatus: "upcoming" | "ongoing" | "completed" | "cancelled" | "accepted";
   appliedAt: string;
   approvedAt?: string;
@@ -141,17 +143,19 @@ export default function EventsAttendedPage() {
                     role: "manager",
                   },
                   participants: [],
-                  userStatus: registration.status, // pending, accepted, rejected, etc.
+                  userStatus: registration.status, // pending, approved, rejected
+                  completionStatus: registration.completion_status, // pending, completed, failed
+                  completionNote: registration.completion_note,
                   eventStatus:
                     event.status ||
                     getEventStatus(event.start_time, event.end_time),
                   appliedAt:
                     registration.created_at || new Date().toISOString(),
                   approvedAt:
-                    registration.joined_at && registration.status === "accepted"
+                    registration.joined_at && registration.status === "approved"
                       ? registration.joined_at
                       : undefined,
-                  completedAt: undefined,
+                  completedAt: registration.completed_at,
                 };
               });
 
@@ -242,29 +246,64 @@ export default function EventsAttendedPage() {
       );
     }
     if (selectedTab === "completed") {
-      // "Hoàn thành" includes both "completed" and "accepted" status
-      return (
-        matchesSearch &&
-        (event.userStatus === "completed" || event.userStatus === "accepted")
-      );
+      // "Hoàn thành" only shows events with completion_status='completed'
+      return matchesSearch && event.completionStatus === "completed";
     }
     return matchesSearch && event.userStatus === selectedTab;
   });
 
-  // Get status info
-  const getStatusInfo = (status: string) => {
+  // Get status info - Logic hiển thị trạng thái trên card
+  // Priority: completionStatus > userStatus + eventStatus
+  const getStatusInfo = (event: UserEvent) => {
+    const { userStatus, eventStatus, completionStatus } = event;
+
+    // Nếu có completionStatus = "completed" → Đã hoàn thành (manager đã đánh giá)
+    if (completionStatus === "completed") {
+      return {
+        icon: FaTrophy,
+        color: "text-purple-600",
+        bgColor: "bg-purple-100",
+        label: "Đã hoàn thành",
+      };
+    }
+
+    // Nếu có completionStatus = "failed" → Không hoàn thành
+    if (completionStatus === "failed") {
+      return {
+        icon: FaTimesCircle,
+        color: "text-red-600",
+        bgColor: "bg-red-100",
+        label: "Không hoàn thành",
+      };
+    }
+
+    // Nếu userStatus = "approved" và event đã kết thúc → Đã tham gia (chờ đánh giá)
+    if (userStatus === "approved" && eventStatus === "completed") {
+      return {
+        icon: FaCheckCircle,
+        color: "text-green-600",
+        bgColor: "bg-green-100",
+        label: "Đã tham gia",
+      };
+    }
+
+    // Nếu userStatus = "approved" và event đang diễn ra → Đang diễn ra
+    if (userStatus === "approved" && eventStatus === "ongoing") {
+      return {
+        icon: FaCheckCircle,
+        color: "text-blue-600",
+        bgColor: "bg-blue-100",
+        label: "Đang diễn ra",
+      };
+    }
+
+    // Các status khác
     const statusConfig = {
       pending: {
         icon: FaHourglassHalf,
         color: "text-yellow-600",
         bgColor: "bg-yellow-100",
         label: "Chờ duyệt",
-      },
-      accepted: {
-        icon: FaCheckCircle,
-        color: "text-green-600",
-        bgColor: "bg-green-100",
-        label: "Đã hoàn thành",
       },
       approved: {
         icon: FaCheckCircle,
@@ -278,31 +317,19 @@ export default function EventsAttendedPage() {
         bgColor: "bg-red-100",
         label: "Bị từ chối",
       },
-      completed: {
-        icon: FaCheck,
-        color: "text-purple-600",
-        bgColor: "bg-purple-100",
-        label: "Đã hoàn thành",
-      },
       cancelled: {
         icon: FaExclamationCircle,
         color: "text-orange-600",
         bgColor: "bg-orange-100",
         label: "Đã hủy",
       },
-      participating: {
-        icon: FaCheckCircle,
-        color: "text-green-600",
-        bgColor: "bg-green-100",
-        label: "Đang tham gia",
-      },
     };
     return (
-      statusConfig[status as keyof typeof statusConfig] || {
+      statusConfig[userStatus as keyof typeof statusConfig] || {
         icon: FaCalendarAlt,
         color: "text-gray-600",
         bgColor: "bg-gray-100",
-        label: status || "Không xác định",
+        label: userStatus || "Không xác định",
       }
     );
   };
@@ -321,9 +348,8 @@ export default function EventsAttendedPage() {
         (e) => e.userStatus === "approved" || e.userStatus === "participating"
       ).length,
       rejected: events.filter((e) => e.userStatus === "rejected").length,
-      completed: events.filter(
-        (e) => e.userStatus === "completed" || e.userStatus === "accepted"
-      ).length,
+      completed: events.filter((e) => e.completionStatus === "completed")
+        .length,
     };
   };
 
@@ -508,7 +534,7 @@ export default function EventsAttendedPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEvents.map((event) => {
-              const statusInfo = getStatusInfo(event.userStatus);
+              const statusInfo = getStatusInfo(event);
               const StatusIcon = statusInfo.icon;
 
               return (
@@ -680,25 +706,40 @@ export default function EventsAttendedPage() {
                               <FaEye />
                               <span>Chi tiết</span>
                             </button>
-                            <button
-                              onClick={() => handleCancelRegistration(event.id)}
-                              disabled={cancellingEventId === event.id}
-                              className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition duration-200 font-medium disabled:opacity-50"
-                            >
-                              {cancellingEventId === event.id ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                              ) : (
-                                <>
-                                  <FaTimes />
-                                  <span>Hủy</span>
-                                </>
-                              )}
-                            </button>
+                            {/* Chỉ hiện nút hủy nếu sự kiện chưa kết thúc */}
+                            {event.eventStatus !== "completed" &&
+                            event.eventStatus !== "ongoing" ? (
+                              <button
+                                onClick={() =>
+                                  handleCancelRegistration(event.id)
+                                }
+                                disabled={cancellingEventId === event.id}
+                                className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition duration-200 font-medium disabled:opacity-50"
+                              >
+                                {cancellingEventId === event.id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                                ) : (
+                                  <>
+                                    <FaTimes />
+                                    <span>Hủy</span>
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-gray-200 text-gray-400 rounded-lg font-medium cursor-not-allowed">
+                                <FaCheckCircle />
+                                <span>
+                                  {event.eventStatus === "completed"
+                                    ? "Đã kết thúc"
+                                    : "Đang diễn ra"}
+                                </span>
+                              </span>
+                            )}
                           </div>
                         </>
                       )}
 
-                      {event.userStatus === "completed" && (
+                      {event.completionStatus === "completed" && (
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             onClick={() => showEventDetails(event)}
@@ -756,7 +797,8 @@ export default function EventsAttendedPage() {
               </button>
               <div className="absolute top-4 left-4">
                 {(() => {
-                  const statusInfo = getStatusInfo(selectedEvent.userStatus);
+                  // getStatusInfo expects the full event object, not just userStatus
+                  const statusInfo = getStatusInfo(selectedEvent);
                   const StatusIcon = statusInfo.icon;
                   return (
                     <span
@@ -1008,7 +1050,7 @@ export default function EventsAttendedPage() {
                   </div>
                 )}
 
-                {selectedEvent.userStatus === "completed" && (
+                {selectedEvent.completionStatus === "completed" && (
                   <div className="flex gap-3">
                     <button
                       onClick={() => setShowDetailModal(false)}

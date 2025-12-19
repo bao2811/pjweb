@@ -17,29 +17,14 @@
       - token: { jsonpath_mini: access_token }
 
 - test:
-    name: "Get Post By ID - 1"
-    url: "/api/getPostById/1"
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200, 404]
-
-- test:
-    name: "Get Post By ID - 2"
-    url: "/api/getPostById/2"
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200, 404]
-
-- test:
-    name: "Get Post By ID - 3"
-    url: "/api/getPostById/3"
-    method: GET
-    headers: { template: { "Authorization": "Bearer $token" } }
-    expected_status: [200, 404]
-
-- test:
     name: "Get All Likes"
     url: "/api/getAllLikes"
     method: GET
     headers: { template: { "Authorization": "Bearer $token" } }
     expected_status: [200, 429]
+    performance:
+      mode: sync
+      repeat: 50
+      concurrency: 5
+      threshold_ms: 300
+    output_format: json

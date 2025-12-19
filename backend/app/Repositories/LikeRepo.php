@@ -66,5 +66,10 @@ class LikeRepo
                     ->where('post_id', $postId)
                     ->first();
     }
+
+    public function findByPostId($postId)
+    {
+        return Like::where('post_id', $postId)->get();
+    }
 }
 

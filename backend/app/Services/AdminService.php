@@ -4,10 +4,8 @@ namespace App\Services;
 
 use App\Repositories\UserRepo;;
 use Exception;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 use App\Services\EventService;
-use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class AdminService
 {
@@ -76,7 +74,7 @@ class AdminService
                 $affected++;
             } catch (\Exception $e) {
                 // Log error but continue with other users
-                \Log::error("Failed to lock user {$id}: " . $e->getMessage());
+                Log::error("Failed to lock user {$id}: " . $e->getMessage());
             }
         }
         return $affected;
@@ -91,7 +89,7 @@ class AdminService
                 $affected++;
             } catch (\Exception $e) {
                 // Log error but continue with other users
-                \Log::error("Failed to unlock user {$id}: " . $e->getMessage());
+                Log::error("Failed to unlock user {$id}: " . $e->getMessage());
             }
         }
         return $affected;

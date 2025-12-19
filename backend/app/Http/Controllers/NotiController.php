@@ -111,6 +111,16 @@ class NotiController extends Controller
     {
         try {
             $user = $request->user();
+            
+            // Check authorization - user can only mark their own notifications
+            $noti = $this->notiService->getNotificationById($id);
+            if (!$noti) {
+                return response()->json(['error' => 'Notification not found'], 404);
+            }
+            if ($noti->receiver_id !== $user->id) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            
             $noti = $this->notiService->markAsRead($id);
             
             if ($noti) {
@@ -139,11 +149,22 @@ class NotiController extends Controller
     public function deleteNotification(Request $request, $id)
     {
         try {
+            $user = $request->user();
+            
+            // Check authorization - user can only delete their own notifications
+            $noti = $this->notiService->getNotificationById($id);
+            if (!$noti) {
+                return response()->json(['error' => 'Notification not found'], 404);
+            }
+            if ($noti->receiver_id !== $user->id) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            
             $result = $this->notiService->deleteNotification($id);
             if ($result) {
                 return response()->json(['success' => true]);
             }
-            return response()->json(['error' => 'Notification not found'], 404);
+            return response()->json(['error' => 'Failed to delete notification'], 500);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -221,7 +242,7 @@ class NotiController extends Controller
                     'title' => $request->title,
                     'message' => $request->message,
                     'type' => $request->type ?? 'event_update',
-                    'sender_id' => auth()->id(),
+                    'sender_id' => $request->user()->id,
                     'data' => $request->data ?? []
                 ]
             );
@@ -299,7 +320,7 @@ class NotiController extends Controller
                     'title' => $request->title,
                     'message' => $request->message,
                     'type' => $request->type ?? 'custom',
-                    'sender_id' => auth()->id(),
+                    'sender_id' => $request->user()->id,
                     'data' => $request->data ?? []
                 ]
             );
@@ -317,5 +338,3 @@ class NotiController extends Controller
         }
     }
 }
-
-

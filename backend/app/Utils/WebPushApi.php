@@ -131,4 +131,5 @@ class WebPushApi
             return false;
         }
     }
+
 }

@@ -37,4 +37,15 @@ class EventManagementRepo
         }
         return $addedComanagers;
     }
+
+    public function createEventManagement($eventId, $comanagerId) : EventManagement
+    {
+        return EventManagement::create([
+            'event_id' => $eventId,
+            'comanager_id' => $comanagerId,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+        ]);
+    }
+
 }

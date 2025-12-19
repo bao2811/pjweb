@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   FaBell,
   FaBellSlash,
@@ -18,6 +19,7 @@ import { authFetch } from "@/utils/auth";
 import { useReverbNotification } from "@/hooks/useReverbNotification";
 
 export default function Navbar() {
+  const router = useRouter();
   const { user: currentUser, token, logout, isLoading } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -49,12 +51,12 @@ export default function Navbar() {
       fetchNotifications();
 
       // Refresh mỗi 30 giây
-      // const interval = setInterval(() => {
-      //   console.log("🔄 [Navbar] Auto-refreshing notifications...");
-      //   fetchNotifications();
-      // }, 30000);
+      const interval = setInterval(() => {
+        console.log("🔄 [Navbar] Auto-refreshing notifications...");
+        fetchNotifications();
+      }, 30000);
 
-      // return () => clearInterval(interval);
+      return () => clearInterval(interval);
     }
   }, [currentUser]);
 
@@ -583,7 +585,7 @@ export default function Navbar() {
     logout(); // Dùng logout từ AuthContext
   };
 
-  const markAsRead = async (id: number) => {
+  const markAsRead = async (id: number, noti?: any) => {
     try {
       await authFetch(`/user/notifications/${id}/read`, {
         method: "POST",
@@ -591,6 +593,26 @@ export default function Navbar() {
       setNotifications(
         notifications.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
+
+      // Navigate to notification link if available - ưu tiên event_id
+      if (noti) {
+        let targetUrl: string | null = null;
+
+        // Ưu tiên event_id trước
+        if (noti.data?.event_id) {
+          targetUrl = `/events/${noti.data.event_id}`;
+        } else if (noti.data?.url && noti.data.url !== "/notifications") {
+          // Chỉ navigate nếu url không phải là "/notifications" mặc định
+          targetUrl = noti.data.url;
+        } else if (noti.link) {
+          targetUrl = noti.link;
+        }
+
+        if (targetUrl) {
+          setShowNotifications(false);
+          router.push(targetUrl);
+        }
+      }
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -658,13 +680,13 @@ export default function Navbar() {
               <>
                 <Link
                   href="/manager/events"
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
                 >
                   Quản lý sự kiện
                 </Link>
                 <Link
                   href="/manager/reports"
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
                 >
                   Báo cáo
                 </Link>
@@ -676,7 +698,7 @@ export default function Navbar() {
               <>
                 <Link
                   href="/admin/manager"
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors duration-200 font-medium"
                   // className={`text-xs sm:text-sm lg:text-base whitespace-nowrap px-2 sm:px-3 py-1 rounded-lg transition-colors hover:bg-blue-100 ${
                   //   pathname === "/admin/manager"
                   //     ? "bg-blue-500 text-white font-semibold"
@@ -692,20 +714,9 @@ export default function Navbar() {
                   //     ? "bg-blue-500 text-white font-semibold"
                   //     : "text-gray-700"
                   // }`}
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors duration-200 font-medium"
                 >
                   Người dùng
-                </Link>
-                <Link
-                  href="/admin/events"
-                  // className={`text-xs sm:text-sm lg:text-base whitespace-nowrap px-2 sm:px-3 py-1 rounded-lg transition-colors hover:bg-blue-100 ${
-                  //   pathname === "/admin/users"
-                  //     ? "bg-blue-500 text-white font-semibold"
-                  //     : "text-gray-700"
-                  // }`}
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
-                >
-                  Quản lý sự kiện
                 </Link>
               </>
             )}
@@ -762,7 +773,7 @@ export default function Navbar() {
                           notifications.map((noti) => (
                             <div
                               key={noti.id}
-                              onClick={() => markAsRead(noti.id)}
+                              onClick={() => markAsRead(noti.id, noti)}
                               className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-all duration-200 ${
                                 !noti.is_read
                                   ? "bg-blue-50 border-l-4 border-l-blue-500"

@@ -118,9 +118,7 @@ export default function ManagerNotificationsPage() {
       });
 
       if (response.ok) {
-        setNotifications(
-          notifications.map((n) => ({ ...n, is_read: true }))
-        );
+        setNotifications(notifications.map((n) => ({ ...n, is_read: true })));
       }
     } catch (error) {
       console.error("Error marking all as read:", error);
@@ -131,9 +129,12 @@ export default function ManagerNotificationsPage() {
     if (!confirm("Bạn có chắc muốn xóa thông báo này?")) return;
 
     try {
-      const response = await authFetch(`/user/notifications/${notificationId}`, {
-        method: "DELETE",
-      });
+      const response = await authFetch(
+        `/user/notifications/${notificationId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (response.ok) {
         setNotifications(notifications.filter((n) => n.id !== notificationId));
@@ -148,12 +149,17 @@ export default function ManagerNotificationsPage() {
       handleMarkAsRead(notification.id);
     }
 
-    // Navigate based on notification type
+    // Navigate based on notification type - ưu tiên event_id nếu có
     if (notification.data?.event_id) {
       router.push(`/manager/events/${notification.data.event_id}`);
-    } else if (notification.data?.url) {
+    } else if (
+      notification.data?.url &&
+      notification.data.url !== "/notifications"
+    ) {
+      // Chỉ navigate nếu url không phải là "/notifications" mặc định
       router.push(notification.data.url);
     }
+    // Nếu không có event_id và url là mặc định, không navigate - chỉ đánh dấu đã đọc
   };
 
   const handleApproveUser = async (notification: Notification) => {
@@ -161,19 +167,16 @@ export default function ManagerNotificationsPage() {
 
     try {
       setProcessingId(notification.id);
-      const response = await authFetch(
-        `/manager/acceptUserJoinEvent`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_id: notification.data.user_id,
-            event_id: notification.data.event_id,
-          }),
-        }
-      );
+      const response = await authFetch(`/manager/acceptUserJoinEvent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: notification.data.user_id,
+          event_id: notification.data.event_id,
+        }),
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -197,19 +200,16 @@ export default function ManagerNotificationsPage() {
 
     try {
       setProcessingId(notification.id);
-      const response = await authFetch(
-        `/manager/rejectUserJoinEvent`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_id: notification.data.user_id,
-            event_id: notification.data.event_id,
-          }),
-        }
-      );
+      const response = await authFetch(`/manager/rejectUserJoinEvent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: notification.data.user_id,
+          event_id: notification.data.event_id,
+        }),
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -372,10 +372,10 @@ export default function ManagerNotificationsPage() {
               const isFromUser = notification.sender_role === "user";
               const isFromAdmin = notification.sender_role === "admin";
               const isJoinRequest = notification.type === "event_join_request";
-              
+
               let borderColor = "border-gray-200";
               let bgGradient = "bg-white";
-              
+
               if (!notification.is_read) {
                 if (isJoinRequest) {
                   borderColor = "border-blue-500";
@@ -405,12 +405,18 @@ export default function ManagerNotificationsPage() {
                           className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md"
                         />
                       ) : (
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md ${
-                          isFromAdmin ? "bg-gradient-to-br from-purple-500 to-pink-500" :
-                          isFromUser ? "bg-gradient-to-br from-blue-500 to-cyan-500" :
-                          "bg-gradient-to-br from-green-500 to-teal-500"
-                        }`}>
-                          {notification.sender_username?.charAt(0).toUpperCase() || "?"}
+                        <div
+                          className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md ${
+                            isFromAdmin
+                              ? "bg-gradient-to-br from-purple-500 to-pink-500"
+                              : isFromUser
+                              ? "bg-gradient-to-br from-blue-500 to-cyan-500"
+                              : "bg-gradient-to-br from-green-500 to-teal-500"
+                          }`}
+                        >
+                          {notification.sender_username
+                            ?.charAt(0)
+                            .toUpperCase() || "?"}
                         </div>
                       )}
                     </div>
@@ -424,36 +430,53 @@ export default function ManagerNotificationsPage() {
                             <span className="font-semibold text-gray-800">
                               {notification.sender_username || "Unknown"}
                             </span>
-                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                              isFromAdmin ? "bg-purple-100 text-purple-700" :
-                              isFromUser ? "bg-blue-100 text-blue-700" :
-                              "bg-green-100 text-green-700"
-                            }`}>
-                              {isFromAdmin ? "Admin" : isFromUser ? "User" : "Manager"}
+                            <span
+                              className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                isFromAdmin
+                                  ? "bg-purple-100 text-purple-700"
+                                  : isFromUser
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-green-100 text-green-700"
+                              }`}
+                            >
+                              {isFromAdmin
+                                ? "Admin"
+                                : isFromUser
+                                ? "User"
+                                : "Manager"}
                             </span>
                           </div>
-                          
+
                           {/* Title */}
                           <h3 className="text-lg font-bold text-gray-900 mb-1">
                             {notification.title}
                           </h3>
-                          
+
                           {/* Type badge */}
-                          <span className={`inline-flex items-center space-x-1 px-2 py-1 text-xs font-medium rounded-full ${
-                            isJoinRequest ? "bg-blue-100 text-blue-700" :
-                            notification.type === "event_approved" ? "bg-green-100 text-green-700" :
-                            notification.type === "event_rejected" ? "bg-red-100 text-red-700" :
-                            "bg-gray-100 text-gray-700"
-                          }`}>
+                          <span
+                            className={`inline-flex items-center space-x-1 px-2 py-1 text-xs font-medium rounded-full ${
+                              isJoinRequest
+                                ? "bg-blue-100 text-blue-700"
+                                : notification.type === "event_approved"
+                                ? "bg-green-100 text-green-700"
+                                : notification.type === "event_rejected"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
                             {getNotificationIcon(notification.type)}
-                            <span className="ml-1">{getNotificationTypeLabel(notification.type)}</span>
+                            <span className="ml-1">
+                              {getNotificationTypeLabel(notification.type)}
+                            </span>
                           </span>
                         </div>
-                        
+
                         {!notification.is_read && (
                           <div className="flex-shrink-0 flex flex-col items-center">
                             <span className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                            <span className="text-xs text-blue-600 font-medium mt-1">Mới</span>
+                            <span className="text-xs text-blue-600 font-medium mt-1">
+                              Mới
+                            </span>
                           </div>
                         )}
                       </div>
@@ -474,45 +497,50 @@ export default function ManagerNotificationsPage() {
                       )}
 
                       {/* Action buttons cho join request */}
-                      {isJoinRequest && notification.data?.user_id && notification.data?.event_id && (
-                        <div className="flex items-center space-x-3 mb-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleApproveUser(notification);
-                            }}
-                            disabled={processingId === notification.id}
-                            className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                          >
-                            <FaCheckCircle />
-                            <span>Duyệt</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRejectUser(notification);
-                            }}
-                            disabled={processingId === notification.id}
-                            className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                          >
-                            <FaTimesCircle />
-                            <span>Từ chối</span>
-                          </button>
-                        </div>
-                      )}
+                      {isJoinRequest &&
+                        notification.data?.user_id &&
+                        notification.data?.event_id && (
+                          <div className="flex items-center space-x-3 mb-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApproveUser(notification);
+                              }}
+                              disabled={processingId === notification.id}
+                              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            >
+                              <FaCheckCircle />
+                              <span>Duyệt</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRejectUser(notification);
+                              }}
+                              disabled={processingId === notification.id}
+                              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            >
+                              <FaTimesCircle />
+                              <span>Từ chối</span>
+                            </button>
+                          </div>
+                        )}
 
                       {/* Footer */}
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <div className="flex items-center space-x-2 text-sm text-gray-500">
                           <FaClock />
                           <span>
-                            {new Date(notification.created_at).toLocaleString("vi-VN", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit"
-                            })}
+                            {new Date(notification.created_at).toLocaleString(
+                              "vi-VN",
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
                           </span>
                         </div>
 

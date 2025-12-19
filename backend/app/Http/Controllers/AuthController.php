@@ -95,7 +95,16 @@ class AuthController extends Controller
             return response()->json(['error' => 'Invalid or expired refresh token'], 401);
         }
 
-        $access_token = JWTUtil::generateToken($payload, 15); // 15 phút
+        if (isset($payload['']) && $payload[''] === false) {
+            return response()->json(['error' => 'Invalid refresh token'], 401);
+        }
+        
+        $user = User::find($payload['sub']);
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        $access_token = $user->createToken($user. 15);
 
         return response()->json([
             'message' => 'Token refreshed successfully',

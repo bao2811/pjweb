@@ -110,129 +110,35 @@ export default function ProfilePage() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Kiểm tra kích thước file (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("Ảnh quá lớn! Vui lòng chọn ảnh nhỏ hơn 5MB");
-        return;
-      }
-
-      // Kiểm tra định dạng file
-      if (!file.type.startsWith("image/")) {
-        alert("Vui lòng chọn file ảnh!");
-        return;
-      }
-
       const reader = new FileReader();
       reader.onloadend = () => {
-        const img = new Image();
-        img.onload = () => {
-          // Resize image nếu quá lớn
-          const maxWidth = 800;
-          const maxHeight = 800;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > maxWidth) {
-              height *= maxWidth / width;
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width *= maxHeight / height;
-              height = maxHeight;
-            }
-          }
-
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx?.drawImage(img, 0, 0, width, height);
-
-          // Convert to base64 với quality 0.8
-          const resizedBase64 = canvas.toDataURL("image/jpeg", 0.8);
-          setPreviewAvatar(resizedBase64);
-          setFormData({ ...formData, image: resizedBase64 });
-        };
-        img.src = reader.result as string;
+        setPreviewAvatar(reader.result as string);
+        setFormData({ ...formData, image: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleSave = async () => {
-    // ✅ Validation frontend trước khi gửi
-    if (!formData.username || formData.username.trim() === "") {
-      alert("Tên người dùng không được để trống!");
-      return;
-    }
-
-    if (!formData.email || formData.email.trim() === "") {
-      alert("Email không được để trống!");
-      return;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      alert("Email không đúng định dạng!");
-      return;
-    }
-
-    // Validate phone (optional)
-    if (formData.phone && formData.phone.length > 0) {
-      const phoneRegex = /^[0-9]{10,11}$/;
-      if (!phoneRegex.test(formData.phone.replace(/\s/g, ""))) {
-        alert("Số điện thoại không hợp lệ! (10-11 chữ số)");
-        return;
-      }
-    }
-
     try {
-      // Chuẩn bị data để gửi
-      const updateData: any = {
-        username: formData.username.trim(),
-        email: formData.email.trim(),
-      };
-
-      // Chỉ thêm các field không rỗng
-      if (formData.phone && formData.phone.trim()) {
-        updateData.phone = formData.phone.trim();
-      }
-      if (formData.address && formData.address.trim()) {
-        updateData.address = formData.address.trim();
-      }
-      if (formData.address_card && formData.address_card.trim()) {
-        updateData.address_card = formData.address_card.trim();
-      }
-
-      // Chỉ gửi image nếu có thay đổi (preview)
-      if (previewAvatar) {
-        // Giới hạn kích thước base64 image (max 2MB)
-        if (previewAvatar.length > 2 * 1024 * 1024) {
-          alert("Ảnh quá lớn! Vui lòng chọn ảnh nhỏ hơn 2MB");
-          return;
-        }
-        updateData.image = previewAvatar;
-      } else if (formData.image !== user.image) {
-        updateData.image = formData.image;
-      }
-
-      console.log("📤 Sending update data:", updateData);
-
       const response = await authFetch(`/user/updateUserProfile/${user.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          image: formData.image,
+          address_card: formData.address_card,
+        }),
       });
 
       if (response.ok) {
         const result = await response.json();
-        alert("✅ Cập nhật hồ sơ thành công!");
-
+        alert("Cập nhật hồ sơ thành công!");
         // Fetch lại profile để cập nhật dữ liệu mới nhất
         const profileResponse = await authFetch("/user/getuser");
         if (profileResponse.ok) {
@@ -259,22 +165,14 @@ export default function ProfilePage() {
         setPreviewAvatar(null);
       } else {
         const error = await response.json();
-        console.error("❌ Update error response:", error);
-
-        // Hiển thị chi tiết lỗi validation
-        if (error.messages) {
-          const errorMessages = Object.values(error.messages).flat().join("\n");
-          alert("❌ Lỗi validation:\n" + errorMessages);
-        } else {
-          alert(
-            "❌ Cập nhật thất bại: " +
-              (error.error || error.message || "Lỗi không xác định")
-          );
-        }
+        alert(
+          "Cập nhật thất bại: " +
+            (error.error || error.message || "Lỗi không xác định")
+        );
       }
     } catch (error) {
-      console.error("❌ Update profile error:", error);
-      alert("❌ Cập nhật thất bại! Vui lòng kiểm tra lại thông tin.");
+      console.error("Update profile error:", error);
+      alert("Cập nhật thất bại!");
     }
   };
 

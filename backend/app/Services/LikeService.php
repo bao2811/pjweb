@@ -7,16 +7,22 @@ use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Services\PostService;
+use Illuminate\Support\Facades\Validator;
+use App\Models\Like;
+use App\Models\Event;
+use App\Models\Post;
 
 class LikeService
 {
     protected $likeRepo;
     protected $postService;
+    protected $eventService;
 
-    public function __construct(LikeRepo $likeRepo, PostService $postService)
+    public function __construct(LikeRepo $likeRepo, PostService $postService, EventService $eventService)
     {
         $this->likeRepo = $likeRepo;
         $this->postService = $postService;
+        $this->eventService = $eventService;
     }
 
     public function all()

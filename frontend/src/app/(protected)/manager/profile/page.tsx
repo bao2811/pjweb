@@ -9,20 +9,16 @@ import {
   FaCamera,
   FaSave,
   FaCalendarAlt,
-  FaTrophy,
   FaCheckCircle,
   FaClock,
   FaUsers,
-  FaLock,
   FaEdit,
   FaChartLine,
   FaStar,
-  FaTimes,
   FaClipboardList,
-  FaThumbsUp,
+  FaUserShield,
   FaPlus,
 } from "react-icons/fa";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import CreateEventModal from "@/components/CreateEventModal";
 
@@ -36,7 +32,6 @@ interface ManagerProfile {
   image: string | null;
   joinedDate: string | null;
   role: string;
-  // Manager-specific stats
   eventsCreated: number;
   totalParticipants: number;
   pendingApprovals: number;
@@ -50,13 +45,19 @@ interface EventStat {
   name: string;
   date: string;
   participants: number;
-  status: "pending" | "approved" | "rejected" | "completed";
+  status:
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "completed"
+    | "upcoming"
+    | "ongoing";
 }
 
 export default function ManagerProfilePage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [profile, setProfile] = useState<ManagerProfile>({
     id: null,
     name: null,
@@ -77,12 +78,6 @@ export default function ManagerProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<ManagerProfile>(profile);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
   const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
   const [recentEvents, setRecentEvents] = useState<EventStat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,11 +88,11 @@ export default function ManagerProfilePage() {
     const fetchProfile = async () => {
       try {
         setIsLoading(true);
-        const response = await authFetch("/user/me");
+        const response = await authFetch("/api/me");
         if (response.ok) {
           const data = await response.json();
           const managerData = data.user || data;
-          
+
           setProfile({
             id: managerData.id,
             name: managerData.username,
@@ -105,7 +100,7 @@ export default function ManagerProfilePage() {
             email: managerData.email,
             phone: managerData.phone || "",
             address: managerData.address || "",
-            image: managerData.image || "https://i.pravatar.cc/150?img=12",
+            image: managerData.image,
             joinedDate: managerData.created_at,
             role: managerData.role,
             eventsCreated: 0,
@@ -115,7 +110,7 @@ export default function ManagerProfilePage() {
             averageRating: 4.5,
             bio: managerData.bio || "",
           });
-          
+
           setFormData({
             id: managerData.id,
             name: managerData.username,
@@ -144,52 +139,48 @@ export default function ManagerProfilePage() {
     fetchProfile();
   }, []);
 
-  // Fetch manager's events
+  // Fetch manager's stats from reports endpoint
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchManagerStats = async () => {
       try {
-        const response = await authFetch("/manager/my-events");
+        const response = await authFetch("/manager/reports");
         if (response.ok) {
           const data = await response.json();
-          const events = data.events || [];
-          
-          // Calculate stats
-          const totalParticipants = events.reduce(
-            (sum: number, event: any) => sum + (event.current_participants || 0),
-            0
-          );
-          const approvedEvents = events.filter(
-            (e: any) => e.status === "approved"
-          ).length;
-          const pendingEvents = events.filter(
-            (e: any) => e.status === "pending"
-          ).length;
+          if (data.success && data.report) {
+            // Backend trả về {overview, events} không phải {overallStats, reports}
+            const overview =
+              data.report.overview || data.report.overallStats || {};
+            const events = data.report.events || data.report.reports || [];
 
-          setProfile((prev) => ({
-            ...prev,
-            eventsCreated: events.length,
-            totalParticipants,
-            approvedEvents,
-            pendingApprovals: pendingEvents,
-          }));
+            // Update profile with real stats
+            setProfile((prev) => ({
+              ...prev,
+              eventsCreated: overview.total_events || 0,
+              totalParticipants: overview.total_volunteers || 0,
+              approvedEvents: overview.total_events || 0,
+              pendingApprovals: 0,
+            }));
 
-          // Set recent events
-          const recent = events.slice(0, 5).map((event: any) => ({
-            id: event.id,
-            name: event.name,
-            date: event.date,
-            participants: event.current_participants || 0,
-            status: event.status,
-          }));
-          setRecentEvents(recent);
+            // Set recent events - check if events is array
+            if (Array.isArray(events) && events.length > 0) {
+              const recent = events.slice(0, 5).map((event: any) => ({
+                id: event.id,
+                name: event.title,
+                date: event.start_time,
+                participants: event.approved || 0,
+                status: event.status,
+              }));
+              setRecentEvents(recent);
+            }
+          }
         }
       } catch (error) {
-        console.error("Error fetching events:", error);
+        console.error("Error fetching manager stats:", error);
       }
     };
 
     if (profile.id) {
-      fetchEvents();
+      fetchManagerStats();
     }
   }, [profile.id]);
 
@@ -211,17 +202,22 @@ export default function ManagerProfilePage() {
 
   const handleSave = async () => {
     try {
-      const response = await authFetch("/user/update-profile", {
-        method: "POST",
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          image: formData.image,
-          bio: formData.bio,
-        }),
-      });
+      const response = await authFetch(
+        `/user/updateUserProfile/${formData.id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: formData.username,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+            image: formData.image,
+          }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -235,44 +231,13 @@ export default function ManagerProfilePage() {
     }
   };
 
-  const handlePasswordChange = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("Mật khẩu mới không khớp!");
-      return;
-    }
-
-    try {
-      const response = await authFetch("/user/change-password", {
-        method: "POST",
-        body: JSON.stringify({
-          current_password: passwordData.currentPassword,
-          new_password: passwordData.newPassword,
-        }),
-      });
-
-      if (response.ok) {
-        alert("Đổi mật khẩu thành công!");
-        setShowPasswordModal(false);
-        setPasswordData({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-      } else {
-        alert("Mật khẩu hiện tại không đúng!");
-      }
-    } catch (error) {
-      console.error("Error changing password:", error);
-      alert("Có lỗi xảy ra!");
-    }
-  };
-
   const getStatusBadge = (status: string) => {
     const badges = {
       pending: "bg-yellow-100 text-yellow-800",
-      approved: "bg-green-100 text-green-800",
+      upcoming: "bg-green-100 text-green-800",
+      ongoing: "bg-blue-100 text-blue-800",
       rejected: "bg-red-100 text-red-800",
-      completed: "bg-blue-100 text-blue-800",
+      completed: "bg-purple-100 text-purple-800",
     };
     return badges[status as keyof typeof badges] || "bg-gray-100 text-gray-800";
   };
@@ -298,14 +263,14 @@ export default function ManagerProfilePage() {
               {/* Avatar */}
               <div className="relative group mb-4 md:mb-0">
                 <div className="w-40 h-40 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white">
-                  <Image
+                  {/* <Image
                     src={previewAvatar || profile.image || "https://i.pravatar.cc/150?img=12"}
                     alt="Manager Avatar"
                     width={160}
                     height={160}
                     className="w-full h-full object-cover"
                     unoptimized
-                  />
+                  /> */}
                 </div>
                 {isEditing && (
                   <button
@@ -336,7 +301,10 @@ export default function ManagerProfilePage() {
                 <div className="flex items-center justify-center md:justify-start gap-4 text-sm text-gray-500">
                   <span className="flex items-center gap-1">
                     <FaCalendarAlt className="text-green-500" />
-                    Tham gia: {profile.joinedDate ? new Date(profile.joinedDate).toLocaleDateString("vi-VN") : "N/A"}
+                    Tham gia:{" "}
+                    {profile.joinedDate
+                      ? new Date(profile.joinedDate).toLocaleDateString("vi-VN")
+                      : "N/A"}
                   </span>
                   <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">
                     Quản lý
@@ -354,13 +322,6 @@ export default function ManagerProfilePage() {
                     >
                       <FaEdit />
                       Chỉnh sửa
-                    </button>
-                    <button
-                      onClick={() => setShowPasswordModal(true)}
-                      className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
-                    >
-                      <FaLock />
-                      Đổi MK
                     </button>
                   </>
                 ) : (
@@ -380,7 +341,6 @@ export default function ManagerProfilePage() {
                       }}
                       className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
                     >
-                      <FaTimes />
                       Hủy
                     </button>
                   </>
@@ -399,7 +359,7 @@ export default function ManagerProfilePage() {
                 <FaChartLine className="text-purple-500" />
                 Thống kê quản lý
               </h2>
-              
+
               <div className="space-y-4">
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl text-center">
                   <FaClipboardList className="text-3xl text-purple-600 mx-auto mb-2" />
@@ -611,7 +571,8 @@ export default function ManagerProfilePage() {
                         )}`}
                       >
                         {event.status === "pending" && "Chờ duyệt"}
-                        {event.status === "approved" && "Đã duyệt"}
+                        {event.status === "upcoming" && "Sắp diễn ra"}
+                        {event.status === "ongoing" && "Đang diễn ra"}
                         {event.status === "rejected" && "Bị từ chối"}
                         {event.status === "completed" && "Hoàn thành"}
                       </span>
@@ -629,118 +590,44 @@ export default function ManagerProfilePage() {
         </div>
       </div>
 
-      {/* Password Change Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Đổi mật khẩu</h2>
-              <button
-                onClick={() => setShowPasswordModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <FaTimes size={24} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mật khẩu hiện tại
-                </label>
-                <input
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) =>
-                    setPasswordData({
-                      ...passwordData,
-                      currentPassword: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mật khẩu mới
-                </label>
-                <input
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) =>
-                    setPasswordData({
-                      ...passwordData,
-                      newPassword: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Xác nhận mật khẩu mới
-                </label>
-                <input
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) =>
-                    setPasswordData({
-                      ...passwordData,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={handlePasswordChange}
-                className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition font-medium"
-              >
-                Xác nhận
-              </button>
-              <button
-                onClick={() => setShowPasswordModal(false)}
-                className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
-              >
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Create Event Modal */}
       <CreateEventModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={() => {
-          // Refresh recent events after creating
+          // Refresh stats after creating
           if (profile.id) {
-            const fetchEvents = async () => {
+            const fetchStats = async () => {
               try {
-                const response = await authFetch("/manager/my-events");
+                const response = await authFetch("/manager/reports");
                 if (response.ok) {
                   const data = await response.json();
-                  const events = data.events || [];
-                  const recent = events.slice(0, 5).map((event: any) => ({
-                    id: event.id,
-                    name: event.name,
-                    date: event.date,
-                    participants: event.current_participants || 0,
-                    status: event.status,
-                  }));
-                  setRecentEvents(recent);
+                  if (data.success && data.report) {
+                    const { overallStats, reports } = data.report;
+
+                    setProfile((prev) => ({
+                      ...prev,
+                      eventsCreated: overallStats.total_events,
+                      totalParticipants: overallStats.total_volunteers,
+                      approvedEvents: overallStats.total_events,
+                      pendingApprovals: 0,
+                    }));
+
+                    const recent = reports.slice(0, 5).map((event: any) => ({
+                      id: event.id,
+                      name: event.title,
+                      date: event.start_time,
+                      participants: event.approved,
+                      status: event.status,
+                    }));
+                    setRecentEvents(recent);
+                  }
                 }
               } catch (error) {
-                console.error("Error fetching events:", error);
+                console.error("Error fetching stats:", error);
               }
             };
-            fetchEvents();
+            fetchStats();
           }
         }}
       />
