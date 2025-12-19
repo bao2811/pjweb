@@ -23,10 +23,14 @@ class ManagerController extends Controller
         $this->managerService = $managerService;
     }
 
-    public function getListUserByEvent($id): JsonResponse
+    /**
+     * Kiểm tra Manager ownership trước khi lấy danh sách users
+     */
+    public function getListUserByEvent(Request $request, $id): JsonResponse
     {
         try {
-            $users = $this->managerService->getListUserByEvent($id);
+            $managerId = $request->user()->id;
+            $users = $this->managerService->getListUserByEvent($id, $managerId);
             return response()->json([
                 'success' => true,
                 'users' => $users
@@ -35,9 +39,38 @@ class ManagerController extends Controller
             Log::error('Error fetching users for event: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Internal Server Error',
+                'message' => $e->getMessage(),
                 'error' => $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * FIX #3: Delete event với kiểm tra quyền sở hữu
+     */
+    public function deleteEvent(Request $request, $id): JsonResponse
+    {
+        try {
+            $managerId = $request->user()->id;
+            $result = $this->managerService->deleteEvent($id, $managerId);
+            
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Event not found or you do not have permission'
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Event deleted successfully'
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            Log::error('Error deleting event: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], Response::HTTP_BAD_REQUEST);
         }
     }
     
@@ -51,7 +84,7 @@ class ManagerController extends Controller
 
             $userId = $request->input('user_id');
             $eventId = $request->input('event_id');
-            $managerId = $request->user()->id; // Lấy manager ID từ user đang authenticated
+            $managerId = $request->user()->id;
             
             $result = $this->managerService->acceptUserJoinEvent($userId, $eventId, $managerId);
             
@@ -85,7 +118,7 @@ class ManagerController extends Controller
 
             $userId = $request->input('user_id');
             $eventId = $request->input('event_id');
-            $managerId = $request->user()->id; // Lấy manager ID từ user đang authenticated
+            $managerId = $request->user()->id;
             
             $result = $this->managerService->rejectUserJoinEvent($eventId, $userId, $managerId);
             
@@ -109,15 +142,18 @@ class ManagerController extends Controller
         }
     }
 
+    /**
+     * FIX #7: Thêm validation 'start_time' => 'after:now'
+     */
     public function createEvent(Request $request)
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'content' => 'required|string',
+            'content' => 'required|string|max:5000', // FIX #10 (optional): Giới hạn độ dài content
             'address' => 'required|string|max:255',
-            'start_time' => 'required|date',
+            'start_time' => 'required|date|after:now', // FIX #7: start_time phải sau thời điểm hiện tại
             'end_time' => 'required|date|after_or_equal:start_time',
-            'image' => 'nullable|string|max:500', // Changed to accept URL string
+            'image' => 'nullable|string|max:500',
             'comanager' => 'nullable|array',
             'comanager.*' => 'integer|exists:users,id',
             'max_participants' => 'required|integer|min:1',
@@ -126,9 +162,8 @@ class ManagerController extends Controller
 
         $eventData = $request->only(['title', 'content', 'start_time', 'end_time', 'address', 'max_participants', 'category']);
         $eventData['author_id'] = $request->user()->id;
-        $eventData['status'] = 'pending'; // Manager created events need admin approval
+        $eventData['status'] = 'pending';
         
-        // Handle image: use provided URL or default
         if (!empty($request->input('image'))) {
             $eventData['image'] = $request->input('image');
         } else {
@@ -139,43 +174,6 @@ class ManagerController extends Controller
 
         return response()->json(['event' => $event], 201);
     }
-
-    //  public function createEvent(Request $request)
-    // {
-    //     $request->validate([
-    //         'title' => 'required|string|max:255',
-    //         'description' => 'nullable|string',
-    //         'location' => 'required|string|max:255',
-    //         'start_time' => 'required|date',
-    //         'end_time' => 'required|date|after_or_equal:start_time',
-    //         'max_participants' => 'required|integer|min:1',
-    //         'points' => 'nullable|integer|min:0',
-    //         'category' => 'required|string|max:100',
-    //         'image' => 'nullable|string',
-    //         'status' => 'nullable|string|in:pending,approved,rejected',
-    //     ]);
-
-    //     // Lấy user_id từ JWT token
-    //     $userId = auth()->id();
-        
-    //     $eventData = $request->only([
-    //         'title', 'description', 'location', 'start_time', 'end_time',
-    //         'max_participants', 'points', 'category', 'image', 'status'
-    //     ]);
-        
-    //     // Set default values
-    //     $eventData['status'] = $eventData['status'] ?? 'pending';
-    //     $eventData['points'] = $eventData['points'] ?? 100;
-    //     $eventData['current_participants'] = 0;
-    //     $eventData['creator_id'] = $userId;
-        
-    //     $event = $this->managerService->createEvent($eventData, []);
-
-    //     return response()->json([
-    //         'message' => 'Event created successfully',
-    //         'event' => $event
-    //     ], 201);
-    // }
 
     /**
      * Lấy danh sách events của manager hiện tại
@@ -199,4 +197,171 @@ class ManagerController extends Controller
         }
     }
 
+    /**
+     * Get event details for editing
+     */
+    public function getEventDetails(Request $request, $id): JsonResponse
+    {
+        try {
+            $managerId = $request->user()->id;
+            $event = $this->managerService->getEventById($id, $managerId);
+            
+            if (!$event) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Event not found or you do not have permission'
+                ], Response::HTTP_NOT_FOUND);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'event' => $event
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            Log::error('Error fetching event details: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Update event and notify admin
+     * FIX #7, #8: Thêm validation start_time > now và kiểm tra lifecycle
+     */
+    public function updateEvent(Request $request, $id): JsonResponse
+    {
+        try {
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'content' => 'required|string|max:5000', // FIX optional: Giới hạn content
+                'address' => 'required|string|max:255',
+                'start_time' => 'required|date|after:now', // FIX #7: start_time phải sau thời điểm hiện tại
+                'end_time' => 'required|date|after_or_equal:start_time',
+                'image' => 'nullable|string|max:500',
+                'max_participants' => 'required|integer|min:1',
+                'category' => 'required|string|max:100',
+            ]);
+
+            $managerId = $request->user()->id;
+            $eventData = $request->only([
+                'title', 
+                'content', 
+                'start_time', 
+                'end_time', 
+                'address', 
+                'max_participants', 
+                'category',
+                'image'
+            ]);
+
+            $event = $this->managerService->updateEvent($id, $managerId, $eventData);
+
+            if (!$event) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Event not found or you do not have permission'
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Event updated successfully. Admin has been notified.',
+                'event' => $event
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            Log::error('Error updating event: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], Response::HTTP_BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Mark volunteer completion
+     */
+    public function markVolunteerCompletion(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'event_id' => 'required|integer',
+                'user_id' => 'required|integer',
+                // unified participant status: completed or failed
+                'status' => 'required|string|in:completed,failed',
+                'completion_note' => 'nullable|string|max:1000',
+            ]);
+
+            $managerId = $request->user()->id;
+            $eventId = $request->input('event_id');
+            $userId = $request->input('user_id');
+            $status = $request->input('status');
+            $completionNote = $request->input('completion_note');
+
+            $result = $this->managerService->markVolunteerCompletion(
+                $eventId,
+                $userId,
+                $managerId,
+                $status,
+                $completionNote
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Volunteer completion marked successfully',
+                'data' => $result
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            Log::error('Error marking volunteer completion: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], Response::HTTP_BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Get event report
+     */
+    public function getEventReport(Request $request, $eventId): JsonResponse
+    {
+        try {
+            $managerId = $request->user()->id;
+            $report = $this->managerService->getEventReport($eventId, $managerId);
+
+            return response()->json([
+                'success' => true,
+                'report' => $report
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            Log::error('Error fetching event report: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], Response::HTTP_BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Get manager's events overview report
+     */
+    public function getManagerEventsReport(Request $request): JsonResponse
+    {
+        try {
+            $managerId = $request->user()->id;
+            $report = $this->managerService->getManagerEventsReport($managerId);
+
+            return response()->json([
+                'success' => true,
+                'report' => $report
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            Log::error('Error fetching manager events report: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }

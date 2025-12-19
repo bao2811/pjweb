@@ -155,14 +155,14 @@ class UserService
         
         $eventsCompleted = DB::table('join_events')
             ->where('user_id', $userId)
-            ->where('status', 'completed')
+            ->where('completion_status', 'completed')
             ->count();
         
-        // Tính tổng giờ từ các sự kiện đã hoàn thành
+        // Tính tổng giờ từ các sự kiện đã hoàn thành (chỉ tính khi completion_status='completed')
         $totalHours = DB::table('join_events')
             ->join('events', 'join_events.event_id', '=', 'events.id')
             ->where('join_events.user_id', $userId)
-            ->where('join_events.status', 'completed')
+            ->where('join_events.completion_status', 'completed')
             ->whereNotNull('events.start_time')
             ->whereNotNull('events.end_time')
             ->selectRaw('SUM(EXTRACT(EPOCH FROM (events.end_time - events.start_time)) / 3600) as total')
@@ -224,7 +224,7 @@ class UserService
         }
     } 
 
-    public function joinEvent($userId, $eventId): array
+    public function joinEvent($userId, $eventId)
     {
         $result =  $this->joinEventRepo->joinEvent([
             'user_id' => $userId,
@@ -238,11 +238,7 @@ class UserService
                 'data' => $result
             ];
         } else {
-            return [
-                'success'=> false,
-                'message'=> 'Failed to join event',
-                'data'=> null
-            ];
+            return false;
         }
     }
 
@@ -291,6 +287,9 @@ class UserService
                 ->select(
                     'join_events.id as registration_id',
                     'join_events.status as registration_status',
+                    'join_events.completion_status',
+                    'join_events.completed_at',
+                    'join_events.completion_note',
                     'join_events.created_at',
                     'join_events.joined_at',
                     'events.id as event_id',
@@ -317,6 +316,9 @@ class UserService
                     return [
                         'id' => $item->registration_id,
                         'status' => $item->registration_status,
+                        'completion_status' => $item->completion_status,
+                        'completed_at' => $item->completed_at,
+                        'completion_note' => $item->completion_note,
                         'created_at' => $item->created_at,
                         'joined_at' => $item->joined_at,
                         'event_id' => $item->event_id,
@@ -362,7 +364,8 @@ class UserService
                 ->join('events', 'join_events.event_id', '=', 'events.id')
                 ->join('users as author', 'events.author_id', '=', 'author.id')
                 ->where('join_events.user_id', $userId)
-                ->where('join_events.status', 'accepted')
+                ->where('join_events.status', 'approved')
+                ->where('join_events.completion_status', 'completed')
                 ->where('events.end_time', '<', now()) // Only past events
                 ->select(
                     'events.id',
@@ -373,6 +376,8 @@ class UserService
                     'events.start_time',
                     'events.end_time',
                     'join_events.created_at as joined_at',
+                    'join_events.completed_at',
+                    'join_events.completion_note',
                     'author.username as organizer_name',
                     'author.image as organizer_avatar'
                 )
@@ -385,10 +390,10 @@ class UserService
                     $interval = $startTime->diff($endTime);
                     $hours = ($interval->days * 24) + $interval->h + ($interval->i / 60);
 
-                    // Get participant count
+                    // Get participant count (chỉ tính approved)
                     $participants = DB::table('join_events')
                         ->where('event_id', $event->id)
-                        ->where('status', 'accepted')
+                        ->where('status', 'approved')
                         ->count();
 
                     return [
@@ -397,9 +402,10 @@ class UserService
                         'description' => $event->description,
                         'image' => $event->image,
                         'location' => $event->location,
-                        'completedAt' => $event->end_time,
+                        'completedAt' => $event->completed_at ?? $event->end_time,
                         'hours' => round($hours, 1),
                         'participants' => $participants,
+                        'completion_note' => $event->completion_note,
                         'organizer' => [
                             'name' => $event->organizer_name,
                             'avatar' => $event->organizer_avatar

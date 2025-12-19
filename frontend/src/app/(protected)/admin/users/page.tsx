@@ -985,7 +985,7 @@ export default function UserManagementPage() {
           <div>
             {/* Status Filter */}
             <div>
-              <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center">
+              <label className=" text-base font-semibold text-gray-700 mb-3 flex items-center">
                 <FaFilter className="mr-2 text-green-500" />
                 Trạng thái
               </label>
@@ -1885,7 +1885,7 @@ export default function UserManagementPage() {
 
               {/* Notification Type */}
               <div>
-                <label className="block text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
+                <label className="text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
                   <span>📋</span>
                   <span>Loại thông báo</span>
                 </label>
@@ -1910,7 +1910,7 @@ export default function UserManagementPage() {
 
               {/* Title Input */}
               <div>
-                <label className="block text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
+                <label className=" text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
                   <span>✏️</span>
                   <span>Tiêu đề thông báo</span>
                   <span className="text-red-500">*</span>
@@ -1949,7 +1949,7 @@ export default function UserManagementPage() {
               {/* URL Input (Web Push only) */}
               {notificationMode === "webpush" && (
                 <div>
-                  <label className="block text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
+                  <label className=" text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
                     <span>🔗</span>
                     <span>URL đích (khi click notification)</span>
                   </label>
@@ -1980,7 +1980,7 @@ export default function UserManagementPage() {
 
               {/* Message Textarea */}
               <div>
-                <label className="block text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
+                <label className=" text-base font-bold text-gray-800 mb-3 flex items-center space-x-2">
                   <span>�</span>
                   <span>Nội dung thông báo</span>
                   <span className="text-red-500">*</span>

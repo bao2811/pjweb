@@ -95,9 +95,21 @@ class PostController extends Controller
     public function deletePostById(Request $request, $id): JsonResponse
     {
         try {
+            $currentUserId = $request->user()->id;
+            
+            // Check ownership before deleting
+            $post = $this->postService->getPostById($id);
+            if (!$post) {
+                return response()->json(['error' => 'Post not found'], 404);
+            }
+            
+            if ($post->author_id !== $currentUserId) {
+                return response()->json(['error' => 'You are not authorized to delete this post'], 403);
+            }
+            
             $deleted = $this->postService->deletePostById($id);
             if (!$deleted) {
-                return response()->json(['error' => 'Post not found'], 404);
+                return response()->json(['error' => 'Failed to delete post'], 500);
             }
             return response()->json(['message' => 'Post deleted successfully'], 200);
         } catch (\Exception $e) {
@@ -227,18 +239,20 @@ class PostController extends Controller
         }
     }
 
-    // Tạo post mới trong channel
+    /**
+     * Tạo post mới trong channel
+     * FIX #10: Thêm kiểm tra quyền - chỉ user đã được approved tham gia sự kiện mới được post
+     */
     public function addPostToChannel(Request $request): JsonResponse
     {
         try {
             $request->validate([
                 'channel_id' => 'required|exists:channels,id',
-                'content' => 'required|string',
+                'content' => 'required|string|max:5000', // FIX: Giới hạn độ dài content
                 'image' => 'nullable|string',
-                'author_id' => 'nullable|integer', // Allow author_id from frontend as fallback
+                'author_id' => 'nullable|integer',
             ]);
 
-            // Try to get author_id from JWT auth, fallback to request
             $authorId = auth()->id() ?? $request->input('author_id');
             
             if (!$authorId) {
@@ -250,8 +264,36 @@ class PostController extends Controller
                 return response()->json(['error' => 'Author ID is required'], 400);
             }
 
+            // FIX #10: Kiểm tra quyền truy cập channel
+            $channelId = $request->input('channel_id');
+            $channel = \App\Models\Channel::find($channelId);
+            
+            if (!$channel || !$channel->event_id) {
+                return response()->json(['error' => 'Channel not found'], 404);
+            }
+
+            // Kiểm tra event đã được duyệt chưa (status khác pending/rejected là đã duyệt)
+            $event = \App\Models\Event::find($channel->event_id);
+            if (!$event || in_array($event->status, ['pending', 'rejected'])) {
+                return response()->json(['error' => 'Event is not approved yet. Channel access denied.'], 403);
+            }
+
+            // Kiểm tra user có quyền: là author, comanager, hoặc đã được approved tham gia
+            $isAuthor = $event->author_id === $authorId;
+            $isComanager = $event->comanagers()->where('user_id', $authorId)->exists();
+            $isApprovedParticipant = \App\Models\JoinEvent::where('user_id', $authorId)
+                ->where('event_id', $event->id)
+                ->where('status', 'approved')
+                ->exists();
+
+            if (!$isAuthor && !$isComanager && !$isApprovedParticipant) {
+                return response()->json([
+                    'error' => 'You do not have permission to post in this channel. You must be approved to join the event first.'
+                ], 403);
+            }
+
             $postData = [
-                'channel_id' => $request->input('channel_id'),
+                'channel_id' => $channelId,
                 'content' => $request->input('content'),
                 'image' => $request->input('image'),
                 'author_id' => $authorId,

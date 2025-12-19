@@ -812,7 +812,7 @@ export default function AdminEventsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Category Filter */}
             <div>
-              <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center">
+              <label className=" text-base font-semibold text-gray-700 mb-3 flex items-center">
                 <FaFilter className="mr-2 text-blue-500" />
                 Chủ đề
               </label>
@@ -832,7 +832,7 @@ export default function AdminEventsPage() {
 
             {/* Status Filter */}
             <div>
-              <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center">
+              <label className="text-base font-semibold text-gray-700 mb-3 flex items-center">
                 <FaFilter className="mr-2 text-green-500" />
                 Trạng thái
               </label>

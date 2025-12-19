@@ -13,7 +13,7 @@ class JoinEvent extends Model
 
     /**
      * The attributes that are mass assignable.
-     *
+     * Note: Database không có cột updated_at, timestamps = false
      * @var list<string>
      */
     protected $fillable = [
@@ -22,6 +22,10 @@ class JoinEvent extends Model
         'status',
         'joined_at',
         'created_at',
+        'completion_status',
+        'completed_at',
+        'completed_by',
+        'completion_note',
     ];
 
     public function event()

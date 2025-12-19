@@ -44,6 +44,11 @@ interface Notification {
   created_at: string;
   is_read: boolean;
   link?: string;
+  data?: {
+    event_id?: number;
+    url?: string;
+    icon?: string;
+  };
 }
 
 export default function NotificationsPage() {
@@ -215,9 +220,21 @@ export default function NotificationsPage() {
       markAsRead(notification.id);
     }
 
-    // Navigate to link if exists
-    if (notification.link) {
-      router.push(notification.link);
+    // Ưu tiên event_id trước, sau đó mới đến url
+    let targetUrl: string | null = null;
+    
+    if (notification.data?.event_id) {
+      targetUrl = `/events/${notification.data.event_id}`;
+    } else if (notification.data?.url && notification.data.url !== '/notifications') {
+      // Chỉ navigate nếu url không phải là "/notifications" mặc định
+      targetUrl = notification.data.url;
+    } else if (notification.link) {
+      targetUrl = notification.link;
+    }
+
+    // Navigate to link if exists and not default
+    if (targetUrl) {
+      router.push(targetUrl);
     }
   };
 

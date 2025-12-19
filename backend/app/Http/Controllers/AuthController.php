@@ -44,7 +44,7 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
                 try {
-                    $token = JWTUtil::generateToken($user, 15);
+                    $token = JWTUtil::generateToken($user, 5); // 5 phút
                     $refresh_token = JWTUtil::generateToken($user, 43200); // 30 days
                 } catch (\Exception $e) {
                     // Log full exception for debugging and return a JSON error so the frontend can surface it
@@ -95,7 +95,13 @@ class AuthController extends Controller
             return response()->json(['error' => 'Invalid or expired refresh token'], 401);
         }
 
-        $access_token = JWTUtil::generateToken($payload, 15); // 15 phút
+        // Lấy user từ database dựa trên payload->sub (user ID)
+        $user = User::find($payload->sub);
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 401);
+        }
+
+        $access_token = JWTUtil::generateToken($user, 5); // 5 phút
 
         return response()->json([
             'message' => 'Token refreshed successfully',

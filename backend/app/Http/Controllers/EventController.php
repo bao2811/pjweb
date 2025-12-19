@@ -5,14 +5,18 @@ namespace App\Http\Controllers;
 use App\Helpers\WebPushApi;
 use Illuminate\Http\Request;
 use App\Services\EventService;
+use App\Services\ManagerService;
 
 
 class EventController extends Controller
 {
 
     protected $eventService;
-    public function __construct(EventService $eventService){
+    protected $managerService;
+    
+    public function __construct(EventService $eventService, ManagerService $managerService){
         $this->eventService = $eventService;
+        $this->managerService = $managerService;
     }
 
     public function sendNotification(Request $request)
@@ -77,7 +81,22 @@ class EventController extends Controller
         if (!$event) {
             return response()->json(['error' => 'Event not found'], 404);
         }
-        return response()->json(['event' => $event]);
+        
+        // Check if current user has liked this event
+        $isLiked = false;
+        if ($request->user()) {
+            $like = \DB::table('likes')
+                ->where('user_id', $request->user()->id)
+                ->where('event_id', $id)
+                ->where('status', 1)
+                ->first();
+            $isLiked = $like ? true : false;
+        }
+        
+        $eventData = $event->toArray();
+        $eventData['is_liked'] = $isLiked;
+        
+        return response()->json(['event' => $eventData]);
     }
 
     public function createEvent(Request $request)

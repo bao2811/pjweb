@@ -617,7 +617,7 @@ export default function ManagerManagement() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Status Filter */}
             <div>
-              <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center">
+              <label className="text-base font-semibold text-gray-700 mb-3 flex items-center">
                 <FaFilter className="mr-2 text-green-500" />
                 Trạng thái
               </label>
@@ -635,7 +635,7 @@ export default function ManagerManagement() {
 
             {/* Events Range */}
             <div>
-              <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center">
+              <label className="text-base font-semibold text-gray-700 mb-3 flex items-center">
                 <FaFilter className="mr-2 text-blue-500" />
                 Số sự kiện: {eventsRange[0]} - {eventsRange[1]}
               </label>

@@ -148,12 +148,14 @@ export default function ManagerNotificationsPage() {
       handleMarkAsRead(notification.id);
     }
 
-    // Navigate based on notification type
+    // Navigate based on notification type - ưu tiên event_id nếu có
     if (notification.data?.event_id) {
       router.push(`/manager/events/${notification.data.event_id}`);
-    } else if (notification.data?.url) {
+    } else if (notification.data?.url && notification.data.url !== '/notifications') {
+      // Chỉ navigate nếu url không phải là "/notifications" mặc định
       router.push(notification.data.url);
     }
+    // Nếu không có event_id và url là mặc định, không navigate - chỉ đánh dấu đã đọc
   };
 
   const handleApproveUser = async (notification: Notification) => {

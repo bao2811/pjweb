@@ -30,6 +30,15 @@ class NotiService
         }
     }
 
+    public function getNotificationById($id)
+    {
+        try {
+            return $this->notiRepo->findById($id);
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
     public function createNotification($data)
     {
         try {
