@@ -400,12 +400,13 @@ export default function ManagerManagement() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `${API_URL}/admin/users/${editingManager.id}`,
+      const response = await authFetch(
+        `/admin/updateInfoManager/${editingManager.id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(editingManager),
         }

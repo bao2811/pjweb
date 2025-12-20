@@ -374,6 +374,8 @@ class UserService
                     'events.content as description',
                     'events.image',
                     'events.address as location',
+                    'events.max_participants',
+                    'events.current_participants',
                     'events.start_time',
                     'events.end_time',
                     'join_events.created_at as joined_at',
@@ -392,10 +394,10 @@ class UserService
                     $hours = ($interval->days * 24) + $interval->h + ($interval->i / 60);
 
                     // Get participant count (chỉ tính approved)
-                    $participants = DB::table('join_events')
-                        ->where('event_id', $event->id)
-                        ->where('status', 'approved')
-                        ->count();
+                    // $participants = DB::table('join_events')
+                    //     ->where('event_id', $event->id)
+                    //     ->where('status', 'approved')
+                    //     ->count();
 
                     return [
                         'id' => $event->id,
@@ -405,7 +407,8 @@ class UserService
                         'location' => $event->location,
                         'completedAt' => $event->completed_at ?? $event->end_time,
                         'hours' => round($hours, 1),
-                        'participants' => $participants,
+                        'max_participants' => $event->max_participants,
+                        'participants' => $event->current_participants,
                         'completion_note' => $event->completion_note,
                         'organizer' => [
                             'name' => $event->organizer_name,

@@ -23,6 +23,8 @@ import {
   FaVideo,
   FaMicrophone,
 } from "react-icons/fa";
+import { useAuth } from "@/hooks/useAuth";
+import { useReverbChannel } from "@/hooks/useReverbChannel";
 
 // Mock current user
 const currentUser = {
@@ -397,6 +399,50 @@ export default function () {
   const [newComment, setNewComment] = useState<Record<number, string>>({});
   const [showGroupList, setShowGroupList] = useState(true);
   const chatMessagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Auth (to get token for Reverb auth)
+  const { user, token } = useAuth();
+
+  // Connect to Reverb group channel for realtime chat/notifications
+  useReverbChannel({
+    groupId: selectedGroup?.id ?? null,
+    authToken: token ?? null,
+    onMessage: (data: any) => {
+      console.log("[useReverbChannel] message received:", data);
+      // Safe read group id from common payload shapes
+      const gid =
+        data.group_id ?? data.groupId ?? data.group ?? selectedGroup?.id;
+      if (!gid) return;
+
+      setChatMessagesByGroup((prev) => {
+        const copy: typeof prev = { ...prev };
+        const arr = copy[gid] ? [...copy[gid]] : [];
+        const msg = {
+          id: data.id ?? Date.now(),
+          userId: data.user_id ?? data.userId ?? data.senderId ?? 0,
+          userName:
+            data.user_name ?? data.userName ?? data.senderName ?? "Người dùng",
+          userAvatar: data.avatar ?? data.userAvatar ?? "",
+          message: data.message ?? data.text ?? JSON.stringify(data),
+          timestamp: data.timestamp ?? new Date().toLocaleTimeString(),
+          isCurrentUser:
+            (data.user_id ?? data.userId) === (user?.id ?? currentUser.id),
+        };
+        arr.push(msg);
+        copy[gid] = arr;
+        return copy;
+      });
+    },
+    onMemberJoined: (d) => {
+      console.log("[useReverbChannel] member joined:", d);
+    },
+    onMemberLeft: (d) => {
+      console.log("[useReverbChannel] member left:", d);
+    },
+    onEvent: (eventName, payload) => {
+      console.log(`[useReverbChannel] event ${eventName}:`, payload);
+    },
+  });
 
   // Get chat messages for selected group
   const currentChatMessages = chatMessagesByGroup[selectedGroup.id] || [];

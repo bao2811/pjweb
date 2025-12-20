@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Message;
 use App\Models\Channel;
-use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -20,7 +20,7 @@ class MessageController extends Controller
 
             return response()->json(['messages' => $messages], 200);
         } catch (\Exception $e) {
-            \Log::error('Get Messages Error:', ['error' => $e->getMessage(), 'channel_id' => $channelId]);
+            Log::error('Get Messages Error:', ['error' => $e->getMessage(), 'channel_id' => $channelId]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -35,13 +35,13 @@ class MessageController extends Controller
             ]);
 
             // Ưu tiên auth()->id(), fallback về sender_id từ request (để test)
-            $senderId = auth()->id() ?? $request->sender_id;
+            $senderId = $request->user()->id;
             
-            \Log::info('Sending message:', [
-                'auth_id' => auth()->id(),
+            Log::info('Sending message:', [
+                'auth_id' => $senderId,
                 'request_sender_id' => $request->sender_id,
                 'final_sender_id' => $senderId,
-                'has_user' => auth()->user() ? 'yes' : 'no'
+                'has_user' => $request->user() ? 'yes' : 'no'
             ]);
 
             if (!$senderId) {
@@ -59,18 +59,18 @@ class MessageController extends Controller
 
             return response()->json($message, 201);
         } catch (\Exception $e) {
-            \Log::error('Send Message Error:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Log::error('Send Message Error:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
-    public function deleteMessage($id): JsonResponse
+    public function deleteMessage(Request $request, $id): JsonResponse
     {
         try {
             $message = Message::findOrFail($id);
             
             // Only allow deletion by sender
-            if ($message->sender_id !== auth()->id()) {
+            if ($message->sender_id !== $request->user()->id) {
                 return response()->json(['error' => 'Unauthorized'], 403);
             }
 

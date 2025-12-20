@@ -71,7 +71,7 @@ class JoinEventRepo
                 'event_id' => $data['event_id'],
                 'event_title' => $event->title,
                 'user_id' => $data['user_id'],
-                'url' => "/manager/events/{$data['event_id']}"
+                'url' => "/manager/notifications"
             ]
         ]);
 
@@ -98,7 +98,9 @@ class JoinEventRepo
             
         if ($joinEvent) {
             $event = Event::find($eventId);
-            
+            $event->current_participants -= 1;
+            $event->save();
+
             // Gửi thông báo xác nhận hủy đăng ký
             if ($event) {
                 $notification = Noti::createAndPush([
@@ -166,21 +168,33 @@ class JoinEventRepo
     }
 
     public function acceptUserJoinEvent($userId, $eventId, $managerId) {
-        $joinEvent = DB::update(
-            "UPDATE join_events
-             SET status = 'approved', joined_at = NOW()
-             WHERE user_id = :user_id
-               AND event_id = :event_id
-               AND status = 'pending'",
-            ['user_id' => $userId, 'event_id' => $eventId]
-        );
+        // $joinEvent = DB::update(
+        //     "UPDATE join_events
+        //      SET status = 'approved', joined_at = NOW()
+        //      WHERE user_id = :user_id
+        //        AND event_id = :event_id
+        //        AND status = 'pending'",
+        //     ['user_id' => $userId, 'event_id' => $eventId]
+        // );
+        $joinEvent = JoinEvent::where('user_id', $userId)
+            ->where('event_id', $eventId)
+            ->where('status', 'pending')
+            ->first();
 
-        if ($joinEvent > 0) {
+        if ($joinEvent) {
             // Lấy thông tin event
             $event = Event::find($eventId);
-            
             // Gửi notification + push notification cho user
-            if ($event) {
+            return DB::transaction(function () use ($event, $joinEvent, $userId, $managerId, $eventId) {
+                // Check capacity before accepting
+                if ($event->current_participants >= $event->max_participants) {
+                    throw new Exception('Event is full');
+                }
+
+                // Atomically increment participants in DB
+                $event->increment('current_participants');
+
+                // Gửi notification + push notification cho user
                 $notification = Noti::createAndPush([
                     'title' => "Đã được duyệt vào '{$event->title}' 🎉",
                     'message' => "Bạn đã được chấp nhận tham gia sự kiện '{$event->title}'!",
@@ -193,11 +207,16 @@ class JoinEventRepo
                         'url' => "/events/{$eventId}"
                     ]
                 ]);
-            }
 
-            broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
-            
-            return $joinEvent;
+                broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
+
+                // Update join event status
+                $joinEvent->status = 'approved';
+                $joinEvent->joined_at = now();
+                $joinEvent->save();
+
+                return true;
+            });
         }
         throw new Exception('JoinEvent not found');
     }

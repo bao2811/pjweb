@@ -13,6 +13,8 @@ import {
   FaExclamationCircle,
 } from "react-icons/fa";
 import { authFetch } from "@/utils/auth";
+import { useReverbNotification } from "@/hooks/useReverbNotification";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Notification {
   id: number;
@@ -33,6 +35,8 @@ interface Notification {
     user_id?: number;
   };
   created_at: string;
+  // client-side flag to mark a notification as processed (approved/rejected handled)
+  processed?: boolean;
 }
 
 export default function ManagerNotificationsPage() {
@@ -51,8 +55,82 @@ export default function ManagerNotificationsPage() {
   }, []);
 
   useEffect(() => {
+    // 1️⃣ Lắng nghe postMessage từ Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type === "notification-data") {
+          const newNotif = event.data.data;
+          setNotifications((prev) => [newNotif, ...prev]);
+        }
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     filterNotifications();
   }, [notifications, filter, typeFilter]);
+
+  const { user, token } = useAuth();
+
+  useReverbNotification({
+    userId: user?.id ?? null,
+    authToken: token ?? null,
+    onNewNotification: (data) => {
+      try {
+        // payload may be { notification: {...} } or the notification itself
+        const payload: any = data?.notification ?? data;
+
+        // build a Notification-like object with safe defaults
+        const newNoti: Notification = {
+          id: payload.id,
+          title: payload.title ?? payload.data?.title ?? "Thông báo mới",
+          message: payload.message ?? payload.body ?? "",
+          type: payload.type ?? payload.data?.type ?? "webpush",
+          sender_id: payload.sender_id ?? payload.data?.sender_id ?? 0,
+          receiver_id: payload.receiver_id ?? user?.id ?? 0,
+          is_read: !!payload.is_read,
+          sender_username:
+            payload.sender_username ?? payload.sender?.username ?? undefined,
+          sender_email: payload.sender_email ?? undefined,
+          sender_image: payload.sender_image ?? undefined,
+          sender_role: payload.sender_role ?? undefined,
+          data: payload.data ?? {},
+          created_at: payload.created_at ?? new Date().toISOString(),
+        };
+
+        setNotifications((prev) => {
+          // avoid duplicate
+          if (prev.some((n) => n.id === newNoti.id)) return prev;
+          return [newNoti, ...prev];
+        });
+
+        // show browser notification if permitted
+        if (
+          typeof window !== "undefined" &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          try {
+            new Notification(newNoti.title, {
+              body: newNoti.message || "",
+              tag: `notification-${newNoti.id}`,
+              data: { url: newNoti.data?.url ?? "/notifications" },
+            });
+          } catch (err) {
+            console.warn("Failed to show browser notification", err);
+          }
+        }
+      } catch (err) {
+        console.error("Error handling realtime notification:", err, data);
+      }
+    },
+    onNotificationRead: (notificationId) => {
+      // Đánh dấu notification đã đọc trong state
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
+      );
+    },
+  });
 
   const fetchNotifications = async () => {
     try {
@@ -108,6 +186,26 @@ export default function ManagerNotificationsPage() {
       }
     } catch (error) {
       console.error("Error marking notification as read:", error);
+    }
+  };
+
+  // delete notification without user confirmation (used after approve/reject)
+  const deleteNotificationSilent = async (notificationId: number) => {
+    try {
+      const response = await authFetch(
+        `/user/notifications/${notificationId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+      } else {
+        console.warn("Failed to delete notification", await response.text());
+      }
+    } catch (error) {
+      console.error("Error deleting notification:", error);
     }
   };
 
@@ -181,8 +279,18 @@ export default function ManagerNotificationsPage() {
 
       if (data.success) {
         alert("Đã duyệt user tham gia sự kiện!");
+        // mark locally as read + processed so UI shows "đã được xử lý"
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notification.id
+              ? { ...n, is_read: true, processed: true }
+              : n
+          )
+        );
+        // optionally inform backend that the notification was read
         handleMarkAsRead(notification.id);
-        fetchNotifications(); // Refresh to show updated status
+        // remove the notification from server so it's no longer shown
+        deleteNotificationSilent(notification.id);
       } else {
         alert(data.message || "Có lỗi xảy ra khi duyệt user");
       }
@@ -214,8 +322,16 @@ export default function ManagerNotificationsPage() {
 
       if (data.success) {
         alert("Đã từ chối user tham gia sự kiện!");
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notification.id
+              ? { ...n, is_read: true, processed: true }
+              : n
+          )
+        );
         handleMarkAsRead(notification.id);
-        fetchNotifications();
+        // delete notification after rejection
+        deleteNotificationSilent(notification.id);
       } else {
         alert(data.message || "Có lỗi xảy ra khi từ chối user");
       }
@@ -500,29 +616,40 @@ export default function ManagerNotificationsPage() {
                       {isJoinRequest &&
                         notification.data?.user_id &&
                         notification.data?.event_id && (
-                          <div className="flex items-center space-x-3 mb-3">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleApproveUser(notification);
-                              }}
-                              disabled={processingId === notification.id}
-                              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                            >
-                              <FaCheckCircle />
-                              <span>Duyệt</span>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRejectUser(notification);
-                              }}
-                              disabled={processingId === notification.id}
-                              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                            >
-                              <FaTimesCircle />
-                              <span>Từ chối</span>
-                            </button>
+                          <div className="mb-3">
+                            {!notification.processed ? (
+                              <div className="flex items-center space-x-3">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleApproveUser(notification);
+                                  }}
+                                  disabled={processingId === notification.id}
+                                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                                >
+                                  <FaCheckCircle />
+                                  <span>Duyệt</span>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRejectUser(notification);
+                                  }}
+                                  disabled={processingId === notification.id}
+                                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                                >
+                                  <FaTimesCircle />
+                                  <span>Từ chối</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center space-x-2 px-3 py-2 rounded-full bg-gray-100 text-gray-700">
+                                <FaExclamationCircle className="text-orange-500" />
+                                <span className="font-medium">
+                                  Đã được xử lý
+                                </span>
+                              </div>
+                            )}
                           </div>
                         )}
 

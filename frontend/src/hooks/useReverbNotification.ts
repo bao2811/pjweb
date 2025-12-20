@@ -134,7 +134,6 @@ export function useReverbNotification({
       }
     );
 
-    // Cleanup on unmount or when dependencies change
     return () => {
       console.log("🔌 [Reverb] Cleaning up, leaving channel:", channelName);
       echo.leave(channelName);

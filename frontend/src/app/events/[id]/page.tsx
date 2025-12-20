@@ -24,7 +24,6 @@ import {
 } from "react-icons/fa";
 import { authFetch } from "@/utils/auth";
 import { useAuth } from "@/hooks/useAuth";
-import Navbar from "@/components/Navbar";
 
 interface EventDetail {
   id: number;
@@ -42,7 +41,6 @@ interface EventDetail {
   status: string;
   creator_id?: number;
   author_id?: number;
-  currentParticipants?: number;
   current_participants?: number;
   manager?: {
     id: number;
@@ -83,11 +81,22 @@ export default function EventDetailPage({
       setIsLoading(true);
       const response = await authFetch(`/api/events/getEventDetails/${id}`);
       const data = await response.json();
+      console.log("Event detail data:", data);
       if (data && data.event) {
         setEvent(data.event);
-        // Set like status từ backend
-        setIsLiked(Boolean(data.event.is_liked));
-        setLikes(data.event.likes || 0);
+        // API returns is_liked nested inside event: { event: { ... , is_liked: true } }
+        setIsLiked(
+          (data.event && (data.event.is_liked ?? data.is_liked)) || false
+        );
+        // likes count may be returned as likes_count or likes inside event
+        setLikes(
+          (data.event &&
+            (data.event.likes_count ??
+              data.event.likes ??
+              data.likes_count ??
+              data.likes)) ||
+            0
+        );
       }
     } catch (error) {
       console.error("Error fetching event details:", error);
@@ -100,9 +109,8 @@ export default function EventDetailPage({
     try {
       const response = await authFetch("/user/my-registrations");
       const data = await response.json();
-      // Fix: Đọc đúng format {success: true, registrations: [...]}
-      if (data && data.success && Array.isArray(data.registrations)) {
-        const registration = data.registrations.find(
+      if (data && Array.isArray(data)) {
+        const registration = data.find(
           (reg: any) => reg.event_id === parseInt(id)
         );
         if (registration) {
@@ -114,36 +122,25 @@ export default function EventDetailPage({
     }
   };
 
-  const handleLike = async () => {
-    // Optimistic update
-    const wasLiked = isLiked;
-    const prevLikes = likes;
+  const handleLike = () => {
     setIsLiked(!isLiked);
     setLikes(isLiked ? likes - 1 : likes + 1);
-
-    try {
-      const endpoint = wasLiked
-        ? `/api/likes/event/unlike/${id}`
-        : `/api/likes/event/like/${id}`;
-
-      const response = await authFetch(endpoint, {
+    if (!isLiked) {
+      authFetch(`/api/likes/event/like/${id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
       });
-
-      if (!response.ok) {
-        // Rollback on error
-        setIsLiked(wasLiked);
-        setLikes(prevLikes);
-        console.error("Failed to update like status");
-      }
-    } catch (error) {
-      // Rollback on network error
-      setIsLiked(wasLiked);
-      setLikes(prevLikes);
-      console.error("Error updating like:", error);
+    } else {
+      authFetch(`/api/likes/event/unlike/${id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
     }
   };
 
@@ -268,7 +265,7 @@ export default function EventDetailPage({
   const progress =
     event.max_participants > 0
       ? Math.min(
-          ((event.currentParticipants || 0) / event.max_participants) * 100,
+          ((event.current_participants || 0) / event.max_participants) * 100,
           100
         )
       : 0;
@@ -276,58 +273,50 @@ export default function EventDetailPage({
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
       <Toaster />
+      {/* Hero Section */}
+      <div className="relative h-[400px] w-full">
+        <Image
+          src={
+            event.image ||
+            "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&h=400&fit=crop"
+          }
+          alt={event.title}
+          fill
+          className="object-cover"
+          unoptimized
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+
+        {/* Overlay Content */}
+        <div className="absolute bottom-0 left-0 right-0 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center space-x-2 mb-3">
+              <span className="px-3 py-1 bg-green-500 text-white rounded-full text-sm font-semibold flex items-center">
+                <FaLeaf className="mr-1" />
+                {event.category || "Tình nguyện"}
+              </span>
+              <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-gray-700 rounded-full text-sm font-semibold">
+                {event.status === "upcoming"
+                  ? "Sắp diễn ra"
+                  : event.status === "ongoing"
+                  ? "Đang diễn ra"
+                  : event.status === "completed"
+                  ? "Đã kết thúc"
+                  : "Đã hủy"}
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">
+              {event.title}
+            </h1>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Event Details */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Hero Image Card */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-green-100">
-              <div className="relative w-full aspect-video">
-                <Image
-                  src={
-                    event.image ||
-                    "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&h=600&fit=crop"
-                  }
-                  alt={event.title}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
-              <div className="p-6">
-                <div className="flex items-center space-x-2 mb-3">
-                  <span className="px-3 py-1 bg-green-500 text-white rounded-full text-sm font-semibold flex items-center">
-                    <FaLeaf className="mr-1" />
-                    {event.category || "Tình nguyện"}
-                  </span>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                      event.status === "upcoming"
-                        ? "bg-blue-100 text-blue-700"
-                        : event.status === "ongoing"
-                        ? "bg-green-100 text-green-700"
-                        : event.status === "completed"
-                        ? "bg-gray-100 text-gray-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {event.status === "upcoming"
-                      ? "Sắp diễn ra"
-                      : event.status === "ongoing"
-                      ? "Đang diễn ra"
-                      : event.status === "completed"
-                      ? "Đã kết thúc"
-                      : "Đã hủy"}
-                  </span>
-                </div>
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
-                  {event.title}
-                </h1>
-              </div>
-            </div>
-
             {/* Description Card */}
             <div className="bg-white rounded-2xl shadow-lg p-8 border border-green-100">
               <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
@@ -530,26 +519,10 @@ export default function EventDetailPage({
           {/* Right Column - Action Cards */}
           <div className="space-y-6">
             {/* Registration Card - Featured */}
-            <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-green-200 sticky top-24 z-10">
+            <div className="bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl shadow-xl p-8 text-white sticky top-4">
               <div className="text-center mb-6">
-                {registrationStatus === "approved" ? (
-                  <div className="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                    <FaCheckCircle className="text-4xl text-green-600" />
-                  </div>
-                ) : registrationStatus === "pending" ? (
-                  <div className="w-20 h-20 mx-auto mb-4 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <FaClock className="text-4xl text-yellow-600" />
-                  </div>
-                ) : registrationStatus === "rejected" ? (
-                  <div className="w-20 h-20 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                    <FaExclamationCircle className="text-4xl text-red-600" />
-                  </div>
-                ) : (
-                  <div className="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                    <FaHandsHelping className="text-4xl text-green-600" />
-                  </div>
-                )}
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                <FaHandsHelping className="text-6xl mx-auto mb-4 opacity-90" />
+                <h3 className="text-2xl font-bold mb-2">
                   {registrationStatus === "approved"
                     ? "Đã được duyệt"
                     : registrationStatus === "pending"
@@ -558,7 +531,7 @@ export default function EventDetailPage({
                     ? "Bị từ chối"
                     : "Tham gia ngay"}
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-green-100">
                   {registrationStatus === "approved"
                     ? "Bạn đã được chấp nhận tham gia sự kiện này"
                     : registrationStatus === "pending"
@@ -577,11 +550,11 @@ export default function EventDetailPage({
                     event.status === "completed" ||
                     event.status === "cancelled"
                   }
-                  className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-4 px-6 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="w-full bg-white text-green-700 font-bold py-4 px-6 rounded-xl hover:bg-green-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isRegistering ? (
                     <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-700"></div>
                       <span>Đang xử lý...</span>
                     </>
                   ) : (
@@ -593,16 +566,14 @@ export default function EventDetailPage({
                 </button>
               ) : registrationStatus === "pending" ? (
                 <div className="space-y-3">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
-                    <FaClock className="text-3xl mx-auto mb-2 text-yellow-600" />
-                    <p className="font-semibold text-yellow-700">
-                      Đang chờ duyệt
-                    </p>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <FaClock className="text-3xl mx-auto mb-2" />
+                    <p className="font-semibold">Đang chờ duyệt</p>
                   </div>
                   <button
                     onClick={handleCancelRequest}
                     disabled={isRegistering}
-                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
+                    className="w-full bg-red-500/90 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
                   >
                     {isRegistering ? (
                       <>
@@ -619,47 +590,40 @@ export default function EventDetailPage({
                 </div>
               ) : registrationStatus === "approved" ? (
                 <div className="space-y-3">
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                    <FaCheckCircle className="text-3xl mx-auto mb-2 text-green-600" />
-                    <p className="font-semibold text-green-700">
-                      Đã được chấp nhận!
-                    </p>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <FaCheckCircle className="text-3xl mx-auto mb-2" />
+                    <p className="font-semibold">Đã được chấp nhận!</p>
                   </div>
                   <button
                     onClick={handleJoinChat}
-                    className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+                    className="w-full bg-white text-blue-700 font-bold py-3 px-6 rounded-xl hover:bg-blue-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
                   >
                     <FaComments className="text-xl" />
                     <span>Vào kênh chat</span>
                   </button>
-                  {/* Chỉ hiển thị nút Rời khỏi sự kiện nếu event chưa bắt đầu (upcoming) */}
-                  {event.status === "upcoming" && (
-                    <button
-                      onClick={handleCancelRequest}
-                      disabled={isRegistering}
-                      className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-xl transition-all flex items-center justify-center space-x-2 text-sm disabled:opacity-50"
-                    >
-                      {isRegistering ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span>Đang xử lý...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FaTimes />
-                          <span>Rời khỏi sự kiện</span>
-                        </>
-                      )}
-                    </button>
-                  )}
+                  <button
+                    onClick={handleCancelRequest}
+                    disabled={isRegistering}
+                    className="w-full bg-red-500/90 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-xl transition-all flex items-center justify-center space-x-2 text-sm disabled:opacity-50"
+                  >
+                    {isRegistering ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Đang xử lý...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaTimes />
+                        <span>Rời khỏi sự kiện</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               ) : (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-                  <FaExclamationCircle className="text-3xl mx-auto mb-2 text-red-600" />
-                  <p className="font-semibold text-red-700">
-                    Yêu cầu bị từ chối
-                  </p>
-                  <p className="text-sm text-red-600 mt-2">
+                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                  <FaExclamationCircle className="text-3xl mx-auto mb-2" />
+                  <p className="font-semibold">Yêu cầu bị từ chối</p>
+                  <p className="text-sm text-green-100 mt-2">
                     Vui lòng liên hệ manager để biết thêm chi tiết
                   </p>
                 </div>
@@ -677,25 +641,10 @@ export default function EventDetailPage({
                   <div>
                     <p className="text-sm text-gray-500">Thời gian</p>
                     <p className="font-semibold text-gray-800">
-                      {new Date(event.start_time).toLocaleString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })}
+                      {new Date(event.start_time).toLocaleDateString("vi-VN")}
                     </p>
                     <p className="text-sm text-gray-600">
-                      đến{" "}
-                      {new Date(event.end_time).toLocaleString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })}
+                      đến {new Date(event.end_time).toLocaleDateString("vi-VN")}
                     </p>
                   </div>
                 </div>
@@ -718,7 +667,7 @@ export default function EventDetailPage({
                     </p>
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-semibold text-gray-800">
-                        {event.currentParticipants || 0}/
+                        {event.current_participants || 0}/
                         {event.max_participants}
                       </span>
                       <span className="text-sm text-gray-600">

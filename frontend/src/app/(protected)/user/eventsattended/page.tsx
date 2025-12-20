@@ -25,15 +25,6 @@ import {
 } from "react-icons/fa";
 import { authFetch } from "@/utils/auth";
 
-// Mock current user
-const mockCurrentUser = {
-  name: "Nguyễn Văn An",
-  email: "user@example.com",
-  avatar: "https://i.pravatar.cc/150?img=12",
-  role: "user" as const,
-  points: 1250,
-};
-
 // Types
 interface Participant {
   id: number;
@@ -89,6 +80,11 @@ export default function EventsAttendedPage() {
   const [cancellingEventId, setCancellingEventId] = useState<number | null>(
     null
   );
+  // Local state to show a nicer confirm modal when cancelling registration
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [pendingCancelEventId, setPendingCancelEventId] = useState<
+    number | null
+  >(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch user's registered events
@@ -191,9 +187,19 @@ export default function EventsAttendedPage() {
     return "completed";
   };
 
-  // Handle cancel registration
-  const handleCancelRegistration = async (eventId: number) => {
-    if (!confirm("Bạn có chắc muốn hủy đăng ký sự kiện này?")) return;
+  // Open confirm modal (instead of native confirm) so UX is nicer
+  const handleCancelRegistration = (eventId: number) => {
+    setPendingCancelEventId(eventId);
+    setShowCancelConfirm(true);
+  };
+
+  // Confirm cancellation and call backend
+  const confirmCancelRegistration = async () => {
+    const eventId = pendingCancelEventId;
+    // close modal right away
+    setShowCancelConfirm(false);
+
+    if (!eventId) return;
 
     try {
       setCancellingEventId(eventId);
@@ -203,7 +209,7 @@ export default function EventsAttendedPage() {
 
       if (response.ok) {
         // Remove event from list
-        setEvents(events.filter((e) => e.id !== eventId));
+        setEvents((prev) => prev.filter((e) => e.id !== eventId));
         alert("Đã hủy đăng ký thành công!");
         setShowDetailModal(false);
       } else {
@@ -215,6 +221,7 @@ export default function EventsAttendedPage() {
       alert("Hủy đăng ký thất bại!");
     } finally {
       setCancellingEventId(null);
+      setPendingCancelEventId(null);
     }
   };
 
@@ -1068,6 +1075,42 @@ export default function EventsAttendedPage() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel confirmation modal (replaces native confirm) */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 bg-opacity-60 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-lg w-full max-w-md p-6 z-[10000] shadow-xl">
+            <h3 className="text-lg text-black font-semibold mb-2">
+              Hủy đăng ký
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Bạn có chắc muốn hủy đăng ký sự kiện này? Hành động này có thể
+              không thể hoàn tác.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowCancelConfirm(false);
+                  setPendingCancelEventId(null);
+                }}
+                className="px-4 py-2 bg-gray-900 rounded-lg"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmCancelRegistration}
+                disabled={cancellingEventId === pendingCancelEventId}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg flex items-center"
+              >
+                {cancellingEventId === pendingCancelEventId && (
+                  <div className="animate-spin h-4 w-4 border-b-2 border-white rounded-full inline-block mr-2" />
+                )}
+                Xác nhận hủy
+              </button>
             </div>
           </div>
         </div>

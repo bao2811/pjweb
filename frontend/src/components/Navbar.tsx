@@ -45,20 +45,12 @@ export default function Navbar() {
   }, []);
 
   // Fetch notifications định kỳ (polling) + real-time
-  useEffect(() => {
-    if (currentUser) {
-      // Fetch ngay lập tức
-      fetchNotifications();
-
-      // Refresh mỗi 30 giây
-      const interval = setInterval(() => {
-        console.log("🔄 [Navbar] Auto-refreshing notifications...");
-        fetchNotifications();
-      }, 30000);
-
-      return () => clearInterval(interval);
-    }
-  }, [currentUser]);
+  // useEffect(() => {
+  //   if (currentUser) {
+  //     // Fetch ngay lập tức
+  //     fetchNotifications();
+  //   }
+  // }, [currentUser]);
 
   // Callback khi có thông báo mới qua Reverb WebSocket
   const handleNewNotification = (notification: any) => {
@@ -84,11 +76,6 @@ export default function Navbar() {
     }
 
     // Delay một chút để backend kịp lưu vào database, sau đó refresh danh sách
-    console.log("🔄 [Navbar] Will refresh notification list in 500ms...");
-    setTimeout(() => {
-      console.log("🔄 [Navbar] Now fetching notifications from server...");
-      fetchNotifications();
-    }, 500);
   };
 
   // Callback khi notification được đánh dấu đã đọc
@@ -466,46 +453,46 @@ export default function Navbar() {
     return outputArray;
   }
 
-  const fetchNotifications = async () => {
-    if (!currentUser) return;
+  // const fetchNotifications = async () => {
+  //   if (!currentUser) return;
 
-    try {
-      setLoadingNotifications(true);
-      const response = await authFetch("/user/notifications");
+  //   try {
+  //     setLoadingNotifications(true);
+  //     const response = await authFetch("/user/notifications");
 
-      if (!response.ok) {
-        console.error("Failed to fetch notifications:", response.status);
-        return;
-      }
+  //     if (!response.ok) {
+  //       console.error("Failed to fetch notifications:", response.status);
+  //       return;
+  //     }
 
-      const data = await response.json();
+  //     const data = await response.json();
 
-      // Handle both data.notifications (object response) and direct array
-      const notificationsList = data.notifications || data;
+  //     // Handle both data.notifications (object response) and direct array
+  //     const notificationsList = data.notifications || data;
 
-      if (Array.isArray(notificationsList)) {
-        // Lấy 5 thông báo mới nhất
-        const recentNotifications = notificationsList.slice(0, 5);
-        setNotifications(recentNotifications);
+  //     if (Array.isArray(notificationsList)) {
+  //       // Lấy 5 thông báo mới nhất
+  //       const recentNotifications = notificationsList.slice(0, 5);
+  //       setNotifications(recentNotifications);
 
-        const unreadTotal = notificationsList.filter(
-          (n: any) => !n.is_read
-        ).length;
+  //       const unreadTotal = notificationsList.filter(
+  //         (n: any) => !n.is_read
+  //       ).length;
 
-        console.log("📊 [Navbar] Fetched notifications:", {
-          total: notificationsList.length,
-          showing: recentNotifications.length,
-          unread: unreadTotal,
-          recentUnread: recentNotifications.filter((n: any) => !n.is_read)
-            .length,
-        });
-      }
-    } catch (error) {
-      console.error("❌ [Navbar] Error fetching notifications:", error);
-    } finally {
-      setLoadingNotifications(false);
-    }
-  };
+  //       console.log("📊 [Navbar] Fetched notifications:", {
+  //         total: notificationsList.length,
+  //         showing: recentNotifications.length,
+  //         unread: unreadTotal,
+  //         recentUnread: recentNotifications.filter((n: any) => !n.is_read)
+  //           .length,
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error("❌ [Navbar] Error fetching notifications:", error);
+  //   } finally {
+  //     setLoadingNotifications(false);
+  //   }
+  // };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -680,13 +667,13 @@ export default function Navbar() {
               <>
                 <Link
                   href="/manager/events"
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
                 >
                   Quản lý sự kiện
                 </Link>
                 <Link
                   href="/manager/reports"
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-purple-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
                 >
                   Báo cáo
                 </Link>
@@ -697,8 +684,14 @@ export default function Navbar() {
             {currentUser?.role === "admin" && (
               <>
                 <Link
+                  href="/admin/events"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
+                >
+                  Quản lý sự kiện
+                </Link>
+                <Link
                   href="/admin/manager"
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
                   // className={`text-xs sm:text-sm lg:text-base whitespace-nowrap px-2 sm:px-3 py-1 rounded-lg transition-colors hover:bg-blue-100 ${
                   //   pathname === "/admin/manager"
                   //     ? "bg-blue-500 text-white font-semibold"
@@ -714,7 +707,7 @@ export default function Navbar() {
                   //     ? "bg-blue-500 text-white font-semibold"
                   //     : "text-gray-700"
                   // }`}
-                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
                 >
                   Người dùng
                 </Link>

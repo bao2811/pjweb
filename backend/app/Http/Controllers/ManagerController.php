@@ -88,19 +88,19 @@ class ManagerController extends Controller
                 'success' => true,
                 'message' => 'User approved successfully',
                 'data' => $result
-            ], Response::HTTP_OK);
+            ], 200);
         } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Event not found'
-            ], Response::HTTP_NOT_FOUND);
+            ], 404);
         } catch (Exception $e) {
             Log::error('Error accepting user join event: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            ], 500);
         }
     }
 
@@ -122,19 +122,19 @@ class ManagerController extends Controller
                 'success' => true,
                 'message' => 'User rejected successfully',
                 'data' => $result
-            ], Response::HTTP_OK);
+            ], 200);
         } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Event not found'
-            ], Response::HTTP_NOT_FOUND);
+            ], 404);
         } catch (Exception $e) {
             Log::error('Error rejecting user join event: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            ], 500);
         }
     }
 

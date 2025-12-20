@@ -65,6 +65,7 @@ class PostRepo
             })
 
             ->where('posts.status', 'active')
+            ->where('posts.channel_id', null)
 
             // Nếu có lastId thì thêm điều kiện
             ->when($lastId, function($query) use ($lastId) {

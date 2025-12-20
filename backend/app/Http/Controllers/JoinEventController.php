@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\WebPushApi;
+use App\Utils\WebPushApi;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 use Illuminate\Http\Request;
@@ -28,16 +28,16 @@ class JoinEventController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function sendEventNotificationToAll(Request $request)
-    {
-        $title = $request->input('title');
-        $body = $request->input('body');
-        $url = $request->input('url');
+    // public function sendEventNotificationToAll(Request $request)
+    // {
+    //     $title = $request->input('title');
+    //     $body = $request->input('body');
+    //     $url = $request->input('url');
 
-        WebPushApi::sendNotificationToAll($title, $body, $url);
+    //     WebPushApi::sendNotificationToAll($title, $body, $url);
 
-        return response()->json(['success' => true]);
-    }
+    //     return response()->json(['success' => true]);
+    // }
 
     public function joinEvent(Request $request, $eventId)
     {

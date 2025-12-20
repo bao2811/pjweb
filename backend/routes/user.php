@@ -10,7 +10,7 @@ use App\Http\Middleware\VerifyEmailMiddleware;
 Route::middleware(['jwt'])->prefix('user')->group(function () {
     Route::get('/getuser', [UserController::class, 'getUser']);
     Route::get('/getUserDetails/{id}', [UserController::class, 'getUserDetails']);
-    Route::get('/updateUserProfile/{id}', [UserController::class, 'updateUserProfile']);
+    Route::post('/updateUserProfile/{id}', [UserController::class, 'updateUserProfile']);
     Route::post('/leaveEvent/{id}', [UserController::class, 'leaveEvent']);
     Route::post('/joinEvent/{id}', [UserController::class, 'joinEvent']);
     Route::get('/getEventHistory', [UserController::class, 'getEventHistory']);

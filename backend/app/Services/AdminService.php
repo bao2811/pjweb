@@ -112,4 +112,11 @@ class AdminService
         $result = $this->userRepo->createUser($data);
         return $result;
     }
+
+    public function updateManager($id, $data) {
+        $result = $this->userRepo->updateUserById($id, $data);
+        if($result) {
+            return $result;
+        }
+    }
 }

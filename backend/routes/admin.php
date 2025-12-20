@@ -17,5 +17,6 @@ Route::middleware(['jwt', 'check.role:admin'])->prefix('admin')->group(function 
     Route::get('/getAllUsers', [AdminController::class, 'getAllUsers']);
     Route::get('/getAllEvents', [AdminController::class, 'getAllEvents']);
     Route::get('/getAllManagers', [AdminController::class, 'getAllManagers']);
+    Route::put('/updateInfoManager/{id}', [AdminController::class, 'updateManager']);
 });
 

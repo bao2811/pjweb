@@ -62,6 +62,18 @@ export default function NotificationsPage() {
     fetchNotifications();
   }, []);
 
+  useEffect(() => {
+    // 1️⃣ Lắng nghe postMessage từ Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type === "notification-data") {
+          const newNotif = event.data.data;
+          setNotifications((prev) => [newNotif, ...prev]);
+        }
+      });
+    }
+  }, []);
+
   const fetchNotifications = async () => {
     try {
       setLoading(true);

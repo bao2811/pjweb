@@ -75,7 +75,7 @@ export default function CreateEventModal({
     // Validate image URL (no base64)
     if (formData.image && formData.image.startsWith("data:")) {
       setError(
-        "⚠️ Vui lòng nhập URL ảnh từ internet (không hỗ trợ base64). Có thể để trống để dùng ảnh mặc định."
+        "Vui lòng nhập URL ảnh từ internet (không hỗ trợ base64). Có thể để trống để dùng ảnh mặc định."
       );
       return;
     }

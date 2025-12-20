@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Services\AdminService;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\LOG;
 
 
 class AdminController {
@@ -219,6 +220,49 @@ class AdminController {
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'something wrong',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+public function updateManager(Request $request, $id) {
+        try {
+            $data = $request->validate([
+                'username' => 'sometimes|string|max:255',
+                'email' => [
+                    'sometimes',
+                    'string',
+                    'email',
+                    'max:255',
+                ],
+                'phone' => 'sometimes|nullable|string|max:20',
+                'address' => 'sometimes|nullable|string|max:255',
+                'image' => 'sometimes|nullable|string|max:255',
+                'address_card' => 'sometimes|nullable|string|max:255',
+            ]);
+
+            $result = $this->adminService->updateManager($id, $data);
+
+            if (!$result) {
+                return response()->json([
+                    'error' => 'not_found',
+                    'message' => 'Manager not found'
+                ], 404);
+            }
+
+            return response()->json([
+                'message' => 'update thành công',
+                'user' => $result
+            ], 200);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'error' => 'validation',
+                'message' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('updateManager failed', ['id' => $id, 'error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'server_error',
                 'message' => $e->getMessage()
             ], 500);
         }
