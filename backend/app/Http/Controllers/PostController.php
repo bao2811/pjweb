@@ -79,8 +79,26 @@ class PostController extends Controller
     public function createPost(Request $request): JsonResponse
     {
         try {
-            $postData = $request->only(['title', 'content', 'image', 'user_id', 'event_id']);
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'content' => 'required|string',
+                'image' => 'nullable|string',
+                'channel_id' => 'nullable|integer',
+            ]);
+
+            $postData = $request->only(['title', 'content', 'image', 'channel_id']);
+            $userId = $request->user() ? $request->user()->id : null;
+            
+            if (!$userId) {
+                return response()->json(['error' => 'User not authenticated'], 401);
+            }
+            
+            $postData['author_id'] = $userId; // Sửa từ user_id thành author_id
+            
             $post = $this->postService->createPost($postData);
+            if (!$post) {
+                return response()->json(['error' => 'Failed to create post'], 500);
+            }
             return response()->json(['post' => $post], 201);
         } catch (ValidationException $e) {
             return response()->json([

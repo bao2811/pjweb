@@ -109,7 +109,7 @@ class User extends Authenticatable
 
     public function joinedEvents()
     {
-        return $this->belongsToMany(Event::class, 'joinevent', 'user_id', 'event_id');
+        return $this->belongsToMany(Event::class, 'join_events', 'user_id', 'event_id');
     }
 
     // 🔹 Kiểm tra xem user có trong event chưa

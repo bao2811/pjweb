@@ -307,13 +307,13 @@ class ManagerController extends Controller
                 'success' => true,
                 'message' => 'Volunteer completion marked successfully',
                 'data' => $result
-            ], Response::HTTP_OK);
+            ], 200);
         } catch (Exception $e) {
             Log::error('Error marking volunteer completion: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
-            ], Response::HTTP_BAD_REQUEST);
+            ], 400);
         }
     }
 

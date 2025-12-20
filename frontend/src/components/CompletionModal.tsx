@@ -41,9 +41,9 @@ export default function CompletionModal({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          event_id: eventId,
+          event_id: eventId,  
           user_id: volunteer.user_id,
-          completion_status: completionStatus,
+          status: completionStatus,
           completion_note: completionNote,
         }),
       });
@@ -66,7 +66,7 @@ export default function CompletionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">
           Đánh giá tình nguyện viên

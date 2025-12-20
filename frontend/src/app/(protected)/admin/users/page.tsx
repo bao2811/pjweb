@@ -77,11 +77,11 @@ interface User {
   email: string;
   phone: string;
   image: string;
-  role: "admin" | "manager" | "volunteer";
+  role: "admin" | "manager" | "volunteer" | "user";
   status: "active" | "locked" | "pending";
   address: string;
   created_at: string;
-  eventsJoined?: number;
+  events_count?: number;
   eventsCreated?: number;
   events?: UserEvent[];
   isNew?: boolean; // Highlight new users
@@ -97,7 +97,7 @@ interface UserEvent {
   role: string;
 }
 
-type SortField = "username" | "role" | "status" | "eventsJoined" | "created_at";
+type SortField = "username" | "role" | "status" | "events_count" | "created_at";
 type SortOrder = "asc" | "desc";
 
 interface Toast {
@@ -174,6 +174,7 @@ export default function UserManagementPage() {
       }
 
       const data = await response.json();
+      console.log(data);
       setUsers(data.users || data || []);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -236,9 +237,9 @@ export default function UserManagementPage() {
       let bVal: any = b[sortField];
 
       // Handle undefined values
-      if (sortField === "eventsJoined") {
-        aVal = a.eventsJoined || 0;
-        bVal = b.eventsJoined || 0;
+      if (sortField === "events_count") {
+        aVal = a.events_count || 0;
+        bVal = b.events_count || 0;
       }
 
       if (aVal === undefined) aVal = "";
@@ -461,7 +462,7 @@ export default function UserManagementPage() {
           u.phone || "",
           u.role || "",
           u.status || "",
-          u.eventsJoined || 0,
+          u.events_count || 0,
           u.created_at || "",
         ]);
 
@@ -569,29 +570,48 @@ export default function UserManagementPage() {
     }
   };
 
-  const stats = {
-    total: users.length,
-    active: users.filter((u) => u.status === "active").length,
-    locked: users.filter((u) => u.status === "locked").length,
-    pending: users.filter((u) => u.status === "pending").length,
-    admins: users.filter((u) => u.role === "admin").length,
-    managers: users.filter((u) => u.role === "manager").length,
-    volunteers: users.filter((u) => u.role === "volunteer").length,
-  };
+  // Lọc chỉ user có role "volunteer" hoặc "user" (user thường)
+  const volunteerUsers = users.filter(
+    (u) => u.role === "volunteer" || u.role === "user"
+  );
 
-  // Debug: Log user statuses
+  // Debug: Log all user roles
   useEffect(() => {
     if (users.length > 0) {
-      const statusCount = users.reduce((acc, user) => {
+      const roleCount = users.reduce((acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log("👥 All User Roles Distribution:", roleCount);
+      console.log("📊 Total Users:", users.length);
+      console.log("📊 Volunteer/User count:", volunteerUsers.length);
+    }
+  }, [users]);
+
+  const stats = {
+    total: volunteerUsers.length,
+    active: volunteerUsers.filter((u) => u.status === "active").length,
+    locked: volunteerUsers.filter((u) => u.status === "locked").length,
+    pending: volunteerUsers.filter((u) => u.status === "pending").length,
+    admins: users.filter((u) => u.role === "admin").length,
+    managers: users.filter((u) => u.role === "manager").length,
+    volunteers: volunteerUsers.length,
+  };
+
+  // Debug: Log volunteer user statuses
+  useEffect(() => {
+    if (volunteerUsers.length > 0) {
+      const statusCount = volunteerUsers.reduce((acc, user) => {
         acc[user.status] = (acc[user.status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
-      console.log("👥 User Status Distribution:", statusCount);
-      console.log("🔒 Locked Users:", stats.locked);
+      console.log("👥 Volunteer User Status Distribution:", statusCount);
+      console.log("🔒 Locked Volunteer Users:", stats.locked);
+      console.log("📊 Total Volunteer Users:", volunteerUsers.length);
     }
-  }, [users, stats.locked]);
+  }, [volunteerUsers, stats.locked]);
 
-  // Chart data - Calculate from actual users data
+  // Chart data - Calculate from actual volunteer users data only
   const chartData = useMemo(() => {
     // Get last 12 months
     const months = [];
@@ -605,9 +625,9 @@ export default function UserManagementPage() {
       });
     }
 
-    // Count new users registered per month
+    // Count new volunteer users registered per month
     const newUsersByMonth = months.map((m) => {
-      return users.filter((user) => {
+      return volunteerUsers.filter((user) => {
         const createdDate = new Date(user.created_at);
         return (
           createdDate.getFullYear() === m.year &&
@@ -616,11 +636,11 @@ export default function UserManagementPage() {
       }).length;
     });
 
-    // Count users who joined events per month (based on event date)
+    // Count volunteer users who joined events per month (based on event date)
     const usersJoinedEventsByMonth = months.map((m) => {
-      // Count unique users who have events in this month
+      // Count unique volunteer users who have events in this month
       const usersWithEventsInMonth = new Set<number>();
-      users.forEach((user) => {
+      volunteerUsers.forEach((user) => {
         const hasEventInMonth = user.events?.some((event) => {
           const eventDate = new Date(event.date);
           return (
@@ -635,11 +655,10 @@ export default function UserManagementPage() {
       return usersWithEventsInMonth.size;
     });
 
-    // Count users banned per month (cumulative count of locked users up to that month)
-    // Since we don't have banned_at timestamp, we show cumulative banned users
+    // Count volunteer users banned per month (cumulative count of locked users up to that month)
     const usersBannedByMonth = months.map((m, index) => {
-      // Count all locked users created up to this month
-      return users.filter((user) => {
+      // Count all locked volunteer users created up to this month
+      return volunteerUsers.filter((user) => {
         if (user.status !== "locked") return false;
         const createdDate = new Date(user.created_at);
         const monthDate = new Date(m.year, m.month + 1, 0); // Last day of the month
@@ -655,14 +674,15 @@ export default function UserManagementPage() {
     };
 
     // Debug: Log chart data
-    console.log("📊 Chart Data:", {
-      lockedUsersCount: users.filter((u) => u.status === "locked").length,
+    console.log("📊 Chart Data (Volunteer Users Only):", {
+      lockedUsersCount: volunteerUsers.filter((u) => u.status === "locked")
+        .length,
       usersBanned: chartResult.usersBanned,
-      totalUsers: users.length,
+      totalVolunteerUsers: volunteerUsers.length,
     });
 
     return chartResult;
-  }, [users]);
+  }, [volunteerUsers]);
 
   // Category helpers
   const getCategoryLabel = (category: string) => {
@@ -750,7 +770,8 @@ export default function UserManagementPage() {
                 Quản lý người dùng
               </h1>
               <p className="text-blue-700 mt-1 text-sm sm:text-base">
-                Quản lý tài khoản và phân quyền người dùng
+                {stats.total} users (role User) • {stats.active} hoạt động •{" "}
+                {stats.locked} bị ban • {stats.pending} chờ duyệt
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -777,28 +798,30 @@ export default function UserManagementPage() {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8">
           <div className="bg-white rounded-xl p-5 border-l-4 border-blue-500 shadow-md hover:shadow-lg transition duration-200">
-            <p className="text-sm sm:text-base text-gray-600 mb-1">Tổng số</p>
+            <p className="text-sm sm:text-base text-gray-600 mb-1">Tổng User</p>
             <p className="text-2xl sm:text-3xl font-bold text-blue-900">
               {stats.total}
             </p>
+            <p className="text-xs text-gray-500 mt-1">Chỉ role User</p>
           </div>
           <div className="bg-white rounded-xl p-5 border-l-4 border-green-500 shadow-md hover:shadow-lg transition duration-200">
             <p className="text-sm sm:text-base text-gray-600 mb-1">Hoạt động</p>
             <p className="text-2xl sm:text-3xl font-bold text-green-700">
               {stats.active}
             </p>
+            <p className="text-xs text-gray-500 mt-1">User đang hoạt động</p>
           </div>
           <div className="bg-white rounded-xl p-5 border-l-4 border-red-500 shadow-md hover:shadow-lg transition duration-200">
             <p className="text-sm sm:text-base text-gray-600 mb-1 flex items-center">
               <FaLock className="mr-1.5 text-red-500" />
-              Đã khóa (Bị ban)
+              Bị Ban
             </p>
             <p className="text-2xl sm:text-3xl font-bold text-red-600">
               {stats.locked}
             </p>
-            {stats.locked > 0 && (
+            {stats.locked > 0 && stats.total > 0 && (
               <p className="text-xs text-gray-500 mt-1">
-                {((stats.locked / stats.total) * 100).toFixed(1)}% tổng số
+                {((stats.locked / stats.total) * 100).toFixed(1)}% tổng user
               </p>
             )}
           </div>
@@ -807,6 +830,7 @@ export default function UserManagementPage() {
             <p className="text-2xl sm:text-3xl font-bold text-yellow-600">
               {stats.pending}
             </p>
+            <p className="text-xs text-gray-500 mt-1">User chờ duyệt</p>
           </div>
         </div>
 
@@ -816,14 +840,14 @@ export default function UserManagementPage() {
           <div className="lg:col-span-2 bg-white rounded-xl shadow-md border border-blue-100 p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
               <FaUsers className="mr-2 text-blue-600" />
-              Xu hướng đăng ký người dùng
+              Xu hướng đăng ký User (Role User)
             </h3>
             <Line
               data={{
                 labels: chartData.labels,
                 datasets: [
                   {
-                    label: "Người dùng mới",
+                    label: "User mới",
                     data: chartData.newUsers,
                     borderColor: "rgb(59, 130, 246)",
                     backgroundColor: "rgba(59, 130, 246, 0.1)",
@@ -854,7 +878,7 @@ export default function UserManagementPage() {
           <div className="bg-white rounded-xl shadow-md border border-blue-100 p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
               <FaCheckCircle className="mr-2 text-green-600" />
-              Phân bố trạng thái
+              Phân bố trạng thái User
             </h3>
             <Doughnut
               data={{
@@ -892,14 +916,14 @@ export default function UserManagementPage() {
         <div className="bg-white rounded-xl shadow-md border border-blue-100 p-6 mb-8">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
             <FaUsers className="mr-2 text-blue-600" />
-            Thống kê người dùng theo tháng
+            Thống kê User theo tháng (Role User)
           </h3>
           <Bar
             data={{
               labels: chartData.labels,
               datasets: [
                 {
-                  label: "Người dùng mới",
+                  label: "User mới",
                   data: chartData.newUsers,
                   backgroundColor: "rgba(59, 130, 246, 0.8)",
                   borderColor: "rgb(59, 130, 246)",
@@ -913,7 +937,7 @@ export default function UserManagementPage() {
                   borderWidth: 1,
                 },
                 {
-                  label: "Người dùng bị ban",
+                  label: "User bị ban",
                   data: chartData.usersBanned,
                   backgroundColor: "rgba(239, 68, 68, 0.8)",
                   borderColor: "rgb(239, 68, 68)",
@@ -935,7 +959,7 @@ export default function UserManagementPage() {
                         label += ": ";
                       }
                       if (context.parsed.y !== null) {
-                        label += context.parsed.y + " người";
+                        label += context.parsed.y + " user";
                       }
                       return label;
                     },
@@ -1208,7 +1232,7 @@ export default function UserManagementPage() {
                         <div className="text-sm space-y-1">
                           <p className="text-blue-700 font-semibold flex items-center">
                             <FaCalendarCheck className="mr-1.5" />
-                            {user.eventsJoined || 0} tham gia
+                            {user.events_count || 0} tham gia
                           </p>
                           {(user.eventsCreated || 0) > 0 && (
                             <p className="text-green-700 font-semibold flex items-center">
@@ -1265,7 +1289,7 @@ export default function UserManagementPage() {
 
       {/* Detail Modal */}
       {showDetailModal && selectedUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-500 to-green-500 text-white p-6 rounded-t-2xl">
@@ -1364,7 +1388,7 @@ export default function UserManagementPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
                     <p className="text-3xl font-bold text-blue-700">
-                      {selectedUser.eventsJoined}
+                      {selectedUser.events_count}
                     </p>
                     <p className="text-sm text-gray-600">Sự kiện tham gia</p>
                   </div>
@@ -1490,7 +1514,7 @@ export default function UserManagementPage() {
 
       {/* Export Modal */}
       {showExportModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-500 to-green-500 text-white p-6 rounded-t-2xl">
@@ -1587,7 +1611,7 @@ export default function UserManagementPage() {
 
       {/* Confirm Modal */}
       {showConfirmModal && confirmAction && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
             {/* Modal Header */}
             <div
@@ -1703,7 +1727,7 @@ export default function UserManagementPage() {
 
       {/* Send Notification Modal - Redesigned */}
       {showNotificationModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="fixed inset-0  backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl transform transition-all my-8 max-h-[95vh] flex flex-col">
             {/* Modal Header - Fixed */}
             <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 text-white p-6 rounded-t-3xl flex-shrink-0">
@@ -1717,7 +1741,7 @@ export default function UserManagementPage() {
                       Gửi Thông Báo
                     </h3>
                     <p className="text-purple-100 text-sm mt-1 flex items-center space-x-2">
-                      <span>📊 {stats.total} người dùng</span>
+                      <span>📊 {stats.total} users (role User)</span>
                       <span>•</span>
                       <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold">
                         {notificationMode === "webpush"
@@ -1850,7 +1874,10 @@ export default function UserManagementPage() {
                         <li className="flex items-start">
                           <span className="mr-2">✅</span>
                           <span>
-                            Gửi đến <strong>TẤT CẢ {stats.total} users</strong>{" "}
+                            Gửi đến{" "}
+                            <strong>
+                              TẤT CẢ {stats.total} users (role User)
+                            </strong>{" "}
                             trong hệ thống
                           </span>
                         </li>
@@ -2092,7 +2119,7 @@ export default function UserManagementPage() {
                     <span>
                       {notificationMode === "webpush"
                         ? "🔔 Gửi Web Push"
-                        : `📱 Gửi đến ${stats.total} users`}
+                        : `📱 Gửi đến ${stats.total} users (role User)`}
                     </span>
                   </>
                 )}

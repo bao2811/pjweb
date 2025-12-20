@@ -26,15 +26,49 @@ class UserRepo
 
     public function getAllUsers()
     { 
-        // return User::select('users.*', \DB::raw('COUNT(join_events.event_id) as events_count'))
-        //     ->leftJoin('join_events', 'users.id', '=', 'join_events.user_id')
-        //     ->where('users.role', 'user')
-        //     ->groupBy('users.id')
-        //     ->get();
-
         return User::where('role', 'user')
             ->withCount(['joinEvents as events_count']) // tính số lượng event tham gia
-            ->get();
+            ->with(['joinedEvents' => function($query) {
+                $query->select(
+                    'events.id',
+                    'events.title',
+                    'events.category',
+                    'events.start_time as date',
+                    'events.status'
+                )
+                ->withPivot('status', 'joined_at') // Lấy thêm status từ pivot table
+                ->orderBy('events.start_time', 'desc')
+                ->limit(10); // Giới hạn 10 events gần nhất
+            }])
+            ->get()
+            ->map(function($user) {
+                // Format events data theo UserEvent interface của frontend
+                if ($user->joinedEvents && $user->joinedEvents->count() > 0) {
+                    $user->events = $user->joinedEvents->map(function($event) {
+                        return [
+                            'id' => $event->id,
+                            'title' => $event->title,
+                            'category' => $event->category,
+                            'date' => $event->date,
+                            'status' => $event->status, // Status của event
+                            'role' => 'participant', // User tham gia với role participant
+                        ];
+                    })->values()->toArray();
+                } else {
+                    $user->events = [];
+                }
+                
+                // Đảm bảo events_count luôn tồn tại
+                if (!isset($user->events_count)) {
+                    $user->events_count = 0;
+                }
+                
+                // Thêm isActive flag: user có >= 5 events được coi là active
+                $user->isActive = $user->events_count >= 5;
+                
+                unset($user->joinedEvents); // Xóa joinedEvents, chỉ giữ events
+                return $user;
+            });
     }
 
     public function findByEmail($email)
@@ -44,7 +78,49 @@ class UserRepo
 
     public function getUsersByRole($role)
     {
-        return User::where('role', $role)->get();
+        return User::where('role', $role)
+            ->withCount(['joinEvents as events_count']) // tính số lượng event tham gia
+            ->with(['joinedEvents' => function($query) {
+                $query->select(
+                    'events.id',
+                    'events.title',
+                    'events.category',
+                    'events.start_time as date',
+                    'events.status'
+                )
+                ->withPivot('status', 'joined_at')
+                ->orderBy('events.start_time', 'desc')
+                ->limit(10); // Giới hạn 10 events gần nhất
+            }])
+            ->get()
+            ->map(function($user) {
+                // Format events data theo ManagerEvent interface
+                if ($user->joinedEvents && $user->joinedEvents->count() > 0) {
+                    $user->events = $user->joinedEvents->map(function($event) {
+                        return [
+                            'id' => $event->id,
+                            'title' => $event->title,
+                            'category' => $event->category,
+                            'date' => $event->date,
+                            'status' => $event->status,
+                            'role' => 'manager', // Manager role
+                        ];
+                    })->values()->toArray();
+                } else {
+                    $user->events = [];
+                }
+                
+                // Đảm bảo events_count luôn tồn tại
+                if (!isset($user->events_count)) {
+                    $user->events_count = 0;
+                }
+                
+                // Thêm isActive flag: user có >= 5 events được coi là active
+                $user->isActive = $user->events_count >= 5;
+                
+                unset($user->joinedEvents);
+                return $user;
+            });
     }
 
     public function updateUserById($id, $data) : User

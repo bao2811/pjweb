@@ -74,6 +74,24 @@ class EventRepo
         return $event->delete();
     }
 
+    public function getEventsByAuthor($authorId)
+    {
+        return Event::where('author_id', $authorId)
+            ->select('id', 'title', 'category', 'start_time as date', 'status')
+            ->orderBy('start_time', 'desc')
+            ->get()
+            ->map(function($event) {
+                return [
+                    'id' => $event->id,
+                    'title' => $event->title,
+                    'category' => $event->category,
+                    'date' => $event->date,
+                    'status' => $event->status,
+                    'role' => 'creator',
+                ];
+            });
+    }
+
     public function createEvent($data, $comanager = []) : Event
     {
         $event = Event::create($data);
@@ -226,5 +244,14 @@ class EventRepo
                   ->orWhere('content', 'like', '%' . $keyword . '%');
         })
             ->get();
+    }
+
+    /**
+     * Đếm số lượng sự kiện đang diễn ra (status = ongoing hoặc upcoming)
+     */
+    public function countOngoingEvents()
+    {
+        return Event::whereIn('status', ['ongoing', 'upcoming', 'approved'])
+            ->count();
     }
 }

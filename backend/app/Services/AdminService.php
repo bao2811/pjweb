@@ -33,6 +33,11 @@ class AdminService
         return $this->userRepo->getUsersByRole('manager');
     }
 
+    public function getEventsByAuthor($authorId)
+    {
+        return $this->eventService->getEventsByAuthor($authorId);
+    }
+
     public function banUser($id)
     {
         $result = $this->userRepo->banUser($id);

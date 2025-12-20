@@ -380,10 +380,10 @@ export default function ManagerEvents() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="🔍 Tìm kiếm sự kiện..."
-              className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+              className="text-black w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
             />
           </div>
-          <div className="flex items-center gap-3 ml-4">
+          <div className="flex items-center gap-3 ml-4 text-black">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}

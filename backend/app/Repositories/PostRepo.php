@@ -24,7 +24,7 @@ class PostRepo
 
     public function createPost($data) : Post
     {
-        return Post::create($data);
+        return Post::create(attributes: $data);
     }
 
     public function updatePostById($id, $data) : Post

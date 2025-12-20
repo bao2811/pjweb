@@ -613,45 +613,6 @@ export default function ManagerNotificationsPage() {
                       )}
 
                       {/* Action buttons cho join request */}
-                      {isJoinRequest &&
-                        notification.data?.user_id &&
-                        notification.data?.event_id && (
-                          <div className="mb-3">
-                            {!notification.processed ? (
-                              <div className="flex items-center space-x-3">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleApproveUser(notification);
-                                  }}
-                                  disabled={processingId === notification.id}
-                                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                                >
-                                  <FaCheckCircle />
-                                  <span>Duyệt</span>
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRejectUser(notification);
-                                  }}
-                                  disabled={processingId === notification.id}
-                                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                                >
-                                  <FaTimesCircle />
-                                  <span>Từ chối</span>
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="inline-flex items-center space-x-2 px-3 py-2 rounded-full bg-gray-100 text-gray-700">
-                                <FaExclamationCircle className="text-orange-500" />
-                                <span className="font-medium">
-                                  Đã được xử lý
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
 
                       {/* Footer */}
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">

@@ -45,12 +45,12 @@ export default function Navbar() {
   }, []);
 
   // Fetch notifications định kỳ (polling) + real-time
-  // useEffect(() => {
-  //   if (currentUser) {
-  //     // Fetch ngay lập tức
-  //     fetchNotifications();
-  //   }
-  // }, [currentUser]);
+  useEffect(() => {
+    if (currentUser) {
+      // Fetch ngay lập tức
+      fetchNotifications();
+    }
+  }, [currentUser]);
 
   // Callback khi có thông báo mới qua Reverb WebSocket
   const handleNewNotification = (notification: any) => {
@@ -60,22 +60,68 @@ export default function Navbar() {
       JSON.stringify(notification, null, 2)
     );
 
+    // Normalize incoming payload to the shape we use in the UI
+    const normalized = {
+      id:
+        notification.id ??
+        notification.notification_id ??
+        notification.data?.id ??
+        Date.now(),
+      title:
+        notification.title ??
+        notification.data?.title ??
+        notification.message ??
+        "Thông báo mới",
+      message:
+        notification.message ??
+        notification.data?.message ??
+        notification.data?.body ??
+        "",
+      created_at:
+        notification.created_at ??
+        notification.data?.created_at ??
+        new Date().toISOString(),
+      is_read: notification.is_read ?? false,
+      type: notification.type ?? notification.data?.type ?? "system",
+      // keep original raw payload if needed for deeper handling
+      raw: notification,
+    } as any;
+
+    // Prepend to notifications list (keep recent up to 20)
+    setNotifications((prev) => {
+      // avoid duplicates by id
+      const exists = prev.some((n) => n.id === normalized.id);
+      if (exists) return prev;
+      const updated = [normalized, ...prev].slice(0, 20);
+      console.log(
+        "🔄 [Navbar] Notifications updated (realtime):",
+        updated.length
+      );
+      return updated;
+    });
+
     // Show browser notification if permission granted
     if ("Notification" in window && Notification.permission === "granted") {
-      console.log("🔔 [Navbar] Showing browser notification");
-      new Notification(notification.title || "Thông báo mới", {
-        body: notification.message || "",
-        icon: "/favicon.ico",
-        tag: `notification-${notification.id}`,
-      });
+      try {
+        console.log("🔔 [Navbar] Showing browser notification");
+        new Notification(normalized.title || "Thông báo mới", {
+          body: normalized.message || "",
+          icon: "/favicon.ico",
+          tag: `notification-${normalized.id}`,
+        });
+      } catch (err) {
+        console.error("🔔 [Navbar] Failed to show browser notification:", err);
+      }
     } else {
       console.log(
         "⚠️ [Navbar] Browser notification permission:",
-        Notification?.permission || "not supported"
+        (typeof Notification !== "undefined" && Notification.permission) ||
+          "not supported"
       );
     }
 
-    // Delay một chút để backend kịp lưu vào database, sau đó refresh danh sách
+    // We don't auto-open the dropdown on new message; the badge will update
+    // and when user clicks the icon the latest notifications are already in state.
   };
 
   // Callback khi notification được đánh dấu đã đọc
@@ -86,6 +132,13 @@ export default function Navbar() {
       prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
     );
   };
+
+  useReverbNotification({
+    userId: currentUser?.id || null,
+    authToken: token,
+    onNewNotification: handleNewNotification,
+    onNotificationRead: handleNotificationRead,
+  });
 
   // Debug: Log user info và callback
   useEffect(() => {
@@ -102,13 +155,6 @@ export default function Navbar() {
   console.log("🔧 [Navbar] Calling useReverbNotification with:", {
     userId: currentUser?.id || null,
     hasToken: !!token,
-  });
-
-  useReverbNotification({
-    userId: currentUser?.id || null,
-    authToken: token,
-    onNewNotification: handleNewNotification,
-    onNotificationRead: handleNotificationRead,
   });
 
   const initializePushState = async () => {
@@ -453,46 +499,46 @@ export default function Navbar() {
     return outputArray;
   }
 
-  // const fetchNotifications = async () => {
-  //   if (!currentUser) return;
+  const fetchNotifications = async () => {
+    if (!currentUser) return;
 
-  //   try {
-  //     setLoadingNotifications(true);
-  //     const response = await authFetch("/user/notifications");
+    try {
+      setLoadingNotifications(true);
+      const response = await authFetch("/user/notifications");
 
-  //     if (!response.ok) {
-  //       console.error("Failed to fetch notifications:", response.status);
-  //       return;
-  //     }
+      if (!response.ok) {
+        console.error("Failed to fetch notifications:", response.status);
+        return;
+      }
 
-  //     const data = await response.json();
+      const data = await response.json();
 
-  //     // Handle both data.notifications (object response) and direct array
-  //     const notificationsList = data.notifications || data;
+      // Handle both data.notifications (object response) and direct array
+      const notificationsList = data.notifications || data;
 
-  //     if (Array.isArray(notificationsList)) {
-  //       // Lấy 5 thông báo mới nhất
-  //       const recentNotifications = notificationsList.slice(0, 5);
-  //       setNotifications(recentNotifications);
+      if (Array.isArray(notificationsList)) {
+        // Lấy 5 thông báo mới nhất
+        const recentNotifications = notificationsList.slice(0, 5);
+        setNotifications(recentNotifications);
 
-  //       const unreadTotal = notificationsList.filter(
-  //         (n: any) => !n.is_read
-  //       ).length;
+        const unreadTotal = notificationsList.filter(
+          (n: any) => !n.is_read
+        ).length;
 
-  //       console.log("📊 [Navbar] Fetched notifications:", {
-  //         total: notificationsList.length,
-  //         showing: recentNotifications.length,
-  //         unread: unreadTotal,
-  //         recentUnread: recentNotifications.filter((n: any) => !n.is_read)
-  //           .length,
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error("❌ [Navbar] Error fetching notifications:", error);
-  //   } finally {
-  //     setLoadingNotifications(false);
-  //   }
-  // };
+        console.log("📊 [Navbar] Fetched notifications:", {
+          total: notificationsList.length,
+          showing: recentNotifications.length,
+          unread: unreadTotal,
+          recentUnread: recentNotifications.filter((n: any) => !n.is_read)
+            .length,
+        });
+      }
+    } catch (error) {
+      console.error("❌ [Navbar] Error fetching notifications:", error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);

@@ -54,6 +54,20 @@ class AdminController {
         }
     }
 
+    public function getEventsByAuthor($authorId) {
+        try {
+            $events = $this->adminService->getEventsByAuthor($authorId);
+            return response()->json([
+                'events' => $events
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'error server',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function banUser($id) {
         try {
         $res = $this->adminService->banUser($id);

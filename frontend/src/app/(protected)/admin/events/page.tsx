@@ -119,6 +119,7 @@ export default function AdminEventsPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     type: "approve" | "reject" | "delete";
     eventId: number;
@@ -521,46 +522,70 @@ export default function AdminEventsPage() {
     }
   };
 
-  // Export to CSV
-  const handleExportEvents = () => {
-    const csvHeaders = [
-      "ID",
-      "Tên sự kiện",
-      "Người tổ chức",
-      "Chủ đề",
-      "Địa điểm",
-      "Ngày bắt đầu",
-      "Ngày kết thúc",
-      "Trạng thái",
-      "Tham gia",
-      "Tối đa",
-      "Lượt thích",
-    ];
-    const csvRows = filteredEvents.map((event) => [
-      event.id,
-      event.title,
-      event.author?.username || "N/A",
-      getCategoryLabel(event.category),
-      event.address,
-      formatDate(event.start_time) + " " + formatTime(event.start_time),
-      formatDate(event.end_time) + " " + formatTime(event.end_time),
-      getStatusLabel(getDisplayStatus(event)),
-      event.current_participants,
-      event.max_participants,
-      event.likes,
-    ]);
+  // Export to CSV or JSON
+  const handleExportEvents = (format: "csv" | "json") => {
+    // Format date without commas: YYYY-MM-DD HH:MM:SS
+    const formatExportDate = (dateStr: string) => {
+      if (!dateStr) return "";
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toISOString().replace("T", " ").split(".")[0];
+      } catch {
+        return dateStr;
+      }
+    };
 
-    const csvContent = [csvHeaders, ...csvRows]
-      .map((row) => row.join(","))
-      .join("\n");
-    const blob = new Blob(["\ufeff" + csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `events_${new Date().toISOString().split("T")[0]}.csv`;
-    link.click();
-    showToast("success", `Đã xuất ${filteredEvents.length} sự kiện!`);
+    const dataToExport = filteredEvents.map((event) => ({
+      ID: event.id,
+      "Tên sự kiện": event.title || "",
+      "Người tổ chức": event.author?.username || "N/A",
+      "Chủ đề": getCategoryLabel(event.category),
+      "Địa điểm": event.address || "",
+      "Ngày bắt đầu": formatExportDate(event.start_time),
+      "Ngày kết thúc": formatExportDate(event.end_time),
+      "Trạng thái": getStatusLabel(getDisplayStatus(event)),
+      "Tham gia": event.current_participants || 0,
+      "Tối đa": event.max_participants || 0,
+      "Lượt thích": event.likes || 0,
+    }));
+
+    if (format === "csv") {
+      // Escape CSV values: wrap in quotes and double internal quotes
+      const escape = (v: any) => {
+        const s = v === null || v === undefined ? "" : String(v);
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+
+      const headers = Object.keys(dataToExport[0]).map(escape).join(",");
+      const rows = dataToExport.map((row) =>
+        Object.values(row).map(escape).join(",")
+      );
+      const csvContent = [headers, ...rows].join("\n");
+      const blob = new Blob(["\ufeff" + csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `events_${new Date().toISOString().split("T")[0]}.csv`;
+      link.click();
+      showToast(
+        "success",
+        `Đã xuất ${filteredEvents.length} sự kiện sang CSV!`
+      );
+    } else {
+      // JSON export
+      const json = JSON.stringify(dataToExport, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `events_${new Date().toISOString().split("T")[0]}.json`;
+      link.click();
+      showToast(
+        "success",
+        `Đã xuất ${filteredEvents.length} sự kiện sang JSON!`
+      );
+    }
   };
 
   return (
@@ -580,11 +605,11 @@ export default function AdminEventsPage() {
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={handleExportEvents}
+                onClick={() => setShowExportModal(true)}
                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-xl transition duration-200 shadow-md hover:shadow-lg text-sm font-medium"
               >
                 <FaDownload />
-                <span className="hidden sm:inline">Xuất CSV</span>
+                <span className="hidden sm:inline">Xuất File</span>
               </button>
             </div>
           </div>
@@ -1124,7 +1149,7 @@ export default function AdminEventsPage() {
 
       {/* Detail Modal */}
       {showDetailModal && selectedEvent && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-500 to-green-500 text-white p-6 rounded-t-2xl">
@@ -1381,7 +1406,7 @@ export default function AdminEventsPage() {
             <div className="border-t border-gray-200 p-6 flex flex-wrap justify-between items-center gap-3">
               <button
                 onClick={() => {
-                  router.push(`/event/${selectedEvent.id}`);
+                  router.push(`/events/${selectedEvent.id}`);
                 }}
                 className="px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-lg font-medium transition duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
               >
@@ -1449,7 +1474,7 @@ export default function AdminEventsPage() {
 
       {/* Members Modal */}
       {showMembersModal && selectedEvent && selectedEvent.members && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-t-2xl">
@@ -1527,7 +1552,7 @@ export default function AdminEventsPage() {
 
       {/* Confirm Modal */}
       {showConfirmModal && confirmAction && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
             {/* Modal Header */}
             <div
@@ -1615,6 +1640,60 @@ export default function AdminEventsPage() {
                     <span>Xác nhận</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800">
+                Chọn định dạng xuất file
+              </h3>
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <FaTimes size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-gray-600 text-sm mb-4">
+                Xuất {filteredEvents.length} sự kiện sang định dạng:
+              </p>
+
+              <button
+                onClick={() => {
+                  handleExportEvents("csv");
+                  setShowExportModal(false);
+                }}
+                className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-xl transition duration-200 shadow-md hover:shadow-lg font-medium"
+              >
+                <FaDownload size={20} />
+                <span>Xuất CSV (Excel)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handleExportEvents("json");
+                  setShowExportModal(false);
+                }}
+                className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl transition duration-200 shadow-md hover:shadow-lg font-medium"
+              >
+                <FaDownload size={20} />
+                <span>Xuất JSON</span>
+              </button>
+
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="w-full px-6 py-3 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl transition duration-200 font-medium"
+              >
+                Hủy
               </button>
             </div>
           </div>

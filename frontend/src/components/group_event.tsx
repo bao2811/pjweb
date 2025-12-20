@@ -1449,7 +1449,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                           src={image}
                           alt={`Post image ${index + 1}`}
                           fill
-                          className="object-cover hover:scale-110 transition-transform duration-300 cursor-pointer"
+                          className="object-cover transition-transform duration-300 cursor-pointer"
                           unoptimized
                         />
                       </div>
@@ -2046,7 +2046,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
 
       {/* Create Post Modal */}
       {showCreatePostModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -2129,7 +2129,7 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                             newPostImages.filter((_, i) => i !== idx)
                           )
                         }
-                        className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full transition opacity-0 group-hover:opacity-100"
+                        className="absolute top-2 right-2 p-1.5 hover:bg-black/80 text-white rounded-full transition opacity-0 group-hover:opacity-100"
                       >
                         <svg
                           className="w-4 h-4"

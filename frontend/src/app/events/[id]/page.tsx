@@ -81,10 +81,9 @@ export default function EventDetailPage({
       setIsLoading(true);
       const response = await authFetch(`/api/events/getEventDetails/${id}`);
       const data = await response.json();
-      console.log("Event detail data:", data);
       if (data && data.event) {
         setEvent(data.event);
-        // API returns is_liked nested inside event: { event: { ... , is_liked: true } }
+        console.log("Fetched event details:", data.event);
         setIsLiked(
           (data.event && (data.event.is_liked ?? data.is_liked)) || false
         );
@@ -109,8 +108,9 @@ export default function EventDetailPage({
     try {
       const response = await authFetch("/user/my-registrations");
       const data = await response.json();
-      if (data && Array.isArray(data)) {
-        const registration = data.find(
+      // Fix: Đọc đúng format {success: true, registrations: [...]}
+      if (data && data.success && Array.isArray(data.registrations)) {
+        const registration = data.registrations.find(
           (reg: any) => reg.event_id === parseInt(id)
         );
         if (registration) {
@@ -519,7 +519,7 @@ export default function EventDetailPage({
           {/* Right Column - Action Cards */}
           <div className="space-y-6">
             {/* Registration Card - Featured */}
-            <div className="bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl shadow-xl p-8 text-white sticky top-4">
+            <div className="bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl shadow-xl p-8 text-white top-4">
               <div className="text-center mb-6">
                 <FaHandsHelping className="text-6xl mx-auto mb-4 opacity-90" />
                 <h3 className="text-2xl font-bold mb-2">

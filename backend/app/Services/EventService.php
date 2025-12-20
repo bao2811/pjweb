@@ -43,6 +43,11 @@ class EventService
         return $this->eventRepo->getAllEvents($userId);
     }
 
+    public function getEventsByAuthor($authorId)
+    {
+        return $this->eventRepo->getEventsByAuthor($authorId);
+    }
+
     public function getEventById($id)
     {
         return $this->eventRepo->getEventById($id);
@@ -168,5 +173,10 @@ class EventService
     {
         $result = $this->eventRepo->searchEventsByKeyword($keyword);
         return $result;
-    }   
+    }
+
+    public function countOngoingEvents()
+    {
+        return $this->eventRepo->countOngoingEvents();
+    }
 }

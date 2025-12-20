@@ -19,6 +19,7 @@ import {
   FaFire,
   FaTrophy,
   FaStar,
+  FaClock,
 } from "react-icons/fa";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -57,10 +58,47 @@ export default function Dashboard() {
   const [hasMore, setHasMore] = useState(true);
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostImage, setNewPostImage] = useState("");
+  const [newPostTitle, setNewPostTitle] = useState("");
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
+
+  // Stats states
+  const [totalEvents, setTotalEvents] = useState<number>(0);
+  const [currentTime, setCurrentTime] = useState<string>("");
 
   const token =
     typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null;
+
+  // Fetch ongoing events count from new API
+  const fetchEventsCount = async () => {
+    try {
+      const response = await authFetch("/api/events/countOngoingEvents");
+      if (response.ok) {
+        const data = await response.json();
+        console.log("📊 Events count:", data);
+        if (data.count !== undefined) {
+          setTotalEvents(data.count);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching events count:", error);
+    }
+  };
+
+  // Update current time every second
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const seconds = String(now.getSeconds()).padStart(2, "0");
+      setCurrentTime(`${hours}:${minutes}:${seconds}`);
+    };
+
+    updateTime(); // Initial update
+    const interval = setInterval(updateTime, 1000); // Update every second
+
+    return () => clearInterval(interval); // Cleanup
+  }, []);
 
   // Fetch hot events (top events with most likes in last 7 days)
   const fetchTrendingEvents = async () => {
@@ -380,7 +418,8 @@ export default function Dashboard() {
         body: JSON.stringify({
           content: newPostContent,
           image: newPostImage || null,
-          title: "",
+          title: newPostTitle || "",
+          channel_id: null,
           status: true,
         }),
       });
@@ -400,6 +439,7 @@ export default function Dashboard() {
         setPosts((prev) => [
           {
             ...data.post,
+            title: data.post.title ?? newPostTitle,
             likes: 0,
             comments: 0,
             isliked: 0,
@@ -413,6 +453,7 @@ export default function Dashboard() {
       // Clear form
       setNewPostContent("");
       setNewPostImage("");
+      setNewPostTitle("");
       alert("Đăng bài thành công! 🎉");
     } catch (error) {
       console.error("Error creating post:", error);
@@ -429,6 +470,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchPosts();
     fetchTrendingEvents();
+    fetchEventsCount();
   }, []);
 
   return (
@@ -464,19 +506,23 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
                     <div className="flex items-center space-x-3">
                       <FaCalendarAlt className="text-green-500 text-xl" />
-                      <span className="text-gray-700 font-medium">Sự kiện</span>
+                      <span className="text-gray-700 font-medium">
+                        Sự kiện gần đây :
+                      </span>
                     </div>
                     <span className="text-2xl font-bold text-green-600">
-                      15
+                      {totalEvents}
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
                     <div className="flex items-center space-x-3">
-                      <FaUsers className="text-blue-500 text-xl" />
-                      <span className="text-gray-700 font-medium">Giờ TNV</span>
+                      <FaClock className="text-blue-500 text-xl" />
+                      <span className="text-gray-700 font-medium">
+                        Thời gian
+                      </span>
                     </div>
-                    <span className="text-2xl font-bold text-blue-600">
-                      48h
+                    <span className="text-xl font-bold text-blue-600 font-mono">
+                      {currentTime}
                     </span>
                   </div>
                 </div>
@@ -518,8 +564,15 @@ export default function Dashboard() {
                     placeholder="Chia sẻ trải nghiệm tình nguyện của bạn..."
                     value={newPostContent}
                     onChange={(e) => setNewPostContent(e.target.value)}
-                    className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                    className="text-black w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
                     rows={3}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Tiêu đề (không bắt buộc)"
+                    value={newPostTitle}
+                    onChange={(e) => setNewPostTitle(e.target.value)}
+                    className="text-black w-full mt-3 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                   />
                   <input
                     id="imageUrlInput"
@@ -527,7 +580,7 @@ export default function Dashboard() {
                     placeholder="🖼️ URL hình ảnh (không bắt buộc)"
                     value={newPostImage}
                     onChange={(e) => setNewPostImage(e.target.value)}
-                    className="w-full mt-2 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                    className="text-black w-full mt-2 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                   />
                   {newPostImage && (
                     <div className="mt-2 relative">

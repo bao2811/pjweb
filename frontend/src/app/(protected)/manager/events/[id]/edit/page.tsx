@@ -135,8 +135,8 @@ export default function EditEventPage({
       const data = await response.json();
 
       if (response.ok && data.success) {
-        alert("Đã cập nhật sự kiện thành công! Admin sẽ được thông báo.");
-        router.push("/manager/events");
+        alert("Đã cập nhật sự kiện thành công!");
+        // router.push("/manager/events");
       } else {
         throw new Error(data.message || "Cập nhật sự kiện thất bại");
       }
@@ -195,7 +195,7 @@ export default function EditEventPage({
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
               }
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+              className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
               placeholder="Nhập tiêu đề sự kiện..."
               required
             />
@@ -211,7 +211,7 @@ export default function EditEventPage({
               onChange={(e) =>
                 setFormData({ ...formData, content: e.target.value })
               }
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors resize-none"
+              className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors resize-none"
               rows={6}
               placeholder="Nhập mô tả chi tiết về sự kiện..."
               required
@@ -230,7 +230,7 @@ export default function EditEventPage({
               onChange={(e) =>
                 setFormData({ ...formData, image: e.target.value })
               }
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+              className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
               placeholder="https://example.com/image.jpg"
             />
             {formData.image && (
@@ -259,7 +259,7 @@ export default function EditEventPage({
                 onChange={(e) =>
                   setFormData({ ...formData, start_time: e.target.value })
                 }
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+                className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
                 required
               />
             </div>
@@ -274,7 +274,7 @@ export default function EditEventPage({
                 onChange={(e) =>
                   setFormData({ ...formData, end_time: e.target.value })
                 }
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+                className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
                 required
               />
             </div>
@@ -292,7 +292,7 @@ export default function EditEventPage({
               onChange={(e) =>
                 setFormData({ ...formData, address: e.target.value })
               }
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+              className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
               placeholder="Nhập địa điểm tổ chức..."
               required
             />
@@ -314,7 +314,7 @@ export default function EditEventPage({
                     max_participants: parseInt(e.target.value),
                   })
                 }
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+                className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
                 min="1"
                 required
               />
@@ -328,7 +328,7 @@ export default function EditEventPage({
                 onChange={(e) =>
                   setFormData({ ...formData, category: e.target.value })
                 }
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors bg-white"
+                className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors bg-white"
               >
                 <option value="Môi trường">🌱 Môi trường</option>
                 <option value="Giáo dục">📚 Giáo dục</option>

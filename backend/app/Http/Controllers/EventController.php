@@ -64,6 +64,22 @@ class EventController extends Controller
         }
     }
 
+    /**
+     * Đếm số lượng sự kiện đang diễn ra
+     */
+    public function countOngoingEvents(Request $request)
+    {
+        try {
+            $count = $this->eventService->countOngoingEvents();
+            return response()->json(['count' => $count], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'error server',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getEventDetails(Request $request, $id)
     {
         $event = $this->eventService->getEventById($id);

@@ -43,13 +43,25 @@ interface Manager {
   email: string;
   phone: string;
   image: string;
-  status: string;
+  role: "admin" | "manager" | "volunteer" | "user";
+  status: "active" | "locked" | "pending";
   address: string;
-  role: string;
   created_at: string;
+  events_count?: number;
   eventsCreated?: number;
   eventsManaged?: number;
   totalInteractions?: number;
+  events?: ManagerEvent[];
+  isActive?: boolean; // Highlight very active managers
+}
+
+interface ManagerEvent {
+  id: number;
+  title: string;
+  category: "environment" | "education" | "health" | "community";
+  date: string;
+  status: "completed" | "upcoming" | "ongoing";
+  role: string;
 }
 
 interface Toast {
@@ -58,11 +70,7 @@ interface Toast {
   message: string;
 }
 
-type SortField =
-  | "username"
-  | "eventsCreated"
-  | "totalInteractions"
-  | "eventsManaged";
+type SortField = "username" | "eventsCreated" | "eventsManaged";
 type SortOrder = "asc" | "desc";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -100,6 +108,8 @@ export default function ManagerManagement() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
+  const [managerEvents, setManagerEvents] = useState<ManagerEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
   const [editingManager, setEditingManager] = useState<Manager | null>(null);
   const [newManager, setNewManager] = useState<any>({
     username: "",
@@ -246,10 +256,6 @@ export default function ManagerManagement() {
     locked: managers.filter((m) => m.status === "locked").length,
     pending: managers.filter((m) => m.status === "pending").length,
     totalEvents: managers.reduce((sum, m) => sum + (m.eventsCreated || 0), 0),
-    totalInteractions: managers.reduce(
-      (sum, m) => sum + (m.totalInteractions || 0),
-      0
-    ),
   };
 
   // Handlers
@@ -276,9 +282,28 @@ export default function ManagerManagement() {
     );
   };
 
-  const handleViewDetails = (manager: Manager) => {
+  const handleViewDetails = async (manager: Manager) => {
     setSelectedManager(manager);
     setShowDetailModal(true);
+
+    // Fetch events created by this manager
+    setLoadingEvents(true);
+    try {
+      const response = await authFetch(
+        `/admin/getEventsByAuthor/${manager.id}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setManagerEvents(data.events || []);
+      } else {
+        setManagerEvents([]);
+      }
+    } catch (error) {
+      console.error("Error fetching manager events:", error);
+      setManagerEvents([]);
+    } finally {
+      setLoadingEvents(false);
+    }
   };
 
   const handleEdit = (manager: Manager) => {
@@ -441,7 +466,6 @@ export default function ManagerManagement() {
         "Trạng thái": m.status || "",
         "Sự kiện tạo": m.eventsCreated || 0,
         "Sự kiện quản lý": m.eventsManaged || 0,
-        "Tương tác": m.totalInteractions || 0,
         "Ngày tạo": m.created_at || "",
         "Địa chỉ": m.address || "",
       }));
@@ -550,7 +574,7 @@ export default function ManagerManagement() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5 mb-8">
           <div className="bg-white rounded-xl p-5 border-l-4 border-blue-500 shadow-md hover:shadow-lg transition duration-200">
             <p className="text-sm sm:text-base text-gray-600 mb-1">Tổng số</p>
             <p className="text-2xl sm:text-3xl font-bold text-blue-900">
@@ -579,12 +603,6 @@ export default function ManagerManagement() {
             <p className="text-sm sm:text-base text-gray-600 mb-1">Sự kiện</p>
             <p className="text-2xl sm:text-3xl font-bold text-purple-700">
               {stats.totalEvents}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl p-5 border-l-4 border-pink-500 shadow-md hover:shadow-lg transition duration-200">
-            <p className="text-sm sm:text-base text-gray-600 mb-1">Tương tác</p>
-            <p className="text-2xl sm:text-3xl font-bold text-pink-700">
-              {stats.totalInteractions}
             </p>
           </div>
         </div>
@@ -773,15 +791,6 @@ export default function ManagerManagement() {
                       {getSortIcon("eventsCreated")}
                     </div>
                   </th>
-                  <th
-                    className="px-6 py-4 text-left text-base font-bold text-blue-900 cursor-pointer hover:bg-blue-200 transition"
-                    onClick={() => handleSort("totalInteractions")}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <span>Tương tác</span>
-                      {getSortIcon("totalInteractions")}
-                    </div>
-                  </th>
                   <th className="px-6 py-4 text-center text-base font-bold text-blue-900">
                     Thao tác
                   </th>
@@ -856,14 +865,6 @@ export default function ManagerManagement() {
                           <FaCalendarAlt className="mr-1.5" />
                           {manager.eventsManaged} quản lý
                         </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-pink-700">
-                          {manager.totalInteractions}
-                        </p>
-                        <p className="text-xs text-gray-500">lượt</p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -969,7 +970,7 @@ export default function ManagerManagement() {
 
       {/* Detail Modal */}
       {showDetailModal && selectedManager && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-green-600 text-white p-6 flex items-center justify-between rounded-t-2xl z-10">
               <h2 className="text-2xl font-bold flex items-center">
@@ -1047,26 +1048,97 @@ export default function ManagerManagement() {
                 </div>
               </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Stats - Only show events count */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border-l-4 border-blue-500 shadow-md">
-                  <p className="text-sm text-gray-600 mb-1">Sự kiện tạo</p>
+                  <p className="text-sm text-gray-600 mb-1">Sự kiện đã tạo</p>
                   <p className="text-3xl font-bold text-blue-700">
-                    {selectedManager.eventsCreated}
+                    {managerEvents.length}
                   </p>
                 </div>
                 <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border-l-4 border-green-500 shadow-md">
-                  <p className="text-sm text-gray-600 mb-1">Sự kiện quản lý</p>
+                  <p className="text-sm text-gray-600 mb-1">Tổng tham gia</p>
                   <p className="text-3xl font-bold text-green-700">
-                    {selectedManager.eventsManaged}
+                    {selectedManager.events_count || 0}
                   </p>
                 </div>
-                <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-5 border-l-4 border-pink-500 shadow-md">
-                  <p className="text-sm text-gray-600 mb-1">Tổng tương tác</p>
-                  <p className="text-3xl font-bold text-pink-700">
-                    {selectedManager.totalInteractions}
-                  </p>
-                </div>
+              </div>
+
+              {/* Events List */}
+              <div className="mt-6">
+                <h4 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                  <FaCalendarCheck className="mr-2 text-blue-600" />
+                  Danh sách sự kiện đã tạo
+                </h4>
+
+                {loadingEvents ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="ml-3 text-gray-600">
+                      Đang tải sự kiện...
+                    </span>
+                  </div>
+                ) : managerEvents.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {managerEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        onClick={() => router.push(`/events/${event.id}`)}
+                        className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4 border border-gray-200 hover:shadow-md hover:border-blue-300 transition duration-200 cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h5 className="font-semibold text-gray-900 mb-2 flex items-center">
+                              {event.category === "environment" && "🌱"}
+                              {event.category === "education" && "📚"}
+                              {event.category === "health" && "❤️"}
+                              {event.category === "community" && "🤝"}
+                              <span className="ml-2">{event.title}</span>
+                            </h5>
+                            <div className="space-y-1 text-sm text-gray-600">
+                              <p className="flex items-center">
+                                <FaCalendarAlt className="mr-2 text-blue-500" />
+                                {new Date(event.date).toLocaleDateString(
+                                  "vi-VN",
+                                  {
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric",
+                                  }
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <div>
+                            {event.status === "completed" && (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                <FaCheckCircle className="mr-1" />
+                                Hoàn thành
+                              </span>
+                            )}
+                            {event.status === "ongoing" && (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                                <FaClock className="mr-1" />
+                                Đang diễn ra
+                              </span>
+                            )}
+                            {event.status === "upcoming" && (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+                                <FaHistory className="mr-1" />
+                                Sắp diễn ra
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <FaCalendarAlt className="mx-auto text-4xl mb-3 text-gray-400" />
+                    <p>Manager chưa tạo sự kiện nào</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1233,7 +1305,7 @@ export default function ManagerManagement() {
 
       {/* Edit Modal */}
       {showEditModal && editingManager && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-green-600 to-teal-600 text-white p-6 flex items-center justify-between rounded-t-2xl z-10">
               <h2 className="text-2xl font-bold flex items-center">
@@ -1361,7 +1433,7 @@ export default function ManagerManagement() {
 
       {/* Export Modal */}
       {showExportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="bg-gradient-to-r from-green-600 to-teal-600 text-white p-6 flex items-center justify-between rounded-t-2xl">
               <h2 className="text-2xl font-bold flex items-center">
@@ -1447,7 +1519,7 @@ export default function ManagerManagement() {
 
       {/* Delete Confirm Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="bg-gradient-to-r from-red-600 to-pink-600 text-white p-6 flex items-center justify-between rounded-t-2xl">
               <h2 className="text-2xl font-bold flex items-center">

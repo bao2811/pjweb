@@ -158,7 +158,7 @@ class ManagerService {
             $updated = $this->eventRepo->updateEventById($eventId, $eventData);
 
             // Notify all admins about the update
-            $this->notifyAdminsAboutEventUpdate($event, $managerId);
+            // $this->notifyAdminsAboutEventUpdate($event, $managerId);
 
             DB::commit();
             return $updated;
@@ -181,12 +181,13 @@ class ManagerService {
             foreach ($admins as $admin) {
                 DB::table('notifications')->insert([
                     'user_id' => $admin->id,
+                    'sender_id' => $managerId,
                     'type' => 'event_updated',
                     'data' => json_encode([
                         'event_id' => $event->id,
                         'event_title' => $event->title,
                         'manager_id' => $managerId,
-                        'message' => 'Sự kiện "' . $event->title . '" đã được cập nhật bởi manager. Vui lòng xem xét các thay đổi.'
+                        'message' => 'Sự kiện "' . $event->title . '" đã được cập nhật bởi manager. Vui lòng xem xét các thay đổi.',
                     ]),
                     'created_at' => Carbon::now(),
                     'updated_at' => Carbon::now(),

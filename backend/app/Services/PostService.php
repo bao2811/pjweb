@@ -20,8 +20,6 @@ class PostService
     protected $commentRepo;
     protected $likeRepo;
 
-
-
     public function __construct(PostRepo $postRepo, CommentRepo $commentRepo, LikeRepo $likeRepo)
     {
         $this->postRepo = $postRepo;
@@ -42,17 +40,23 @@ class PostService
     public function createPost($data)
     {
         try {
-            // Controller đã validate rồi, không cần validate lại
-            // $data là array, không phải Request object
-            
-            // Set default values
-            $data['like'] = $data['like'] ?? 0;
-            $data['comment'] = $data['comment'] ?? 0;
+            Log::info('PostService createPost called with data:', $data);
+
+            // Đặt giá trị mặc định cho 'likes' và 'comments' (số ít, khớp với database)
+            $data['likes'] = $data['likes'] ?? 0;
+            $data['comments'] = $data['comments'] ?? 0;
             $data['status'] = $data['status'] ?? 'active';
 
-            return $this->postRepo->createPost($data);
+            $result = $this->postRepo->createPost($data);
+            
+            Log::info('PostService createPost result:', ['post_id' => $result ? $result->id : null]);
+            
+            return $result;
         } catch (Exception $e) {
-            Log::error('PostService createPost error:', ['error' => $e->getMessage()]);
+            Log::error('PostService createPost error:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return null;
         }
     }
@@ -113,7 +117,7 @@ class PostService
             if (!$post) {
                 throw new Exception('Post not found');
             }
-            $post->likes = ($post->likes ?? 0) + $status;
+            $post->like = ($post->like ?? 0) + $status; // Sửa từ 'likes' thành 'like'
             $post->save();
             return true;
         } catch (Exception $e) {
@@ -147,7 +151,7 @@ class PostService
                 throw new Exception('Post not found');
             }
 
-            $post->comments += 1;
+            $post->comment += 1; // Sửa từ 'comments' thành 'comment'
             $post->save();
 
             DB::commit();

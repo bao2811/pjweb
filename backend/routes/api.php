@@ -74,6 +74,7 @@ Route::group(['prefix' => 'likes', 'middleware' => 'jwt'], function () {
 Route::group(['prefix' => 'events', 'middleware' => 'jwt'], function () {
     Route::get('/getAllEvents', [EventController::class, 'getAllEvents']);
     Route::get('/getTrendingEvents', [EventController::class, 'getTrendingEvents']);
+    Route::get('/countOngoingEvents', [EventController::class, 'countOngoingEvents']);
     Route::get('/getEventDetails/{id}', [EventController::class, 'getEventDetails']);
     Route::post('/createEvent', [EventController::class, 'createEvent']);
     Route::put('/updateEventById/{id}', [EventController::class, 'updateEventById']);

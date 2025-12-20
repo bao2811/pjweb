@@ -18,11 +18,12 @@ class Post extends Model
         'title',
         'content',
         'author_id',
-        'channel_id', // Post thuộc channel
+        'event_id',    // Thêm event_id vào fillable
+        'channel_id',  // Post thuộc channel
         'image', 
         'published_at',
-        'likes',
-        'comments',
+        'like',        // Sửa từ 'likes' thành 'like' để khớp với database
+        'comment',     // Sửa từ 'comments' thành 'comment' để khớp với database
         'status',
     ];
 

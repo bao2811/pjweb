@@ -71,7 +71,7 @@ class Event extends Model
 
     public function members()
     {
-        return $this->belongsToMany(User::class, 'joinevent', 'event_id', 'user_id');
+        return $this->belongsToMany(User::class, 'join_events', 'event_id', 'user_id');
     }
 
     /**
