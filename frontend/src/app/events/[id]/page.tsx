@@ -192,8 +192,6 @@ export default function EventDetailPage({
             },
           }
         );
-        // Reload event details
-        fetchEventDetail();
       }
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -231,8 +229,6 @@ export default function EventDetailPage({
           duration: 3000,
           position: "top-center",
         });
-        // Reload event details
-        fetchEventDetail();
       }
     } catch (error: any) {
       console.error("Cancel error:", error);

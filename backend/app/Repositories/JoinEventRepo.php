@@ -125,8 +125,10 @@ class JoinEventRepo
             
         if ($joinEvent) {
             $event = Event::find($eventId);
-            $event->current_participants -= 1;
-            $event->save();
+            if($joinEvent->status === 'approved') {
+                // Giảm current_participants nếu user đã được chấp nhận
+                $event->decrement('current_participants');
+            }
 
             // Gửi thông báo xác nhận hủy đăng ký
             if ($event) {

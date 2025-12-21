@@ -75,7 +75,7 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
                 try {
-                    $token = JWTUtil::generateToken($user, 15);
+                    $token = JWTUtil::generateToken($user, 5);
                     $refresh_token = JWTUtil::generateToken($user, 43200); // 30 days
                 } catch (\Exception $e) {
                     // Log full exception for debugging and return a JSON error so the frontend can surface it
