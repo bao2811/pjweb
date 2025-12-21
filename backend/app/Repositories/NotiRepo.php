@@ -11,6 +11,9 @@ class NotiRepo
 {
     /**
      * Tìm notification theo ID
+     *
+     * @param int $id ID của notification
+     * @return Noti|null
      */
     public function findById($id): ?Noti
     {
@@ -18,7 +21,10 @@ class NotiRepo
     }
 
     /**
-     * Lấy tất cả notifications của một user (với thông tin sender)
+     * Lấy tất cả notifications của một user (kèm thông tin người gửi)
+     *
+     * @param int $userId ID của user nhận
+     * @return \Illuminate\Support\Collection Danh sách notifications
      */
     public function findByUserId($userId)
     {
@@ -46,6 +52,9 @@ class NotiRepo
 
     /**
      * Tạo notification mới
+     *
+     * @param array $data Dữ liệu notification
+     * @return Noti Notification vừa tạo
      */
     public function create($data): Noti
     {
@@ -54,6 +63,9 @@ class NotiRepo
 
     /**
      * Đánh dấu tất cả notifications của user là đã đọc
+     *
+     * @param int $userId ID của user
+     * @return bool True nếu cập nhật thành công
      */
     public function markAllAsReadByUserId($userId): bool
     {
@@ -64,6 +76,9 @@ class NotiRepo
 
     /**
      * Xóa notification theo ID
+     *
+     * @param int $id ID của notification
+     * @return bool True nếu xóa thành công
      */
     public function deleteById($id): bool
     {
@@ -76,6 +91,9 @@ class NotiRepo
 
     /**
      * Lấy số lượng notifications chưa đọc của user
+     *
+     * @param int $userId ID của user
+     * @return int Số lượng chưa đọc
      */
     public function getUnreadCountByUserId($userId): int
     {

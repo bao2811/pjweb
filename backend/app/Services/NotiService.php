@@ -11,17 +11,35 @@ use Illuminate\Support\Facades\DB;
 
 use Exception;
 
+/**
+ * Service NotiService - Xử lý logic nghiệp vụ thông báo
+ * 
+ * Service này xử lý các thao tác nghiệp vụ cho notification,
+ * bao gồm: CRUD notification, WebPush, broadcast realtime.
+ * 
+ * @package App\Services
+ */
 class NotiService
 {
+    /** @var NotiRepo Repository xử lý dữ liệu notification */
     protected $notiRepo;
 
+    /**
+     * Khởi tạo service với repository cần thiết
+     * 
+     * @param NotiRepo $notiRepo Repository notification
+     */
     public function __construct(NotiRepo $notiRepo)
     {
         $this->notiRepo = $notiRepo;
     }
 
-
-
+    /**
+     * Lấy danh sách notifications của user
+     * 
+     * @param int $userId ID của user
+     * @return array|\Illuminate\Support\Collection Danh sách notifications
+     */
     public function getNotificationsByUserId($userId)
     {
         try {
@@ -32,6 +50,12 @@ class NotiService
         }
     }
 
+    /**
+     * Lấy notification theo ID
+     * 
+     * @param int $id ID của notification
+     * @return Noti|null Notification hoặc null
+     */
     public function getNotificationById($id)
     {
         try {
@@ -41,6 +65,12 @@ class NotiService
         }
     }
 
+    /**
+     * Tạo notification mới
+     * 
+     * @param array $data Dữ liệu notification
+     * @return Noti|null Notification vừa tạo
+     */
     public function createNotification($data)
     {
         try {
@@ -51,6 +81,12 @@ class NotiService
         }
     }
 
+    /**
+     * Đánh dấu notification đã đọc
+     * 
+     * @param int $id ID của notification
+     * @return Noti|null Notification sau khi cập nhật
+     */
     public function markAsRead($id)
     {
         try {
@@ -67,6 +103,12 @@ class NotiService
         }
     }
 
+    /**
+     * Đánh dấu tất cả notifications của user đã đọc
+     * 
+     * @param int $userId ID của user
+     * @return bool Kết quả cập nhật
+     */
     public function markAllAsRead($userId)
     {
         try {
@@ -77,6 +119,12 @@ class NotiService
         }
     }
 
+    /**
+     * Xóa notification
+     * 
+     * @param int $id ID của notification
+     * @return bool Kết quả xóa
+     */
     public function deleteNotification($id)
     {
         try {
@@ -87,6 +135,12 @@ class NotiService
         }
     }
 
+    /**
+     * Đếm số notifications chưa đọc của user
+     * 
+     * @param int $userId ID của user
+     * @return int Số lượng chưa đọc
+     */
     public function getUnreadCount($userId)
     {
         try {
@@ -97,11 +151,14 @@ class NotiService
     }
 
     /**
-     * Gửi web push notification đến danh sách subscriptions VÀ lưu vào database
+     * Gửi WebPush notification đến danh sách subscriptions VÀ lưu vào database
+     * 
+     * Sử dụng WebPushApi để gửi push notification.
+     * Broadcast qua WebSocket cho realtime update.
      * 
      * @param \Illuminate\Support\Collection $subscriptions Collection of PushSubscription models
-     * @param array $payload ['title', 'body', 'url', 'icon', 'badge', 'timestamp', 'type', 'sender_id']
-     * @return array ['success' => bool, 'push_sent' => int, 'db_saved' => int, 'failed' => int]
+     * @param array $payload Dữ liệu notification ['title', 'body', 'url', 'icon', 'badge', 'timestamp', 'type', 'sender_id']
+     * @return bool Kết quả gửi
      */
     public function sendPushNotification($subscriptions, $payload)
     {
@@ -174,13 +231,14 @@ class NotiService
     }
 
     /**
-     * Gửi notification đến tất cả users (có hoặc không có WebPush)
-     * - Nếu user có WebPush subscription → Gửi push notification
-     * - Nếu user không có WebPush → Vẫn tạo in-app notification trong DB
+     * Gửi notification đến danh sách users (có hoặc không có WebPush)
+     * 
+     * Nếu user có WebPush subscription → Gửi push notification
+     * Nếu user không có WebPush → Vẫn tạo in-app notification trong DB
      * 
      * @param array $userIds Danh sách user IDs cần gửi notification
-     * @param array $notificationData ['title', 'message', 'type', 'sender_id', 'data']
-     * @return array ['total' => int, 'with_push' => int, 'without_push' => int]
+     * @param array $notificationData Dữ liệu notification ['title', 'message', 'type', 'sender_id', 'data']
+     * @return array Thống kê ['total' => int, 'with_push' => int, 'without_push' => int, 'failed' => int]
      */
     public function sendNotificationToUsers(array $userIds, array $notificationData): array
     {
@@ -236,11 +294,13 @@ class NotiService
     }
 
     /**
-     * Gửi notification đến tất cả users tham gia event
+     * Gửi notification đến tất cả users tham gia sự kiện
      * 
-     * @param int $eventId ID của event
-     * @param array $notificationData ['title', 'message', 'type', 'sender_id', 'data']
-     * @return array Statistics
+     * Lấy danh sách users có status 'accepted' trong join_events.
+     * 
+     * @param int $eventId ID của sự kiện
+     * @param array $notificationData Dữ liệu notification ['title', 'message', 'type', 'sender_id', 'data']
+     * @return array Thống kê
      */
     public function sendNotificationToEventParticipants(int $eventId, array $notificationData): array
     {
@@ -269,8 +329,8 @@ class NotiService
     /**
      * Gửi notification đến TẤT CẢ users trong hệ thống
      * 
-     * @param array $notificationData ['title', 'message', 'type', 'sender_id', 'data']
-     * @return array Statistics
+     * @param array $notificationData Dữ liệu notification ['title', 'message', 'type', 'sender_id', 'data']
+     * @return array Thống kê
      */
     public function sendNotificationToAllUsers(array $notificationData): array
     {

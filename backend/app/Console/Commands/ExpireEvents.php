@@ -6,20 +6,40 @@ use Illuminate\Console\Command;
 use App\Models\Event;
 use Carbon\Carbon;
 
+/**
+ * Command ExpireEvents - Đánh dấu sự kiện hết hạn
+ * 
+ * Command này chạy định kỳ để tìm và đánh dấu các sự kiện
+ * đang ở trạng thái 'pending' nhưng đã qua thời gian kết thúc
+ * thành 'expired'.
+ * 
+ * Sử dụng: php artisan events:expire
+ * 
+ * @package App\Console\Commands
+ */
 class ExpireEvents extends Command
 {
     /**
-     * Tên lệnh artisan.
+     * Tên và signature của lệnh artisan
+     * 
+     * @var string
      */
     protected $signature = 'events:expire';
 
     /**
-     * Mô tả lệnh.
+     * Mô tả lệnh
+     * 
+     * @var string
      */
     protected $description = 'Mark events as expired if they have ended but are still pending approval';
 
     /**
-     * Logic xử lý.
+     * Thực thi logic của command
+     * 
+     * Tìm các sự kiện có status='pending' và end_time < now,
+     * sau đó cập nhật status thành 'expired'.
+     * 
+     * @return void
      */
     public function handle()
     {

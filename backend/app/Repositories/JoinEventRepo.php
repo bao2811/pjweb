@@ -16,6 +16,24 @@ class JoinEventRepo
         return JoinEvent::find($id);
     }
 
+    /**
+     * Lấy JoinEvent theo ID
+     *
+     * @param int $id ID của JoinEvent
+     * @return JoinEvent|null
+     */
+
+
+    /**
+     * Đăng ký tham gia event
+     *
+     * Kiểm tra điều kiện (event tồn tại, chưa bắt đầu, chưa đầy, chưa đăng ký,...)
+     * Sau đó tạo JoinEvent với status='pending' và gửi notification đến manager
+     *
+     * @param array $data Dữ liệu gồm event_id, user_id
+     * @return JoinEvent JoinEvent vừa tạo
+     * @throws Exception Nếu có lỗi kiểm tra
+     */
     public function joinEvent($data) : JoinEvent
     {
         // Kiểm tra điều kiện trước khi insert
@@ -84,6 +102,15 @@ class JoinEventRepo
      * FIX #1, #5: User có thể hủy đăng ký khi status='pending' hoặc 'approved'
      * nhưng chỉ khi sự kiện chưa diễn ra
      */
+    /**
+     * Hủy đăng ký tham gia event
+     *
+     * Cho phép user hủy khi status = 'pending' hoặc 'approved' và event chưa bắt đầu.
+     *
+     * @param int $userId ID của user
+     * @param int $eventId ID của event
+     * @return bool|int False nếu không tìm thấy, hoặc kết quả xóa
+     */
     public function leaveEvent($userId, $eventId)
     {
         // FIX #1: Sử dụng Eloquent thay vì DB::update
@@ -125,6 +152,11 @@ class JoinEventRepo
     }
     
 
+    /**
+     * Lấy tất cả JoinEvent
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
     public function all()
     {
         return JoinEvent::all();
@@ -167,6 +199,28 @@ class JoinEventRepo
         );
     }
 
+    /**
+     * Lấy danh sách user đã đăng ký theo event
+     *
+     * Trả về các trường chi tiết của join_events và thông tin user.
+     *
+     * @param int $eventId ID của event
+     * @return array
+     */
+
+
+    /**
+     * Chấp nhận user tham gia event
+     *
+     * Kiểm tra capacity, tăng current_participants, gửi notification,
+     * và cập nhật status của JoinEvent thành 'approved'.
+     *
+     * @param int $userId ID của user
+     * @param int $eventId ID của event
+     * @param int $managerId ID của manager/approver
+     * @return bool
+     * @throws Exception Nếu JoinEvent không tồn tại hoặc event full
+     */
     public function acceptUserJoinEvent($userId, $eventId, $managerId) {
         // $joinEvent = DB::update(
         //     "UPDATE join_events
@@ -225,6 +279,16 @@ class JoinEventRepo
      * FIX #12: Update status='rejected' thay vì xóa record
      * Điều này giúp giữ lại lịch sử và cho phép user đăng ký lại sau
      */
+    /**
+     * Từ chối user tham gia event
+     *
+     * Thay vì xóa record, cập nhật status='rejected' và gửi notification.
+     *
+     * @param int $eventId ID của event
+     * @param int $userId ID của user
+     * @param int $managerId ID của manager
+     * @return bool True nếu thành công, false nếu không tìm thấy
+     */
     public function rejectUserJoinEvent($eventId, $userId, $managerId) {
         $joinEvent = JoinEvent::where('user_id', $userId)
             ->where('event_id', $eventId)
@@ -265,6 +329,19 @@ class JoinEventRepo
 
     /**
      * Mark volunteer as completed/failed
+     */
+    /**
+     * Đánh dấu tình nguyện viên hoàn thành hoặc thất bại
+     *
+     * Cập nhật completion_status, completed_at, completed_by và gửi notification.
+     *
+     * @param int $eventId
+     * @param int $userId
+     * @param int $managerId
+     * @param string $completionStatus 'completed' hoặc 'failed'
+     * @param string|null $completionNote Ghi chú (nếu có)
+     * @return JoinEvent
+     * @throws Exception Nếu joinEvent không tồn tại hoặc đã được đánh giá
      */
     public function markVolunteerCompletion($eventId, $userId, $managerId, $completionStatus, $completionNote = null)
     {
@@ -320,6 +397,13 @@ class JoinEventRepo
 
     /**
      * Get event report with statistics
+     */
+    /**
+     * Lấy báo cáo chi tiết của một event (thống kê, danh sách volunteers)
+     *
+     * @param int $eventId ID của event
+     * @return array Mảng chứa thông tin event, statistics và volunteers
+     * @throws Exception Nếu event không tồn tại
      */
     public function getEventReport($eventId)
     {
@@ -394,6 +478,12 @@ class JoinEventRepo
     /**
      * Get manager's events overview report
      */
+    /**
+     * Lấy báo cáo tổng quan của manager (danh sách events và statistics từng event)
+     *
+     * @param int $managerId ID của manager
+     * @return array
+     */
     public function getManagerEventsReport($managerId)
     {
         $events = Event::where('author_id', $managerId)
@@ -442,6 +532,19 @@ class JoinEventRepo
             'overview' => $overallStats,
             'events' => $reports,
         ];
+    }
+
+    /**
+     * Lấy danh sách sự kiện mà user đã đăng ký
+     * 
+     * @param int $userId ID của user
+     * @return \Illuminate\Support\Collection Danh sách đăng ký
+     */
+    public function getMyRegistrations($userId)
+    {
+        return JoinEvent::where('user_id', $userId)
+            ->with('event') // Eager load event details
+            ->get();    
     }
 
 }

@@ -14,16 +14,46 @@ class UserRepo
         return User::where('email', $email)->first();
     }
 
+    /**
+     * Lấy user theo email
+     *
+     * @param string $email Email của user cần tìm
+     * @return User|null Trả về User hoặc null nếu không tìm thấy
+     */
+    
+
+    /**
+     * Lấy user theo ID
+     *
+     * @param int $id ID của user
+     * @return User|null Trả về User hoặc null nếu không tồn tại
+     */
     public function getUserById($id) : ?User
     {
         return User::find($id);
     }
 
+    /**
+     * Tạo user mới
+     *
+     * Nhận mảng dữ liệu và tạo bản ghi user trong database.
+     *
+     * @param array $data Dữ liệu user
+     * @return User User vừa tạo
+     */
     public function createUser($data) : User
     {
         return User::create($data);
     }
 
+    /**
+     * Lấy tất cả users có role = 'user'
+     *
+     * Kèm theo thông tin thống kê events đã tham gia và format dữ liệu
+     * để trả về cho frontend.
+     *
+     * @return \Illuminate\Support\Collection Danh sách users đã format
+     */
     public function getAllUsers()
     { 
         return User::where('role', 'user')
@@ -71,11 +101,25 @@ class UserRepo
             });
     }
 
+    /**
+     * Tìm user theo email (tương tự getUserByEmail)
+     *
+     * @param string $email Email cần tìm
+     * @return User|null
+     */
     public function findByEmail($email)
     {
         return User::where('email', $email)->first();
     }
 
+    /**
+     * Lấy users theo role (ví dụ: 'manager')
+     *
+     * Trả về users kèm thông tin events đã tham gia/được quản lý.
+     *
+     * @param string $role Role cần lọc
+     * @return \Illuminate\Support\Collection Danh sách users
+     */
     public function getUsersByRole($role)
     {
         return User::where('role', $role)
@@ -123,6 +167,14 @@ class UserRepo
             });
     }
 
+    /**
+     * Cập nhật user theo ID
+     *
+     * @param int $id ID của user
+     * @param array $data Dữ liệu cần cập nhật
+     * @return User User đã được cập nhật
+     * @throws Exception Nếu user không tồn tại
+     */
     public function updateUserById($id, $data) : User
     {
         $user = $this->getUserById($id);
@@ -133,12 +185,25 @@ class UserRepo
         return $user;
     }
 
+    /**
+     * Tìm user theo ID (wrapper cho getUserById)
+     *
+     * @param int $id ID của user
+     * @return User|null
+     */
     public function find($id) : ?User
     {
         $user = $this->getUserById($id);
         return $user;
     }
 
+    /**
+     * Khóa (ban) user theo ID
+     *
+     * @param int $id ID của user cần khóa
+     * @return int Số record bị ảnh hưởng (1 nếu thành công)
+     * @throws Exception Nếu user không tồn tại
+     */
     public function banUser($id): int
     {
         $result = User::where('id', $id)->update(['status' => 'locked']);
@@ -148,6 +213,13 @@ class UserRepo
         return $result;
     }
 
+    /**
+     * Mở khóa (unban) user theo ID
+     *
+     * @param int $id ID của user cần mở khóa
+     * @return int Số record bị ảnh hưởng
+     * @throws Exception Nếu user không tồn tại
+     */
     public function unbanUser($id) : int
     {
         $result = User::where('id', $id)->update(['status' => 'active']);
@@ -157,6 +229,13 @@ class UserRepo
         return $result;
     }
 
+    /**
+     * Xóa user theo ID
+     *
+     * @param int $id ID của user cần xóa
+     * @return bool true nếu xóa thành công
+     * @throws Exception Nếu user không tồn tại
+     */
     public function deleteUserById($id) : bool
     {
         $user = $this->getUserById($id);

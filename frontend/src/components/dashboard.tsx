@@ -20,9 +20,45 @@ import {
   FaTrophy,
   FaStar,
   FaClock,
+  FaExclamationCircle,
 } from "react-icons/fa";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+// Validation helpers
+const validateComment = (content: string): string | null => {
+  const trimmed = content.trim();
+  if (!trimmed) return "Vui lòng nhập nội dung bình luận";
+  if (trimmed.length < 2) return "Bình luận phải có ít nhất 2 ký tự";
+  if (trimmed.length > 1000) return "Bình luận không được quá 1000 ký tự";
+  return null;
+};
+
+const validatePostContent = (content: string): string | null => {
+  const trimmed = content.trim();
+  if (!trimmed) return "Vui lòng nhập nội dung bài viết";
+  if (trimmed.length < 5) return "Nội dung bài viết phải có ít nhất 5 ký tự";
+  if (trimmed.length > 5000) return "Nội dung không được quá 5000 ký tự";
+  return null;
+};
+
+const validatePostTitle = (title: string): string | null => {
+  const trimmed = title.trim();
+  if (trimmed.length > 200) return "Tiêu đề không được quá 200 ký tự";
+  return null;
+};
+
+const validateImageUrl = (url: string): string | null => {
+  if (!url) return null; // Optional field
+  try {
+    new URL(url);
+    return null;
+  } catch {
+    return "URL hình ảnh không hợp lệ";
+  }
+};
+
+// Helper function to validate and get safe avatar URL
 
 // Helper function to validate and get safe avatar URL
 const getSafeAvatarUrl = (imageUrl: string | null | undefined): string => {
@@ -61,9 +97,20 @@ export default function Dashboard() {
   const [newPostTitle, setNewPostTitle] = useState("");
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
+  // Validation states
+  const [postErrors, setPostErrors] = useState<{
+    content?: string | null;
+    title?: string | null;
+    image?: string | null;
+  }>({});
+  const [commentErrors, setCommentErrors] = useState<{
+    [key: number]: string | null;
+  }>({});
+
   // Stats states
   const [totalEvents, setTotalEvents] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<string>("");
+  const [showTipsModal, setShowTipsModal] = useState<boolean>(false);
 
   const token =
     typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null;
@@ -298,9 +345,16 @@ export default function Dashboard() {
   };
 
   const handleCommentSubmit = async (postId: number) => {
-    if (!commentInputs[postId]?.trim()) return;
+    const commentText = commentInputs[postId]?.trim() || "";
 
-    const commentText = commentInputs[postId].trim();
+    // Validate comment
+    const error = validateComment(commentText);
+    if (error) {
+      setCommentErrors((prev) => ({ ...prev, [postId]: error }));
+      return;
+    }
+    setCommentErrors((prev) => ({ ...prev, [postId]: null }));
+
     const tempId = `temp-${Date.now()}`;
 
     // Optimistic UI update
@@ -401,8 +455,18 @@ export default function Dashboard() {
   };
 
   const handleCreatePost = async () => {
-    if (!newPostContent.trim()) {
-      alert("Vui lòng nhập nội dung bài viết!");
+    // Validate all fields
+    const contentError = validatePostContent(newPostContent);
+    const titleError = validatePostTitle(newPostTitle);
+    const imageError = validateImageUrl(newPostImage);
+
+    setPostErrors({
+      content: contentError,
+      title: titleError,
+      image: imageError,
+    });
+
+    if (contentError || titleError || imageError) {
       return;
     }
 
@@ -478,10 +542,10 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="max-w-[1600px] mx-auto px-2 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          {/* Left Sidebar - Quick Actions */}
+          {/* Left Sidebar - Fixed */}
           <div className="hidden lg:block lg:col-span-2">
-            <div className="space-y-4 sticky top-24">
-              {/* Welcome Card (sticky) */}
+            <div className="sticky top-24 space-y-4 max-h-[calc(100vh-7rem)] overflow-y-auto">
+              {/* Welcome Card */}
               <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white">
                 <h3 className="text-xl font-bold mb-2">
                   Chào mừng trở lại! 👋
@@ -561,28 +625,84 @@ export default function Dashboard() {
                 </div>
                 <div className="flex-1">
                   <textarea
-                    placeholder="Chia sẻ trải nghiệm tình nguyện của bạn..."
+                    placeholder="Chia sẻ trải nghiệm tình nguyện của bạn... (tối thiểu 5 ký tự)"
                     value={newPostContent}
-                    onChange={(e) => setNewPostContent(e.target.value)}
-                    className="text-black w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                    onChange={(e) => {
+                      setNewPostContent(e.target.value);
+                      if (postErrors.content) {
+                        setPostErrors((prev) => ({
+                          ...prev,
+                          content: validatePostContent(e.target.value),
+                        }));
+                      }
+                    }}
+                    className={`text-black w-full p-4 border rounded-xl focus:ring-2 focus:border-transparent resize-none ${
+                      postErrors.content
+                        ? "border-red-400 focus:ring-red-500"
+                        : "border-gray-200 focus:ring-green-500"
+                    }`}
                     rows={3}
+                    maxLength={5000}
                   />
+                  {postErrors.content && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <FaExclamationCircle className="mr-1" />{" "}
+                      {postErrors.content}
+                    </p>
+                  )}
                   <input
                     type="text"
-                    placeholder="Tiêu đề (không bắt buộc)"
+                    placeholder="Tiêu đề (không bắt buộc, tối đa 200 ký tự)"
                     value={newPostTitle}
-                    onChange={(e) => setNewPostTitle(e.target.value)}
-                    className="text-black w-full mt-3 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                    onChange={(e) => {
+                      setNewPostTitle(e.target.value);
+                      if (postErrors.title) {
+                        setPostErrors((prev) => ({
+                          ...prev,
+                          title: validatePostTitle(e.target.value),
+                        }));
+                      }
+                    }}
+                    className={`text-black w-full mt-3 p-3 border rounded-xl focus:ring-2 focus:border-transparent text-sm ${
+                      postErrors.title
+                        ? "border-red-400 focus:ring-red-500"
+                        : "border-gray-200 focus:ring-green-500"
+                    }`}
+                    maxLength={200}
                   />
+                  {postErrors.title && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <FaExclamationCircle className="mr-1" />{" "}
+                      {postErrors.title}
+                    </p>
+                  )}
                   <input
                     id="imageUrlInput"
                     type="text"
                     placeholder="🖼️ URL hình ảnh (không bắt buộc)"
                     value={newPostImage}
-                    onChange={(e) => setNewPostImage(e.target.value)}
-                    className="text-black w-full mt-2 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                    onChange={(e) => {
+                      setNewPostImage(e.target.value);
+                      if (postErrors.image) {
+                        setPostErrors((prev) => ({
+                          ...prev,
+                          image: validateImageUrl(e.target.value),
+                        }));
+                      }
+                    }}
+                    className={`text-black w-full mt-2 p-3 border rounded-xl focus:ring-2 focus:border-transparent text-sm ${
+                      postErrors.image
+                        ? "border-red-400 focus:ring-red-500"
+                        : "border-gray-200 focus:ring-green-500"
+                    }`}
                   />
-                  {newPostImage && (
+                  {postErrors.image && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <FaExclamationCircle className="mr-1" />{" "}
+                      {postErrors.image}
+                    </p>
+                  )}
+                  {newPostImage && !postErrors.image && (
                     <div className="mt-2 relative">
                       <Image
                         src={newPostImage}
@@ -654,7 +774,7 @@ export default function Dashboard() {
               {posts.map((post) => (
                 <div
                   key={post.id}
-                  className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                  className="bg-white rounded-2xl shadow-lg border border-gray-100 transition-all duration-300 transform "
                 >
                   {/* Post Header */}
                   <div className="p-6 flex items-center justify-between">
@@ -884,36 +1004,56 @@ export default function Dashboard() {
                       )}
 
                       {/* Add Comment Input */}
-                      <div className="flex items-center space-x-3 mt-4">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm">
-                          {currentUser?.username?.charAt(0).toUpperCase() ||
-                            "U"}
-                        </div>
-                        <div className="flex-1 relative">
-                          <input
-                            type="text"
-                            placeholder="Viết bình luận..."
-                            value={commentInputs[post.id] || ""}
-                            onChange={(e) =>
-                              handleCommentChange(post.id, e.target.value)
-                            }
-                            onKeyPress={(e) =>
-                              e.key === "Enter" && handleCommentSubmit(post.id)
-                            }
-                            className="w-full bg-gray-100 rounded-full px-4 py-3 pr-20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition duration-200"
-                          />
-                          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
-                            <button className="text-gray-400 hover:text-yellow-500 transition-colors">
-                              <FaSmile />
-                            </button>
-                            <button
-                              onClick={() => handleCommentSubmit(post.id)}
-                              className="text-blue-500 hover:text-blue-600 transition-colors"
-                            >
-                              <FaPaperPlane />
-                            </button>
+                      <div className="mt-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm">
+                            {currentUser?.username?.charAt(0).toUpperCase() ||
+                              "U"}
+                          </div>
+                          <div className="flex-1 relative">
+                            <input
+                              type="text"
+                              placeholder="Viết bình luận... (tối thiểu 2 ký tự)"
+                              value={commentInputs[post.id] || ""}
+                              onChange={(e) => {
+                                handleCommentChange(post.id, e.target.value);
+                                if (commentErrors[post.id]) {
+                                  setCommentErrors((prev) => ({
+                                    ...prev,
+                                    [post.id]: validateComment(e.target.value),
+                                  }));
+                                }
+                              }}
+                              onKeyPress={(e) =>
+                                e.key === "Enter" &&
+                                handleCommentSubmit(post.id)
+                              }
+                              maxLength={1000}
+                              className={`text-black w-full rounded-full px-4 py-3 pr-20 text-sm focus:outline-none focus:ring-2 transition duration-200 ${
+                                commentErrors[post.id]
+                                  ? "bg-red-50 focus:ring-red-500 border border-red-300"
+                                  : "bg-gray-100 focus:ring-green-500 focus:bg-white"
+                              }`}
+                            />
+                            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                              <button className="text-gray-400 hover:text-yellow-500 transition-colors">
+                                <FaSmile />
+                              </button>
+                              <button
+                                onClick={() => handleCommentSubmit(post.id)}
+                                className="text-blue-500 hover:text-blue-600 transition-colors"
+                              >
+                                <FaPaperPlane />
+                              </button>
+                            </div>
                           </div>
                         </div>
+                        {commentErrors[post.id] && (
+                          <p className="mt-1 ml-11 text-sm text-red-600 flex items-center">
+                            <FaExclamationCircle className="mr-1" />{" "}
+                            {commentErrors[post.id]}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -946,71 +1086,116 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Right Sidebar - Hot Events */}
+          {/* Right Sidebar - Fixed */}
           <div className="hidden lg:block lg:col-span-2 space-y-4 lg:-mr-6">
-            {/* Trending Posts */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 sticky top-24 lg:pr-0">
-              <h3 className="font-bold text-lg mb-4 flex items-center text-gray-900">
-                <FaFire className="mr-2 text-orange-500" />
-                Sự kiện HOT 🔥
-              </h3>
-              <div className="space-y-4">
-                {trendingEvents.length > 0 ? (
-                  trendingEvents.map((ev: any) => (
-                    <div
-                      key={ev.id}
-                      className="group cursor-pointer hover:bg-gray-50 p-3 rounded-xl transition-all duration-200"
-                    >
-                      <div className="mb-2">
-                        <p className="font-semibold text-gray-900 text-sm line-clamp-2">
-                          {ev.title}
-                        </p>
-                        <p className="text-gray-600 text-xs line-clamp-2 mt-1">
-                          {ev.content}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-1 text-red-600">
-                          <FaHeart className="text-red-500" />
-                          <span className="font-bold">{ev.likes || 0}</span>
+            <div className="sticky top-24 space-y-4 max-h-[calc(100vh-7rem)] overflow-y-auto">
+              {/* Trending Posts */}
+              <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 lg:pr-0">
+                <h3 className="font-bold text-lg mb-4 flex items-center text-gray-900">
+                  <FaFire className="mr-2 text-orange-500" />
+                  Sự kiện HOT 🔥
+                </h3>
+                <div className="space-y-4">
+                  {trendingEvents.length > 0 ? (
+                    trendingEvents.map((ev: any) => (
+                      <div
+                        key={ev.id}
+                        className="group cursor-pointer hover:bg-gray-50 p-3 rounded-xl transition-all duration-200"
+                      >
+                        <div className="mb-2">
+                          <p className="font-semibold text-gray-900 text-sm line-clamp-2">
+                            {ev.title}
+                          </p>
+                          <p className="text-gray-600 text-xs line-clamp-2 mt-1">
+                            {ev.content}
+                          </p>
                         </div>
-                        <div className="flex items-center space-x-1 text-gray-600">
-                          <FaMapMarkerAlt className="text-blue-500" />
-                          <span className="text-xs">{ev.address || "-"}</span>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-1 text-red-600">
+                            <FaHeart className="text-red-500" />
+                            <span className="font-bold">{ev.likes || 0}</span>
+                          </div>
+                          <div className="flex items-center space-x-1 text-gray-600">
+                            <FaMapMarkerAlt className="text-blue-500" />
+                            <span className="text-xs">{ev.address || "-"}</span>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">
+                          {ev.author?.username ||
+                            ev.author?.name ||
+                            "Người tổ chức"}
                         </div>
                       </div>
-                      <div className="mt-2 text-xs text-gray-500">
-                        {ev.author?.username ||
-                          ev.author?.name ||
-                          "Người tổ chức"}
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-4">
+                      <p className="text-sm">Chưa có sự kiện nổi bật</p>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center text-gray-500 py-4">
-                    <p className="text-sm">Chưa có sự kiện nổi bật</p>
-                  </div>
-                )}
+                  )}
+                </div>
+                <Link
+                  href="/user/events"
+                  className="block w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-md text-center"
+                >
+                  Xem tất cả
+                </Link>
               </div>
-              <Link
-                href="/user/events"
-                className="block w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-md text-center"
-              >
-                Xem tất cả
-              </Link>
-            </div>
 
-            {/* Tips Card */}
-            <div className="bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl shadow-lg p-6 text-white">
-              <h3 className="font-bold text-lg mb-3">💡 Mẹo hữu ích</h3>
-              <p className="text-sm text-white/90 leading-relaxed">
-                Tham gia nhiều sự kiện để tích điểm và nhận huy hiệu đặc biệt.
-                Chia sẻ kinh nghiệm để truyền cảm hứng cho người khác!
-              </p>
+              {/* Tips Card */}
+              <div className="bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl shadow-lg p-6 text-white">
+                <h3 className="font-bold text-lg mb-3">💡 Mẹo hữu ích</h3>
+                <p className="text-sm text-white/90 leading-relaxed">
+                  Tham gia nhiều sự kiện để tích điểm và nhận huy hiệu đặc biệt.
+                  Chia sẻ kinh nghiệm để truyền cảm hứng cho người khác!
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Mobile floating tips button */}
+      <div className="lg:hidden fixed bottom-6 right-4 z-50">
+        <button
+          onClick={() => setShowTipsModal(true)}
+          className="bg-green-500 hover:bg-green-600 text-white p-3 rounded-full shadow-xl"
+          aria-label="Mẹo hữu ích"
+        >
+          💡
+        </button>
+      </div>
+
+      {/* Tips Modal */}
+      {showTipsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl max-w-md w-full mx-4 p-6 shadow-lg">
+            <div className="flex items-start justify-between">
+              <h3 className="text-lg font-bold">Mẹo hữu ích</h3>
+              <button
+                onClick={() => setShowTipsModal(false)}
+                className="text-gray-500 hover:text-gray-700 ml-4"
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-4 space-y-3 text-sm text-gray-700">
+              <p>• Kiểm tra lịch của bạn trước khi đăng ký sự kiện.</p>
+              <p>• Mời bạn bè để tăng cơ hội tham gia.</p>
+              <p>• Sử dụng ảnh kích thước nhỏ để tránh upload chậm.</p>
+              <p>• Đọc mô tả sự kiện kỹ trước khi đăng ký.</p>
+            </div>
+            <div className="mt-6 text-right">
+              <button
+                onClick={() => setShowTipsModal(false)}
+                className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

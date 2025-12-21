@@ -8,17 +8,45 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Repositories\EventRepo;
 
-
+/**
+ * Service JoinEventService - Xử lý logic nghiệp vụ tham gia sự kiện
+ * 
+ * Service này xử lý các thao tác nghiệp vụ cho việc đăng ký và rời sự kiện,
+ * bao gồm: kiểm tra điều kiện, join/leave event.
+ * 
+ * @package App\Services
+ */
 class JoinEventService {
+    /** @var JoinEventRepo Repository xử lý tham gia sự kiện */
     protected $joinEventRepo;
+    
+    /** @var EventRepo Repository xử lý sự kiện */
     protected $eventRepo;
 
+    /**
+     * Khởi tạo service với các repository cần thiết
+     * 
+     * @param JoinEventRepo $joinEventRepo Repository tham gia sự kiện
+     * @param EventRepo $eventRepo Repository sự kiện
+     */
     public function __construct(JoinEventRepo $joinEventRepo, EventRepo $eventRepo)
     {
         $this->joinEventRepo = $joinEventRepo;
         $this->eventRepo = $eventRepo;
     }
 
+    /**
+     * Đăng ký tham gia sự kiện
+     * 
+     * Kiểm tra các điều kiện:
+     * - Sự kiện phải tồn tại
+     * - Sự kiện chưa đầy
+     * - Sự kiện chưa bắt đầu
+     * 
+     * @param int $userId ID của user
+     * @param int $eventId ID của sự kiện
+     * @return array Kết quả đăng ký ['success' => bool, 'message' => string, 'data' => mixed]
+     */
     public function joinEvent($userId, $eventId)
     {
         $event =  $this->eventRepo->getEventById($eventId);
@@ -56,6 +84,17 @@ class JoinEventService {
         }
     }
 
+    /**
+     * Rời khỏi sự kiện đã đăng ký
+     * 
+     * Kiểm tra các điều kiện:
+     * - Sự kiện phải tồn tại
+     * - Sự kiện chưa bắt đầu
+     * 
+     * @param int $userId ID của user
+     * @param int $eventId ID của sự kiện
+     * @return array Kết quả rời sự kiện ['success' => bool, 'message' => string, 'data' => mixed]
+     */
     public function leaveEvent($userId, $eventId)
     {
 
@@ -92,6 +131,12 @@ class JoinEventService {
         }
     }
 
+    /**
+     * Lấy danh sách sự kiện mà user đã đăng ký
+     * 
+     * @param int $userId ID của user
+     * @return \Illuminate\Support\Collection Danh sách đăng ký
+     */
     public function getMyRegistrations($userId)
     {
         return $this->joinEventRepo->getMyRegistrations($userId);

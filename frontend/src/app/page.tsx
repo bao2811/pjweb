@@ -141,8 +141,7 @@ export default function Home() {
       role: "Đại diện đối tác - Công ty ABC",
       content:
         "Chúng tôi rất hài lòng khi đồng hành cùng nền tảng. Mọi hoạt động đều được báo cáo minh bạch, tác động thực sự đến cộng đồng.",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80",
+      avatar: "/ttm.png",
     },
     {
       id: 3,
@@ -150,8 +149,7 @@ export default function Home() {
       role: "Sinh viên tình nguyện",
       content:
         "Qua mỗi dự án, tôi học được nhiều kỹ năng mềm và cảm nhận được giá trị của việc cho đi. Cảm ơn nền tảng đã tạo cơ hội!",
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80",
+      avatar: "/dinh.png",
     },
   ];
 
@@ -287,7 +285,7 @@ export default function Home() {
                   Đăng nhập
                 </a>
                 <a
-                  href="/register"
+                  href="/home/register"
                   className="bg-white text-[#1E90FF] px-5 py-2 rounded-lg font-medium hover:bg-yellow-300 hover:text-[#1E90FF] transition-colors"
                 >
                   Tạo tài khoản
@@ -352,7 +350,7 @@ export default function Home() {
                     Đăng nhập
                   </a>
                   <a
-                    href="/register"
+                    href="/home/register"
                     className="bg-white text-[#1E90FF] px-5 py-2 rounded-lg font-medium text-center hover:bg-yellow-300"
                   >
                     Tạo tài khoản
@@ -785,22 +783,22 @@ export default function Home() {
                 <input
                   type="text"
                   placeholder="Tên tổ chức / doanh nghiệp"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E90FF]"
+                  className="text-black w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E90FF]"
                 />
                 <input
                   type="email"
                   placeholder="Email liên hệ"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E90FF]"
+                  className="text-black w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E90FF]"
                 />
                 <input
                   type="tel"
                   placeholder="Số điện thoại"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E90FF]"
+                  className="text-black w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E90FF]"
                 />
                 <textarea
                   placeholder="Nội dung hợp tác"
                   rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E90FF]"
+                  className="text-black w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E90FF]"
                 ></textarea>
                 <button
                   type="submit"
@@ -1129,7 +1127,7 @@ export default function Home() {
               </a>
               <span>|</span>
               <a
-                href="/register"
+                href="/home/register"
                 className="hover:text-white transition-colors"
               >
                 Tạo tài khoản

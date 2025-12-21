@@ -184,7 +184,7 @@ export default function RegisterPage() {
     });
     setTouched(newTouched);
 
-    // collect errors
+    // collect errors for all fields
     const newErrors: FormErrors = {};
     Object.keys(formData).forEach((key) => {
       // @ts-ignore - dynamic key access for validation
@@ -198,8 +198,44 @@ export default function RegisterPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Validate only the required fields when submitting the form.
+  const validateRequiredFields = (): boolean => {
+    const requiredFields = [
+      "username",
+      "email",
+      "password",
+      "confirmPassword",
+      "address_card",
+      "agreeTerms",
+    ];
+
+    // mark only required fields as touched
+    const newTouched: TouchedFields = { ...touched };
+    requiredFields.forEach((f) => {
+      newTouched[f] = true;
+    });
+    setTouched(newTouched);
+
+    // collect errors for required fields only
+    const newErrors: FormErrors = {};
+    requiredFields.forEach((key) => {
+      // @ts-ignore
+      const error = validateField(key, (formData as any)[key]);
+      if (error) {
+        newErrors[key as keyof FormErrors] = error;
+      }
+    });
+
+    // keep any existing errors for optional fields that were already shown
+    const mergedErrors = { ...errors, ...newErrors } as FormErrors;
+    setErrors(mergedErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // Validate all fields on submit (all fields are required now)
     if (!validate()) return;
 
     try {
@@ -282,7 +318,7 @@ export default function RegisterPage() {
         backgroundPosition: "center",
       }}
     >
-      <div className="max-w-md w-full space-y-8">
+      <div className="max-w-4xl w-full space-y-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center">
           <div className="mx-auto h-20 w-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6 shadow-lg">
@@ -300,229 +336,264 @@ export default function RegisterPage() {
         <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-2xl p-8">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Full Name */}
-            <div>
-              <label htmlFor="username" className="sr-only">
-                Tên đăng nhập
+            <div className="grid grid-cols-12 gap-4 items-start">
+              <label
+                htmlFor="username"
+                className="col-span-12 md:col-span-4 text-sm font-medium text-gray-700 pt-4"
+              >
+                Tên đăng nhập <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaUser className="h-5 w-5 text-gray-400" />
+              <div className="col-span-12 md:col-span-8">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaUser className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 border ${
+                      errors.username && touched.username
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
+                    placeholder="Nhập tên đăng nhập"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                  />
                 </div>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 border ${
-                    errors.username && touched.username
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
-                  placeholder="Tên Đăng Nhập"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                />
+                {errors.username && touched.username && (
+                  <p className="mt-2 text-sm text-red-600">{errors.username}</p>
+                )}
               </div>
-              {errors.username && touched.username && (
-                <p className="mt-2 text-sm text-red-600">{errors.username}</p>
-              )}
             </div>
 
             {/* Email */}
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email
+            <div className="grid grid-cols-12 gap-4 items-start">
+              <label
+                htmlFor="email"
+                className="col-span-12 md:col-span-4 text-sm font-medium text-gray-700 pt-4"
+              >
+                Email <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaEnvelope className="h-5 w-5 text-gray-400" />
+              <div className="col-span-12 md:col-span-8">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaEnvelope className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 border ${
+                      errors.email && touched.email
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
+                    placeholder="Nhập địa chỉ email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                  />
                 </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 border ${
-                    errors.email && touched.email
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
-                  placeholder="Địa chỉ email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                />
+                {errors.email && touched.email && (
+                  <p className="mt-2 text-sm text-red-600">{errors.email}</p>
+                )}
               </div>
-              {errors.email && touched.email && (
-                <p className="mt-2 text-sm text-red-600">{errors.email}</p>
-              )}
             </div>
 
             {/* Password */}
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Mật khẩu
+            <div className="grid grid-cols-12 gap-4 items-start">
+              <label
+                htmlFor="password"
+                className="col-span-12 md:col-span-4 text-sm font-medium text-gray-700 pt-4"
+              >
+                Mật khẩu <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaLock className="h-5 w-5 text-gray-400" />
+              <div className="col-span-12 md:col-span-8">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaLock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                      errors.password && touched.password
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
+                    placeholder="Nhập mật khẩu"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
                 </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
-                    errors.password && touched.password
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
-                  placeholder="Mật khẩu"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  ) : (
-                    <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  )}
-                </button>
+                {errors.password && touched.password && (
+                  <p className="mt-2 text-sm text-red-600">{errors.password}</p>
+                )}
               </div>
-              {errors.password && touched.password && (
-                <p className="mt-2 text-sm text-red-600">{errors.password}</p>
-              )}
             </div>
 
             {/* Confirm Password */}
-            <div>
-              <label htmlFor="confirmPassword" className="sr-only">
-                Xác nhận mật khẩu
+            <div className="grid grid-cols-12 gap-4 items-start">
+              <label
+                htmlFor="confirmPassword"
+                className="col-span-12 md:col-span-4 text-sm font-medium text-gray-700 pt-4"
+              >
+                Xác nhận mật khẩu <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaLock className="h-5 w-5 text-gray-400" />
+              <div className="col-span-12 md:col-span-8">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaLock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                      errors.confirmPassword && touched.confirmPassword
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
+                    placeholder="Nhập lại mật khẩu"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
                 </div>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
-                    errors.confirmPassword && touched.confirmPassword
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
-                  placeholder="Xác nhận mật khẩu"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? (
-                    <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  ) : (
-                    <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  )}
-                </button>
+                {errors.confirmPassword && touched.confirmPassword && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {errors.confirmPassword}
+                  </p>
+                )}
               </div>
-              {errors.confirmPassword && touched.confirmPassword && (
-                <p className="mt-2 text-sm text-red-600">
-                  {errors.confirmPassword}
-                </p>
-              )}
             </div>
 
-            <div>
-              <label htmlFor="address" className="sr-only">
-                Địa chỉ
+            <div className="grid grid-cols-12 gap-4 items-start">
+              <label
+                htmlFor="address"
+                className="col-span-12 md:col-span-4 text-sm font-medium text-gray-700 pt-4"
+              >
+                Địa chỉ <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaHome className="h-5 w-5 text-gray-400" />
+              <div className="col-span-12 md:col-span-8">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaHome className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="address"
+                    name="address"
+                    type="text"
+                    className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                      errors.address && touched.address
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
+                    placeholder="Nhập địa chỉ"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                  />
                 </div>
-                <input
-                  id="address"
-                  name="address"
-                  type="text"
-                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
-                    errors.address && touched.address
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
-                  placeholder="Địa chỉ"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                />
+                {errors.address && touched.address && (
+                  <p className="mt-2 text-sm text-red-600">{errors.address}</p>
+                )}
               </div>
-              {errors.address && touched.address && (
-                <p className="mt-2 text-sm text-red-600">{errors.address}</p>
-              )}
             </div>
 
-            <div>
-              <label htmlFor="phone" className="sr-only">
-                Số điện thoại
+            <div className="grid grid-cols-12 gap-4 items-start">
+              <label
+                htmlFor="phone"
+                className="col-span-12 md:col-span-4 text-sm font-medium text-gray-700 pt-4"
+              >
+                Số điện thoại <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaPhoneSquareAlt className="h-5 w-5 text-gray-400" />
+              <div className="col-span-12 md:col-span-8">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaPhoneSquareAlt className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="text"
+                    className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                      errors.phone && touched.phone
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
+                    placeholder="Nhập số điện thoại"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                  />
                 </div>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="text"
-                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
-                    errors.phone && touched.phone
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
-                  placeholder="Số điện thoại"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                />
+                {errors.phone && touched.phone && (
+                  <p className="mt-2 text-sm text-red-600">{errors.phone}</p>
+                )}
               </div>
-              {errors.phone && touched.phone && (
-                <p className="mt-2 text-sm text-red-600">{errors.phone}</p>
-              )}
             </div>
 
-            <div>
-              <label htmlFor="address_card" className="sr-only">
-                address_card
+            <div className="grid grid-cols-12 gap-4 items-start">
+              <label
+                htmlFor="address_card"
+                className="col-span-12 md:col-span-4 text-sm font-medium text-gray-700 pt-4"
+              >
+                Số CMND/CCCD <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaAddressCard className="h-5 w-5 text-gray-400" />
+              <div className="col-span-12 md:col-span-8">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaAddressCard className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="address_card"
+                    name="address_card"
+                    type="text"
+                    className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                      errors.address_card && touched.address_card
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
+                    placeholder="Nhập số CMND/CCCD (12 số)"
+                    value={formData.address_card}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                  />
                 </div>
-                <input
-                  id="address_card"
-                  name="address_card"
-                  type="text"
-                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
-                    errors.address_card && touched.address_card
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
-                  placeholder="address_card"
-                  value={formData.address_card}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                />
+                {errors.address_card && touched.address_card && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {errors.address_card}
+                  </p>
+                )}
               </div>
-              {errors.address_card && touched.address_card && (
-                <p className="mt-2 text-sm text-red-600">
-                  {errors.address_card}
-                </p>
-              )}
             </div>
 
             {/* <div>
@@ -553,31 +624,36 @@ export default function RegisterPage() {
               )}
             </div> */}
 
-            <div>
-              <label htmlFor="image" className="sr-only">
-                Ảnh đại diện
+            <div className="grid grid-cols-12 gap-4 items-start">
+              <label
+                htmlFor="image"
+                className="col-span-12 md:col-span-4 text-sm font-medium text-gray-700 pt-4"
+              >
+                Ảnh đại diện <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaImage className="h-5 w-5 text-gray-400" />
+              <div className="col-span-12 md:col-span-8">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaImage className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="image"
+                    name="image"
+                    className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
+                      errors.image && touched.image
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
+                    placeholder="URL ảnh đại diện"
+                    value={formData.image}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                  />
                 </div>
-                <input
-                  id="image"
-                  name="image"
-                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border ${
-                    errors.image && touched.image
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200`}
-                  placeholder="Ảnh đại diện"
-                  value={formData.image}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                />
+                {errors.image && touched.image && (
+                  <p className="mt-2 text-sm text-red-600">{errors.image}</p>
+                )}
               </div>
-              {errors.image && touched.image && (
-                <p className="mt-2 text-sm text-red-600">{errors.image}</p>
-              )}
             </div>
 
             {/* Terms Agreement */}

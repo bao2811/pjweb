@@ -14,20 +14,51 @@ use Illuminate\Support\Facades\Cookie;
 
 // use App\Jobs\SendWelcomeEmail;
 
+/**
+ * Controller AuthController - Xử lý xác thực người dùng
+ * 
+ * Controller này xử lý các API endpoint liên quan đến authentication,
+ * bao gồm: đăng nhập, đăng ký, đăng xuất, refresh token, lấy thông tin user.
+ * Sử dụng JWT để tạo và xác thực token.
+ * 
+ * @package App\Http\Controllers
+ */
 class AuthController extends Controller
 {
+    /** @var UserService Service xử lý logic user */
     protected $userService;
 
+    /**
+     * Khởi tạo controller với UserService
+     * 
+     * @param UserService $userService Service xử lý logic user
+     */
     public function __construct(UserService $userService)
     {
         $this->userService = $userService;
     }
 
+    /**
+     * Đăng nhập người dùng
+     * 
+     * Xác thực thông tin đăng nhập và trả về JWT token.
+     * - Access token có thời hạn 15 phút
+     * - Refresh token có thời hạn 30 ngày, được lưu trong httpOnly cookie
+     * 
+     * @param Request $request Request chứa email và password
+     * @return JsonResponse Token và thông tin user
+     */
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+            'email' => 'required|email|max:255',
+            'password' => 'required|string|min:6',
+        ], [
+            'email.required' => 'Vui lòng nhập email',
+            'email.email' => 'Email không hợp lệ',
+            'email.max' => 'Email không được quá 255 ký tự',
+            'password.required' => 'Vui lòng nhập mật khẩu',
+            'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự',
         ]);
 
         // $result = $this->userService->getUserByEmail($request->email);
@@ -79,6 +110,14 @@ class AuthController extends Controller
 
     }
 
+    /**
+     * Làm mới access token bằng refresh token
+     * 
+     * Kiểm tra refresh token hợp lệ và tạo access token mới.
+     * 
+     * @param Request $request Request chứa refresh_token
+     * @return JsonResponse Access token mới
+     */
     public function refreshToken(Request $request)
     {
         $refresh_token = $request->input('refresh_token');
@@ -110,30 +149,14 @@ class AuthController extends Controller
         ]);
     }
 
-
-    // public function refreshToken(Request $request)
-    // {
-
-    //     $refresh_token = $request->cookie('refresh_token');
-    //     if (!$refresh_token) {
-    //         return response()->json(['error' => 'Invalid refresh token'], 401);
-    //     }
-
-    //     if (JWTUtil::validateToken($refresh_token) === false) {
-    //         return response()->json(['error' => 'Invalid refresh token'], 401);
-    //     }
-
-    //     $user = JWTUtil::validateToken($refresh_token);
-    //     $token = JWTUtil::generateToken($user, 60);
-    //     // $refresh_token = JWTUtil::generateToken($user->id, 43200); // 30 days
-    //     return response()->json([
-    //         'message' => 'Token refreshed successfully',
-    //         'access_token' => $token,
-    //         // 'refresh_token' => $refresh_token,
-    //     ]);
-    // }
-
-
+    /**
+     * Lấy thông tin user hiện tại
+     * 
+     * Trả về thông tin của user đang đăng nhập dựa trên JWT token.
+     * 
+     * @param Request $request Request chứa userId từ JWT middleware
+     * @return JsonResponse Thông tin user
+     */
     public function getCurrentUser(Request $request)
     {
         $userId = $request->attributes->get('userId');
@@ -156,19 +179,44 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Đăng ký tài khoản mới
+     * 
+     * Tạo tài khoản user mới với các thông tin:
+     * username, email, password, phone, address, image, address_card (CCCD).
+     * 
+     * @param Request $request Request chứa thông tin đăng ký
+     * @return JsonResponse User vừa tạo
+     */
     public function register(Request $request)
     {
         // Delegate validation and creation to the service which expects a Request
         // Pass the whole Request object so ->validate() inside the service works
 
          $data = $request->validate([
-            'username' => 'required|string|max:255',
+            'username' => 'required|string|min:3|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
-            'phone' => 'required|string|max:20',
-            'address' => 'required|string|max:255',
-            'image' => 'nullable|string|max:255',
-            'address_card' => 'nullable|string|max:255',
+            'password' => 'required|string|min:8|max:255',
+            'phone' => 'required|string|regex:/^(0[3|5|7|8|9])+([0-9]{8})$/|max:20',
+            'address' => 'required|string|min:5|max:255',
+            'image' => 'nullable|string|max:500|url',
+            'address_card' => 'required|string|digits:12',
+        ], [
+            'username.required' => 'Vui lòng nhập tên người dùng',
+            'username.min' => 'Tên người dùng phải có ít nhất 3 ký tự',
+            'username.max' => 'Tên người dùng không được quá 255 ký tự',
+            'email.required' => 'Vui lòng nhập email',
+            'email.email' => 'Email không hợp lệ',
+            'email.unique' => 'Email này đã được sử dụng',
+            'password.required' => 'Vui lòng nhập mật khẩu',
+            'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự',
+            'phone.required' => 'Vui lòng nhập số điện thoại',
+            'phone.regex' => 'Số điện thoại không hợp lệ (VD: 0912345678)',
+            'address.required' => 'Vui lòng nhập địa chỉ',
+            'address.min' => 'Địa chỉ phải có ít nhất 5 ký tự',
+            'image.url' => 'URL ảnh đại diện không hợp lệ',
+            'address_card.required' => 'Vui lòng nhập số CCCD',
+            'address_card.digits' => 'Số CCCD phải có đúng 12 chữ số',
         ]);
         $result = $this->userService->createUser($data);
 
@@ -190,6 +238,14 @@ class AuthController extends Controller
     }
 
 
+    /**
+     * Đăng xuất người dùng
+     * 
+     * Xóa refresh token khỏi cookie để đăng xuất.
+     * 
+     * @param Request $request Request object
+     * @return JsonResponse Thông báo đăng xuất thành công
+     */
     public function logout(Request $request)
     {
         return response()->json([
@@ -207,6 +263,14 @@ class AuthController extends Controller
         );
     }
 
+    /**
+     * Gửi lại email xác thực
+     * 
+     * Gửi lại email xác thực cho user chưa verify email.
+     * 
+     * @param Request $request Request object
+     * @return JsonResponse Kết quả gửi email
+     */
     public function resendVerificationEmail(Request $request)
     {
         $user = $request->user();

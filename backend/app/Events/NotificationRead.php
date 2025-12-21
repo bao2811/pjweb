@@ -7,15 +7,29 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Queue\SerializesModels;
 
+/**
+ * Event NotificationRead - Broadcast khi notification được đọc
+ * 
+ * Event này được broadcast khi user đánh dấu notification là đã đọc.
+ * Giúp đồng bộ trạng thái đọc giữa các tab/devices của user.
+ * 
+ * @package App\Events
+ */
 class NotificationRead implements ShouldBroadcast
 {
     use SerializesModels;
 
+    /** @var int ID của notification đã đọc */
     public $notificationId;
+    
+    /** @var int ID của user */
     public $userId;
 
     /**
-     * Create a new event instance.
+     * Khởi tạo event
+     * 
+     * @param int $notificationId ID của notification đã đọc
+     * @param int $userId ID của user
      */
     public function __construct(int $notificationId, int $userId)
     {
@@ -24,7 +38,9 @@ class NotificationRead implements ShouldBroadcast
     }
 
     /**
-     * Get the channels the event should broadcast on.
+     * Xác định private channel để broadcast
+     * 
+     * @return PrivateChannel
      */
     public function broadcastOn(): PrivateChannel
     {
@@ -32,7 +48,9 @@ class NotificationRead implements ShouldBroadcast
     }
 
     /**
-     * Tên event được broadcast
+     * Tên event được broadcast đến client
+     * 
+     * @return string
      */
     public function broadcastAs(): string
     {
@@ -40,7 +58,9 @@ class NotificationRead implements ShouldBroadcast
     }
 
     /**
-     * Dữ liệu được broadcast
+     * Dữ liệu được broadcast đến client
+     * 
+     * @return array
      */
     public function broadcastWith(): array
     {

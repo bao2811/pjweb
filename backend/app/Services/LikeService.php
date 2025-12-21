@@ -12,12 +12,32 @@ use App\Models\Like;
 use App\Models\Event;
 use App\Models\Post;
 
+/**
+ * Service LikeService - Xử lý logic nghiệp vụ like/unlike
+ * 
+ * Service này xử lý các thao tác nghiệp vụ cho việc like bài viết và sự kiện,
+ * bao gồm: toggle like, like/unlike post/event, get list likes.
+ * 
+ * @package App\Services
+ */
 class LikeService
 {
+    /** @var LikeRepo Repository xử lý dữ liệu like */
     protected $likeRepo;
+    
+    /** @var PostService Service xử lý bài viết */
     protected $postService;
+    
+    /** @var EventService Service xử lý sự kiện */
     protected $eventService;
 
+    /**
+     * Khởi tạo service với các repository và service cần thiết
+     * 
+     * @param LikeRepo $likeRepo Repository like
+     * @param PostService $postService Service bài viết
+     * @param EventService $eventService Service sự kiện
+     */
     public function __construct(LikeRepo $likeRepo, PostService $postService, EventService $eventService)
     {
         $this->likeRepo = $likeRepo;
@@ -25,6 +45,11 @@ class LikeService
         $this->eventService = $eventService;
     }
 
+    /**
+     * Lấy tất cả likes
+     * 
+     * @return array Danh sách likes
+     */
     public function all()
     {
         try {
@@ -37,13 +62,15 @@ class LikeService
 
     /**
      * Toggle like cho POST hoặc EVENT
-     * - Nếu đã like → xóa like (unlike)
-     * - Nếu chưa like → tạo like mới
      * 
-     * @param int $userId - ID user
-     * @param int $itemId - ID của post hoặc event
-     * @param string $type - 'post' hoặc 'event'
-     * @return bool
+     * Nếu đã like → xóa like (unlike)
+     * Nếu chưa like → tạo like mới
+     * 
+     * @param int $userId ID của user
+     * @param int $itemId ID của post hoặc event
+     * @param string $type Loại: 'post' hoặc 'event'
+     * @return bool Kết quả toggle
+     * @throws Exception Khi có lỗi xảy ra
      */
     public function toggleLike($userId, $itemId, $type = 'post')
     {
@@ -104,6 +131,16 @@ class LikeService
         }
     }
 
+    /**
+     * Like bài viết
+     * 
+     * Nếu đã like thì bật status, nếu chưa thì tạo mới.
+     * Cập nhật like count của post.
+     * 
+     * @param int $userId ID của user
+     * @param int $postId ID của bài viết
+     * @return bool Kết quả like
+     */
    public function likePost($userId, $postId) : bool
     {
 
@@ -146,6 +183,15 @@ class LikeService
         }
     }
 
+    /**
+     * Bỏ like bài viết
+     * 
+     * Cập nhật status = 0 và giảm like count.
+     * 
+     * @param int $userId ID của user
+     * @param int $postId ID của bài viết
+     * @return bool Kết quả unlike
+     */
     public function unLikePost($userId, $postId) : bool
     {
         DB::beginTransaction();
@@ -168,6 +214,12 @@ class LikeService
         }
     }
 
+    /**
+     * Lấy danh sách likes theo post ID
+     * 
+     * @param int $postId ID của bài viết
+     * @return array Danh sách likes
+     */
     public function getLikesByPostId($postId)
     {
         try {
@@ -178,6 +230,12 @@ class LikeService
         }
     }
 
+    /**
+     * Lấy danh sách users đã like bài viết
+     * 
+     * @param int $postId ID của bài viết
+     * @return array Danh sách users
+     */
     public function getListLikeOfPost($postId)
     {
         try {
@@ -191,10 +249,15 @@ class LikeService
     // ===== EVENT LIKES =====
 
     /**
-     * Like an event
-     * @param int $userId
-     * @param int $eventId
-     * @return bool
+     * Like sự kiện
+     * 
+     * Nếu đã like thì bật status, nếu chưa thì tạo mới.
+     * Cập nhật like count của event.
+     * 
+     * @param int $userId ID của user
+     * @param int $eventId ID của sự kiện
+     * @return bool Kết quả like
+     * @throws Exception Khi có lỗi xảy ra
      */
     public function likeEvent($userId, $eventId): bool
     {
@@ -245,10 +308,14 @@ class LikeService
     }
 
     /**
-     * Unlike an event
-     * @param int $userId
-     * @param int $eventId
-     * @return bool
+     * Bỏ like sự kiện
+     * 
+     * Cập nhật status = 0 và giảm like count.
+     * 
+     * @param int $userId ID của user
+     * @param int $eventId ID của sự kiện
+     * @return bool Kết quả unlike
+     * @throws Exception Khi có lỗi xảy ra
      */
     public function unlikeEvent($userId, $eventId): bool
     {
@@ -287,9 +354,10 @@ class LikeService
     }
 
     /**
-     * Get list of users who liked an event
-     * @param int $eventId
-     * @return array
+     * Lấy danh sách users đã like sự kiện
+     * 
+     * @param int $eventId ID của sự kiện
+     * @return array Danh sách users (username, user_id, image)
      */
     public function getListLikeOfEvent($eventId)
     {

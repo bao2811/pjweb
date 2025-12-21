@@ -2,14 +2,49 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaHeart } from "react-icons/fa";
+import {
+  FaEnvelope,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaHeart,
+  FaCheckCircle,
+  FaExclamationCircle,
+} from "react-icons/fa";
 import { useAuth } from "@/hooks/useAuth";
 import axios from "axios";
+
+// Validation helpers
+const validateEmail = (email: string): string | null => {
+  if (!email.trim()) return "Vui lòng nhập email";
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.trim())) return "Email không hợp lệ";
+  return null;
+};
+
+const validatePassword = (password: string): string | null => {
+  if (!password) return "Vui lòng nhập mật khẩu";
+  if (password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
+  return null;
+};
+
+interface FormErrors {
+  email?: string | null;
+  password?: string | null;
+}
+
+interface TouchedFields {
+  email?: boolean;
+  password?: boolean;
+}
 
 export default function LoginPage() {
   const route = useRouter();
   const { login, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<TouchedFields>({});
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -18,42 +53,78 @@ export default function LoginPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    // Auto-trim for email
+    const processedValue = name === "email" ? value.trim() : value;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? checked : processedValue,
     }));
+
+    // Real-time validation for touched fields
+    if (touched[name as keyof TouchedFields]) {
+      if (name === "email") {
+        setFormErrors((prev) => ({
+          ...prev,
+          email: validateEmail(processedValue),
+        }));
+      } else if (name === "password") {
+        setFormErrors((prev) => ({
+          ...prev,
+          password: validatePassword(value),
+        }));
+      }
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+
+    if (name === "email") {
+      setFormErrors((prev) => ({ ...prev, email: validateEmail(value) }));
+    } else if (name === "password") {
+      setFormErrors((prev) => ({ ...prev, password: validatePassword(value) }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const emailError = validateEmail(formData.email);
+    const passwordError = validatePassword(formData.password);
+
+    setFormErrors({ email: emailError, password: passwordError });
+    setTouched({ email: true, password: true });
+
+    return !emailError && !passwordError;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
-    const res = await login(
-      formData.email,
-      formData.password,
-      formData.rememberMe
-    );
-    // const res = fetch("http://localhost:8000/api/login", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //     // "X-XSRF-TOKEN": decodeURIComponent(xsrfToken || ""),
-    //   },
-    //   body: JSON.stringify(formData),
-    //   credentials: "include",
-    // })
-    //   .then((response) => response.json())
-    //   .then((data) => {
-    //     localStorage.setItem("user", JSON.stringify(data.user));
-    //     localStorage.setItem("jwt_token", data.access_token);
-    //     localStorage.setItem("refresh_token", data.refresh_token);
-    //     console.log("Success:", data);
-    //     route.push(`/${data.user.role}/dashboard`);
-    //     // Handle successful login (e.g., redirect to dashboard)
-    //   })
-    //   .catch((error) => {
-    //     console.error("Error:", error);
-    //     // Handle login error (e.g., show error message)
-    //   });
+    // Validate before submit
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      await login(
+        formData.email.trim(),
+        formData.password,
+        formData.rememberMe
+      );
+    } catch (err: any) {
+      let errorMessage = "Đăng nhập không thành công. Vui lòng thử lại.";
+
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (typeof err === "string") {
+        errorMessage = err;
+      }
+
+      setError(errorMessage);
+      console.error("Login error:", err);
+    }
   };
 
   return (
@@ -82,6 +153,50 @@ export default function LoginPage() {
 
         {/* Form */}
         <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-2xl p-8">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-red-800">{error}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="ml-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-100 inline-flex h-8 w-8 items-center justify-center"
+                >
+                  <span className="sr-only">Đóng</span>
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Email */}
             <div>
@@ -90,7 +205,13 @@ export default function LoginPage() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaEnvelope className="h-5 w-5 text-gray-400" />
+                  <FaEnvelope
+                    className={`h-5 w-5 ${
+                      formErrors.email && touched.email
+                        ? "text-red-400"
+                        : "text-gray-400"
+                    }`}
+                  />
                 </div>
                 <input
                   id="email"
@@ -98,12 +219,22 @@ export default function LoginPage() {
                   type="email"
                   autoComplete="email"
                   required
-                  className="appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 border placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200 ${
+                    formErrors.email && touched.email
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  }`}
                   placeholder="Địa chỉ email"
                   value={formData.email}
                   onChange={handleInputChange}
+                  onBlur={handleBlur}
                 />
               </div>
+              {formErrors.email && touched.email && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <FaExclamationCircle className="mr-1" /> {formErrors.email}
+                </p>
+              )}
             </div>
 
             {/* Password */}
@@ -113,7 +244,13 @@ export default function LoginPage() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaLock className="h-5 w-5 text-gray-400" />
+                  <FaLock
+                    className={`h-5 w-5 ${
+                      formErrors.password && touched.password
+                        ? "text-red-400"
+                        : "text-gray-400"
+                    }`}
+                  />
                 </div>
                 <input
                   id="password"
@@ -121,10 +258,15 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
-                  className="appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className={`appearance-none rounded-xl relative block w-full px-3 py-4 pl-12 pr-12 border placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition duration-200 ${
+                    formErrors.password && touched.password
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  }`}
                   placeholder="Mật khẩu"
                   value={formData.password}
                   onChange={handleInputChange}
+                  onBlur={handleBlur}
                 />
                 <button
                   type="button"
@@ -138,6 +280,11 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+              {formErrors.password && touched.password && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <FaExclamationCircle className="mr-1" /> {formErrors.password}
+                </p>
+              )}
             </div>
 
             {/* Remember Me & Forgot Password */}
@@ -173,9 +320,36 @@ export default function LoginPage() {
             <div>
               <button
                 type="submit"
-                className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-lg font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 transform hover:scale-105 shadow-lg"
+                disabled={isLoading}
+                className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-lg font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                Đăng nhập
+                {isLoading ? (
+                  <div className="flex items-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Đang xử lý...
+                  </div>
+                ) : (
+                  "Đăng nhập"
+                )}
               </button>
             </div>
 

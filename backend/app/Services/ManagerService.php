@@ -10,11 +10,31 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Repositories\EventRepo;
 
+/**
+ * Service ManagerService - Xử lý logic nghiệp vụ cho Manager
+ * 
+ * Service này xử lý các thao tác nghiệp vụ cho manager (quản lý sự kiện),
+ * bao gồm: quản lý event, approve/reject volunteers, reports.
+ * 
+ * @package App\Services
+ */
 class ManagerService {
+    /** @var JoinEventRepo Repository xử lý tham gia sự kiện */
     protected $joinEventRepo;
+    
+    /** @var EventRepo Repository xử lý sự kiện */
     protected $eventRepo;
+    
+    /** @var ChannelRepo Repository xử lý channel */
     protected $channelRepo;
 
+    /**
+     * Khởi tạo service với các repository cần thiết
+     * 
+     * @param JoinEventRepo $joinEventRepo Repository tham gia sự kiện
+     * @param EventRepo $eventRepo Repository sự kiện
+     * @param ChannelRepo $channelRepo Repository channel
+     */
     public function __construct(JoinEventRepo $joinEventRepo, EventRepo $eventRepo, ChannelRepo $channelRepo) {
         $this->joinEventRepo = $joinEventRepo;
         $this->eventRepo = $eventRepo;
@@ -22,7 +42,14 @@ class ManagerService {
     }
 
     /**
-     * Lấy danh sách users với kiểm tra quyền Manager
+     * Lấy danh sách users đã đăng ký sự kiện (có kiểm tra quyền)
+     * 
+     * Chỉ author hoặc comanager mới được xem danh sách.
+     * 
+     * @param int $eventId ID của sự kiện
+     * @param int $managerId ID của manager đang xem
+     * @return \Illuminate\Support\Collection Danh sách users
+     * @throws Exception Khi không có quyền xem
      */
     public function getListUserByEvent($eventId, $managerId) {
         // Kiểm tra Manager có quyền xem event này không
@@ -44,7 +71,14 @@ class ManagerService {
     }
 
     /**
-     * Delete event với kiểm tra quyền sở hữu
+     * Xóa sự kiện (có kiểm tra quyền sở hữu)
+     * 
+     * Chỉ author mới được xóa, không cho xóa event đã bắt đầu.
+     * 
+     * @param int $eventId ID của sự kiện
+     * @param int $managerId ID của manager
+     * @return bool Kết quả xóa
+     * @throws Exception Khi không có quyền hoặc event đã bắt đầu
      */
     public function deleteEvent($eventId, $managerId) {
         $event = $this->eventRepo->getEventById($eventId);
@@ -66,14 +100,40 @@ class ManagerService {
         return $this->eventRepo->deleteEventById($eventId);
     }
 
+    /**
+     * Chấp nhận user tham gia sự kiện
+     * 
+     * @param int $userId ID của user
+     * @param int $eventId ID của sự kiện
+     * @param int $managerId ID của manager duyệt
+     * @return mixed Kết quả cập nhật
+     */
     public function acceptUserJoinEvent($userId, $eventId, $managerId) {
         return $this->joinEventRepo->acceptUserJoinEvent($userId, $eventId, $managerId);
     }
 
+    /**
+     * Từ chối user tham gia sự kiện
+     * 
+     * @param int $eventId ID của sự kiện
+     * @param int $userId ID của user
+     * @param int $managerId ID của manager từ chối
+     * @return mixed Kết quả cập nhật
+     */
     public function rejectUserJoinEvent($eventId, $userId, $managerId) {
         return $this->joinEventRepo->rejectUserJoinEvent($eventId, $userId, $managerId);
     }
 
+    /**
+     * Tạo sự kiện mới (dành cho manager)
+     * 
+     * Tự động tạo channel chat cho sự kiện.
+     * 
+     * @param array $data Dữ liệu sự kiện
+     * @param array $comanager Danh sách ID comanagers
+     * @return Event Sự kiện vừa tạo
+     * @throws Exception Khi tạo thất bại
+     */
     public function createEvent(array $data, array $comanager = [])
     {
         try {
@@ -97,7 +157,10 @@ class ManagerService {
     }
 
     /**
-     * Lấy danh sách events của một manager cụ thể
+     * Lấy danh sách sự kiện của một manager
+     * 
+     * @param int $managerId ID của manager
+     * @return \Illuminate\Support\Collection Danh sách sự kiện
      */
     public function getEventsByManagerId($managerId)
     {
@@ -105,7 +168,13 @@ class ManagerService {
     }
 
     /**
-     * Get event by ID for manager
+     * Lấy sự kiện theo ID (có kiểm tra quyền manager)
+     * 
+     * Chỉ author hoặc comanager mới xem được.
+     * 
+     * @param int $eventId ID của sự kiện
+     * @param int $managerId ID của manager
+     * @return Event|null Sự kiện hoặc null nếu không có quyền
      */
     public function getEventById($eventId, $managerId)
     {
@@ -127,8 +196,16 @@ class ManagerService {
     }
 
     /**
-     * Update event and notify admin
-     * FIX #8: Thêm kiểm tra lifecycle - không cho sửa event đã bắt đầu/kết thúc
+     * Cập nhật sự kiện và thông báo admin
+     * 
+     * Không cho sửa event đã bắt đầu hoặc kết thúc.
+     * Kiểm tra quyền author hoặc comanager.
+     * 
+     * @param int $eventId ID của sự kiện
+     * @param int $managerId ID của manager
+     * @param array $eventData Dữ liệu cần cập nhật
+     * @return Event|null Sự kiện sau khi cập nhật
+     * @throws Exception Khi không có quyền hoặc event đã bắt đầu
      */
     public function updateEvent($eventId, $managerId, array $eventData)
     {
@@ -170,7 +247,10 @@ class ManagerService {
     }
 
     /**
-     * Send notification to all admins when event is updated
+     * Gửi thông báo đến tất cả admin khi sự kiện được cập nhật
+     * 
+     * @param Event $event Sự kiện được cập nhật
+     * @param int $managerId ID của manager cập nhật
      */
     private function notifyAdminsAboutEventUpdate($event, $managerId)
     {
@@ -199,7 +279,18 @@ class ManagerService {
     }
 
     /**
-     * Mark volunteer completion
+     * Đánh dấu tình nguyện viên đã hoàn thành sự kiện
+     * 
+     * Chỉ author hoặc comanager mới được đánh dấu.
+     * Chỉ được đánh dấu sau khi event kết thúc.
+     * 
+     * @param int $eventId ID của sự kiện
+     * @param int $userId ID của tình nguyện viên
+     * @param int $managerId ID của manager
+     * @param string $status Trạng thái hoàn thành
+     * @param string|null $completionNote Ghi chú
+     * @return mixed Kết quả cập nhật
+     * @throws Exception Khi không có quyền hoặc event chưa kết thúc
      */
     public function markVolunteerCompletion($eventId, $userId, $managerId, $status, $completionNote = null)
     {
@@ -226,7 +317,14 @@ class ManagerService {
     }
 
     /**
-     * Get event report
+     * Lấy báo cáo sự kiện
+     * 
+     * Chỉ author hoặc comanager mới được xem báo cáo.
+     * 
+     * @param int $eventId ID của sự kiện
+     * @param int $managerId ID của manager
+     * @return array Báo cáo sự kiện
+     * @throws Exception Khi không có quyền xem
      */
     public function getEventReport($eventId, $managerId)
     {
@@ -247,7 +345,10 @@ class ManagerService {
     }
 
     /**
-     * Get manager's events overview report
+     * Lấy báo cáo tổng quan các sự kiện của manager
+     * 
+     * @param int $managerId ID của manager
+     * @return array Báo cáo tổng quan
      */
     public function getManagerEventsReport($managerId)
     {

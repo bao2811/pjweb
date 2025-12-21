@@ -17,6 +17,19 @@ class CommentRepo
         $this->commentModel = $commentModel;
     }
 
+    /**
+     * CommentRepo constructor.
+     *
+     * @param Comment $commentModel Model Comment được inject để thao tác DB
+     */
+
+    /**
+     * Thêm bình luận cho bài viết
+     *
+     * @param array $data Mảng dữ liệu gồm post_id, author_id, content
+     * @return Comment Bình luận vừa tạo
+     * @throws Exception Nếu post_id hoặc author_id không hợp lệ
+     */
     public function addCommentOfPost(array $data): Comment
     {
         try {
@@ -36,6 +49,14 @@ class CommentRepo
         }
     }
 
+    /**
+     * Lấy danh sách bình luận gốc của một bài viết (không gồm replies)
+     *
+     * Bao gồm thông tin tác giả và các replies cùng tác giả của mỗi reply.
+     *
+     * @param int $postId ID của bài viết
+     * @return Collection Danh sách Comment
+     */
     public function getCommentsOfPost($postId) : Collection
     {
         // Use the provided $postId (was incorrectly using $post_id) and include

@@ -11,10 +11,26 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Auth\GenericUser;
 
-
+/**
+ * Middleware JwtMiddleware - Xác thực JWT token
+ * 
+ * Middleware này kiểm tra và validate JWT token từ header Authorization.
+ * Nếu token hợp lệ, gán user vào request để các controller có thể truy cập.
+ * 
+ * @package App\Http\Middleware
+ */
 class JwtMiddleware
 {
-
+    /**
+     * Xử lý request đến
+     * 
+     * Trích xuất và validate JWT token, sau đó gán user vào request.
+     * Nếu token không hợp lệ, trả về lỗi 401.
+     * 
+     * @param Request $request Request đến
+     * @param Closure $next Middleware tiếp theo
+     * @return mixed Response
+     */
     public function handle(Request $request, Closure $next)
     {
         Log::info('🔐 [JWT Middleware] Request received', [

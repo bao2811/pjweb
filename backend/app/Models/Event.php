@@ -4,6 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Model Event - Quản lý sự kiện tình nguyện
+ * 
+ * Model này đại diện cho bảng events trong database, chứa thông tin
+ * các sự kiện tình nguyện do manager tạo ra.
+ * 
+ * @package App\Models
+ */
 class Event extends Model
 {
     /** @use HasFactory<\Database\Factories\EventFactory> */
@@ -30,9 +39,15 @@ class Event extends Model
     ];
 
     /**
-     * Get the computed status based on current time and event times
+     * Tính toán trạng thái sự kiện dựa trên thời gian hiện tại
      * 
-     * @return string 'upcoming', 'ongoing', 'completed', 'pending', or 'rejected'
+     * Trả về trạng thái tự động dựa trên thời gian:
+     * - 'upcoming': Sự kiện chưa bắt đầu
+     * - 'ongoing': Sự kiện đang diễn ra
+     * - 'completed': Sự kiện đã kết thúc
+     * - 'pending'/'rejected': Giữ nguyên nếu admin đã set
+     * 
+     * @return string Trạng thái của sự kiện
      */
     public function getComputedStatusAttribute()
     {
@@ -60,22 +75,36 @@ class Event extends Model
     }
 
     /**
-     * Append computed_status to JSON output
+     * Tự động thêm computed_status vào JSON output
      */
     protected $appends = ['computed_status'];
 
+    /**
+     * Lấy danh sách đăng ký tham gia sự kiện
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
     public function joinEvents()
     {
         return $this->hasMany(JoinEvent::class);
     }
 
+    /**
+     * Lấy danh sách thành viên đã tham gia sự kiện
+     * 
+     * Quan hệ nhiều-nhiều thông qua bảng join_events
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
     public function members()
     {
         return $this->belongsToMany(User::class, 'join_events', 'event_id', 'user_id');
     }
 
     /**
-     * Get all likes for this event
+     * Lấy tất cả lượt thích của sự kiện này
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function likes()
     {
@@ -83,7 +112,11 @@ class Event extends Model
     }
 
     /**
-     * Get users who liked this event
+     * Lấy danh sách người dùng đã thích sự kiện này
+     * 
+     * Quan hệ nhiều-nhiều thông qua bảng likes
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function likedByUsers()
     {
@@ -92,7 +125,9 @@ class Event extends Model
     }
 
     /**
-     * Get the author of the event
+     * Lấy thông tin người tạo sự kiện
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function author()
     {
@@ -100,7 +135,11 @@ class Event extends Model
     }
 
     /**
-     * Get co-managers of the event
+     * Lấy danh sách đồng quản lý của sự kiện
+     * 
+     * Quan hệ nhiều-nhiều thông qua bảng event_managements
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function comanagers()
     {
@@ -108,7 +147,9 @@ class Event extends Model
     }
 
     /**
-     * Get the channel for this event (one-to-one)
+     * Lấy kênh chat của sự kiện (quan hệ một-một)
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
      */
     public function channel()
     {

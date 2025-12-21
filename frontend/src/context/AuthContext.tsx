@@ -157,7 +157,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("Login response payload:", data);
 
         if (!response.ok) {
-          throw new Error(data.message || "Login failed");
+          // Extract error message from various possible response formats
+          // Backend returns 'error' field for failed login
+          const errorMessage =
+            data.error || // Primary: backend uses 'error' field
+            data.message || // Fallback: some endpoints use 'message'
+            data.errors?.message ||
+            (typeof data.errors === "string" ? data.errors : null) ||
+            "Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.";
+          throw new Error(errorMessage);
         }
 
         // Save tokens - be defensive about field names

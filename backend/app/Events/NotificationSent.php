@@ -10,18 +10,29 @@ use App\Models\Noti;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Event NotificationSent - Broadcast thông báo mới đến user
+ * 
+ * Event này được broadcast khi có notification mới được tạo.
+ * Mỗi user có một private channel riêng: notifications.{userId}
+ * 
+ * @package App\Events
+ */
 class NotificationSent implements ShouldBroadcast
 {
     use SerializesModels;
 
+    /** @var Noti Notification được gửi */
     public $notification;
+    
+    /** @var int ID của user nhận */
     public $userId;
 
     /**
-     * Create a new event instance.
+     * Khởi tạo event với notification và userId
      *
-     * @param Noti $notification
-     * @param int $userId
+     * @param Noti $notification Notification cần broadcast
+     * @param int $userId ID của user nhận notification
      */
     public function __construct(Noti $notification, int $userId)
     {
@@ -31,10 +42,11 @@ class NotificationSent implements ShouldBroadcast
     }
 
     /**
-     * Get the channels the event should broadcast on.
+     * Xác định private channel để broadcast
+     * 
      * Mỗi user có 1 private channel riêng: notifications.{userId}
      *
-     * @return \Illuminate\Broadcasting\Channel
+     * @return PrivateChannel
      */
     public function broadcastOn(): PrivateChannel
     {
@@ -44,7 +56,9 @@ class NotificationSent implements ShouldBroadcast
     }
 
     /**
-     * Tên event được broadcast
+     * Tên event được broadcast đến client
+     * 
+     * @return string
      */
     public function broadcastAs(): string
     {
@@ -52,7 +66,9 @@ class NotificationSent implements ShouldBroadcast
     }
 
     /**
-     * Dữ liệu được broadcast
+     * Dữ liệu notification được broadcast đến client
+     * 
+     * @return array
      */
     public function broadcastWith(): array
     {

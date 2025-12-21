@@ -6,18 +6,28 @@ use Minishlink\WebPush\Subscription;
 use Illuminate\Support\Facades\Log;
 use App\Models\PushSubscription;
 
-
+/**
+ * Utility class WebPushApi - Gửi Web Push Notification
+ * 
+ * Class này xử lý việc gửi push notification đến browsers/clients
+ * sử dụng thư viện Minishlink/WebPush và VAPID keys.
+ * 
+ * @package App\Utils
+ */
 class WebPushApi
 {
     /**
      * Gửi web push notification đến danh sách subscriptions
      * 
+     * Hàm này queue tất cả notifications và flush một lần để tối ưu performance.
+     * Tự động xóa các subscription hết hạn (404/410) khỏi database.
+     * 
      * @param \Illuminate\Support\Collection $subscriptions Collection of PushSubscription models
      * @param string $title Tiêu đề notification
-     * @param string $body Nội dung notification
+     * @param string $body Nội dung notification  
      * @param string $url URL khi click vào notification
-     * @param string|null $icon Icon của notification
-     * @param string|null $badge Badge icon (hiển thị trên app icon)
+     * @param string|null $icon Icon của notification (mặc định: /icons/notification-icon.png)
+     * @param string|null $badge Badge icon hiển thị trên app icon
      * @param string|null $timestamp Timestamp của notification
      * @return bool True nếu có ít nhất 1 notification gửi thành công
      */

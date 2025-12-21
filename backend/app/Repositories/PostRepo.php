@@ -8,6 +8,12 @@ use Exception;
 
 class PostRepo
 {
+    /**
+     * Lấy post theo ID
+     *
+     * @param int $id ID của post
+     * @return Post|null
+     */
     public function getPostById($id) : ?Post
     {
         // $post = DB::table('posts')->where('id', 4)->first();
@@ -17,16 +23,36 @@ class PostRepo
     }
 
     // Backwards-compatible alias used by some services
+    /**
+     * Alias cho getPostById
+     *
+     * @param int $id
+     * @return Post|null
+     */
     public function find($id) : ?Post
     {
         return $this->getPostById($id);
     }
 
+    /**
+     * Tạo post mới
+     *
+     * @param array $data Dữ liệu post
+     * @return Post Post vừa tạo
+     */
     public function createPost($data) : Post
     {
         return Post::create(attributes: $data);
     }
 
+    /**
+     * Cập nhật post theo ID
+     *
+     * @param int $id ID của post
+     * @param array $data Dữ liệu cần cập nhật
+     * @return Post Post sau khi cập nhật
+     * @throws Exception Nếu post không tồn tại
+     */
     public function updatePostById($id, $data) : Post
     {
         $post = $this->getPostById($id);
@@ -37,6 +63,14 @@ class PostRepo
         return $post;
     }
 
+    /**
+     * Lấy danh sách posts (feed) với cursor-based pagination
+     *
+     * @param int|null $currentUserId ID user hiện tại để kiểm tra isLiked
+     * @param int|null $lastId ID cuối cùng để phân trang
+     * @param int $limit Số lượng trả về
+     * @return \Illuminate\Support\Collection
+     */
     public function all($currentUserId, $lastId = null, $limit = 20)
     {
         // $posts = DB::table('posts')
@@ -92,6 +126,13 @@ class PostRepo
 
     }
 
+    /**
+     * Xóa post theo ID (soft delete -> set status)
+     *
+     * @param int $id ID của post
+     * @return bool True nếu xóa thành công
+     * @throws Exception Nếu post không tồn tại
+     */
     public function deletePostById($id) : bool
     {
         $post = $this->getPostById($id);
@@ -104,6 +145,12 @@ class PostRepo
         return $post->delete();
     }
 
+    /**
+     * Tìm kiếm post theo query (title hoặc content)
+     *
+     * @param string $query Từ khóa tìm kiếm
+     * @return \Illuminate\Support\Collection
+     */
     public function searchPost($query)
     {
         return Post::where('title', 'LIKE', "%$query%")
@@ -111,6 +158,12 @@ class PostRepo
                     ->get();
     }
 
+    /**
+     * Cập nhật tổng likes cho tất cả posts thuộc event
+     *
+     * @param int $eventId ID của event
+     * @param int $status 1 = like, 0 = unlike
+     */
     public function updateAmountLikes($eventId, $status)
     {
         $posts = Post::where('event_id', $eventId)->get();
@@ -120,12 +173,25 @@ class PostRepo
         }
     }
 
+    /**
+     * Lấy posts theo user ID
+     *
+     * @param int $userId
+     * @return \Illuminate\Support\Collection
+     */
     public function getPostsByUserId($userId)
     {
         return Post::where('user_id', $userId)->get();
     }
 
-     public function getPostsByChannel($channelId, $userId = null)
+    /**
+    * Lấy posts theo channel
+    *
+    * @param int $channelId ID của channel
+    * @param int|null $userId ID của user để check is_liked
+    * @return \Illuminate\Support\Collection
+    */
+    public function getPostsByChannel($channelId, $userId = null)
     {
         $currentUserId = $userId;
         
@@ -161,6 +227,14 @@ class PostRepo
     }
 
 
+    /**
+     * Cập nhật số lượt like cho bài viết (bằng query raw)
+     *
+     * @param int $postId
+     * @param int $status 1=like, 0=unlike
+     * @param int $totalLikes Tổng likes hiện tại
+     * @return int Số bản ghi bị ảnh hưởng
+     */
     public function updateLikeOfPost($postId, $status, $totalLikes)
     {
         $like = $totalLikes + ($status == 1 ? 1 : -1);

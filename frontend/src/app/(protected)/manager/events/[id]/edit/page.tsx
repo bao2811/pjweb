@@ -11,6 +11,7 @@ import {
   FaImage,
   FaSpinner,
   FaSave,
+  FaExclamationCircle,
 } from "react-icons/fa";
 
 interface EventData {
@@ -26,6 +27,75 @@ interface EventData {
   status: string;
 }
 
+interface FormErrors {
+  title?: string | null;
+  content?: string | null;
+  image?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  address?: string | null;
+  max_participants?: string | null;
+}
+
+interface TouchedFields {
+  title?: boolean;
+  content?: boolean;
+  image?: boolean;
+  start_time?: boolean;
+  end_time?: boolean;
+  address?: boolean;
+  max_participants?: boolean;
+}
+
+// Validation helpers
+const validateTitle = (title: string): string | null => {
+  if (!title.trim()) return "Vui lòng nhập tiêu đề";
+  if (title.trim().length < 5) return "Tiêu đề phải có ít nhất 5 ký tự";
+  if (title.trim().length > 200) return "Tiêu đề không được quá 200 ký tự";
+  return null;
+};
+
+const validateContent = (content: string): string | null => {
+  if (!content.trim()) return "Vui lòng nhập mô tả";
+  if (content.trim().length < 20) return "Mô tả phải có ít nhất 20 ký tự";
+  return null;
+};
+
+const validateAddress = (address: string): string | null => {
+  if (!address.trim()) return "Vui lòng nhập địa điểm";
+  if (address.trim().length < 5) return "Địa điểm phải có ít nhất 5 ký tự";
+  return null;
+};
+
+const validateMaxParticipants = (value: number): string | null => {
+  if (!value || value < 1) return "Số lượng tối đa phải lớn hơn 0";
+  if (value > 10000) return "Số lượng không được vượt quá 10,000";
+  return null;
+};
+
+const validateImageUrl = (url: string): string | null => {
+  if (!url) return null; // Optional field
+  try {
+    new URL(url);
+    return null;
+  } catch {
+    return "URL hình ảnh không hợp lệ";
+  }
+};
+
+const validateStartTime = (startTime: string): string | null => {
+  if (!startTime) return "Vui lòng chọn thời gian bắt đầu";
+  return null;
+};
+
+const validateEndTime = (startTime: string, endTime: string): string | null => {
+  if (!endTime) return "Vui lòng chọn thời gian kết thúc";
+  if (startTime && endTime && new Date(endTime) <= new Date(startTime)) {
+    return "Thời gian kết thúc phải sau thời gian bắt đầu";
+  }
+  return null;
+};
+
 import { use } from "react";
 
 export default function EditEventPage({
@@ -38,6 +108,8 @@ export default function EditEventPage({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [event, setEvent] = useState<EventData | null>(null);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<TouchedFields>({});
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -48,6 +120,70 @@ export default function EditEventPage({
     max_participants: 10,
     category: "Môi trường",
   });
+
+  // Handle field blur for real-time validation
+  const handleBlur = (fieldName: keyof FormErrors) => {
+    setTouched((prev) => ({ ...prev, [fieldName]: true }));
+    validateField(fieldName);
+  };
+
+  // Validate a single field
+  const validateField = (fieldName: keyof FormErrors) => {
+    let error: string | null = null;
+
+    switch (fieldName) {
+      case "title":
+        error = validateTitle(formData.title);
+        break;
+      case "content":
+        error = validateContent(formData.content);
+        break;
+      case "address":
+        error = validateAddress(formData.address);
+        break;
+      case "max_participants":
+        error = validateMaxParticipants(formData.max_participants);
+        break;
+      case "image":
+        error = validateImageUrl(formData.image);
+        break;
+      case "start_time":
+        error = validateStartTime(formData.start_time);
+        break;
+      case "end_time":
+        error = validateEndTime(formData.start_time, formData.end_time);
+        break;
+    }
+
+    setFormErrors((prev) => ({ ...prev, [fieldName]: error }));
+    return error;
+  };
+
+  // Validate all fields
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {
+      title: validateTitle(formData.title),
+      content: validateContent(formData.content),
+      address: validateAddress(formData.address),
+      max_participants: validateMaxParticipants(formData.max_participants),
+      image: validateImageUrl(formData.image),
+      start_time: validateStartTime(formData.start_time),
+      end_time: validateEndTime(formData.start_time, formData.end_time),
+    };
+
+    setFormErrors(errors);
+    setTouched({
+      title: true,
+      content: true,
+      address: true,
+      max_participants: true,
+      image: true,
+      start_time: true,
+      end_time: true,
+    });
+
+    return !Object.values(errors).some((error) => error !== null);
+  };
 
   useEffect(() => {
     fetchEventDetails();
@@ -99,8 +235,8 @@ export default function EditEventPage({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.content || !formData.address) {
-      alert("Vui lòng điền đầy đủ thông tin bắt buộc");
+    // Validate all fields before submit
+    if (!validateForm()) {
       return;
     }
 
@@ -192,13 +328,23 @@ export default function EditEventPage({
             <input
               type="text"
               value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-              className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+              onChange={(e) => {
+                setFormData({ ...formData, title: e.target.value });
+                if (touched.title) validateField("title");
+              }}
+              onBlur={() => handleBlur("title")}
+              className={`text-black w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors ${
+                formErrors.title && touched.title
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-gray-200 focus:border-blue-400"
+              }`}
               placeholder="Nhập tiêu đề sự kiện..."
-              required
             />
+            {formErrors.title && touched.title && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <FaExclamationCircle className="mr-1" /> {formErrors.title}
+              </p>
+            )}
           </div>
 
           {/* Content */}
@@ -208,14 +354,24 @@ export default function EditEventPage({
             </label>
             <textarea
               value={formData.content}
-              onChange={(e) =>
-                setFormData({ ...formData, content: e.target.value })
-              }
-              className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors resize-none"
+              onChange={(e) => {
+                setFormData({ ...formData, content: e.target.value });
+                if (touched.content) validateField("content");
+              }}
+              onBlur={() => handleBlur("content")}
+              className={`text-black w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors resize-none ${
+                formErrors.content && touched.content
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-gray-200 focus:border-blue-400"
+              }`}
               rows={6}
               placeholder="Nhập mô tả chi tiết về sự kiện..."
-              required
             />
+            {formErrors.content && touched.content && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <FaExclamationCircle className="mr-1" /> {formErrors.content}
+              </p>
+            )}
           </div>
 
           {/* Image */}
@@ -227,13 +383,24 @@ export default function EditEventPage({
             <input
               type="url"
               value={formData.image}
-              onChange={(e) =>
-                setFormData({ ...formData, image: e.target.value })
-              }
-              className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+              onChange={(e) => {
+                setFormData({ ...formData, image: e.target.value });
+                if (touched.image) validateField("image");
+              }}
+              onBlur={() => handleBlur("image")}
+              className={`text-black w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors ${
+                formErrors.image && touched.image
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-gray-200 focus:border-blue-400"
+              }`}
               placeholder="https://example.com/image.jpg"
             />
-            {formData.image && (
+            {formErrors.image && touched.image && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <FaExclamationCircle className="mr-1" /> {formErrors.image}
+              </p>
+            )}
+            {formData.image && !formErrors.image && (
               <div className="mt-3 relative h-48 rounded-lg overflow-hidden">
                 <Image
                   src={formData.image}
@@ -256,12 +423,24 @@ export default function EditEventPage({
               <input
                 type="datetime-local"
                 value={formData.start_time}
-                onChange={(e) =>
-                  setFormData({ ...formData, start_time: e.target.value })
-                }
-                className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
-                required
+                onChange={(e) => {
+                  setFormData({ ...formData, start_time: e.target.value });
+                  if (touched.start_time) validateField("start_time");
+                  if (touched.end_time) validateField("end_time");
+                }}
+                onBlur={() => handleBlur("start_time")}
+                className={`text-black w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors ${
+                  formErrors.start_time && touched.start_time
+                    ? "border-red-400 focus:border-red-500"
+                    : "border-gray-200 focus:border-blue-400"
+                }`}
               />
+              {formErrors.start_time && touched.start_time && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <FaExclamationCircle className="mr-1" />{" "}
+                  {formErrors.start_time}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -271,12 +450,22 @@ export default function EditEventPage({
               <input
                 type="datetime-local"
                 value={formData.end_time}
-                onChange={(e) =>
-                  setFormData({ ...formData, end_time: e.target.value })
-                }
-                className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
-                required
+                onChange={(e) => {
+                  setFormData({ ...formData, end_time: e.target.value });
+                  if (touched.end_time) validateField("end_time");
+                }}
+                onBlur={() => handleBlur("end_time")}
+                className={`text-black w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors ${
+                  formErrors.end_time && touched.end_time
+                    ? "border-red-400 focus:border-red-500"
+                    : "border-gray-200 focus:border-blue-400"
+                }`}
               />
+              {formErrors.end_time && touched.end_time && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <FaExclamationCircle className="mr-1" /> {formErrors.end_time}
+                </p>
+              )}
             </div>
           </div>
 
@@ -289,13 +478,23 @@ export default function EditEventPage({
             <input
               type="text"
               value={formData.address}
-              onChange={(e) =>
-                setFormData({ ...formData, address: e.target.value })
-              }
-              className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+              onChange={(e) => {
+                setFormData({ ...formData, address: e.target.value });
+                if (touched.address) validateField("address");
+              }}
+              onBlur={() => handleBlur("address")}
+              className={`text-black w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors ${
+                formErrors.address && touched.address
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-gray-200 focus:border-blue-400"
+              }`}
               placeholder="Nhập địa điểm tổ chức..."
-              required
             />
+            {formErrors.address && touched.address && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <FaExclamationCircle className="mr-1" /> {formErrors.address}
+              </p>
+            )}
           </div>
 
           {/* Max Participants & Category */}
@@ -303,21 +502,33 @@ export default function EditEventPage({
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 <FaUsers className="inline mr-2" />
-                Số lượng tối đa
+                Số lượng tối đa <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
                 value={formData.max_participants}
-                onChange={(e) =>
+                onChange={(e) => {
                   setFormData({
                     ...formData,
-                    max_participants: parseInt(e.target.value),
-                  })
-                }
-                className="text-black w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none transition-colors"
+                    max_participants: parseInt(e.target.value) || 0,
+                  });
+                  if (touched.max_participants)
+                    validateField("max_participants");
+                }}
+                onBlur={() => handleBlur("max_participants")}
+                className={`text-black w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors ${
+                  formErrors.max_participants && touched.max_participants
+                    ? "border-red-400 focus:border-red-500"
+                    : "border-gray-200 focus:border-blue-400"
+                }`}
                 min="1"
-                required
               />
+              {formErrors.max_participants && touched.max_participants && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <FaExclamationCircle className="mr-1" />{" "}
+                  {formErrors.max_participants}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">

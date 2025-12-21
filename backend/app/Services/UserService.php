@@ -13,18 +13,40 @@ use App\Exceptions\CustomException;
 use App\Repositories\JoinEventRepo;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Service UserService - Xử lý logic nghiệp vụ liên quan đến User
+ * 
+ * Service này xử lý các thao tác nghiệp vụ cho người dùng,
+ * bao gồm: CRUD user, ban/unban, join/leave event, lấy lịch sử sự kiện.
+ * 
+ * @package App\Services
+ */
 class UserService
 {
-
+    /** @var UserRepo Repository xử lý dữ liệu user */
     protected UserRepo $userRepo;
+    
+    /** @var JoinEventRepo Repository xử lý dữ liệu tham gia sự kiện */
     protected JoinEventRepo $joinEventRepo;
 
+    /**
+     * Khởi tạo service với các repository cần thiết
+     * 
+     * @param UserRepo $userRepo Repository user
+     * @param JoinEventRepo $joinEventRepo Repository join event
+     */
     public function __construct(UserRepo $userRepo, JoinEventRepo $joinEventRepo)
     {
         $this->userRepo = $userRepo;
         $this->joinEventRepo = $joinEventRepo;
     }
 
+    /**
+     * Tìm user theo email
+     * 
+     * @param string $email Email của user
+     * @return array Kết quả tìm kiếm
+     */
     public function getUserByEmail($email)
     {
         $user = $this->userRepo->findByEmail($email);
@@ -41,42 +63,17 @@ class UserService
             'data' => $user
         ];
     }
+    
+    /**
+     * Tạo user mới
+     * 
+     * Hash password trước khi lưu vào database.
+     * 
+     * @param array $data Dữ liệu user
+     * @return array Kết quả tạo user
+     */
     public function createUser($data)
     {
-            // Validate input and extract validated data (accepts a Request)
-            // $validated = [];
-            // if (is_object($data) && method_exists($data, 'validate')) {
-            //     $validated = $data->validate([
-            //         'username' => 'required|string|max:255',
-            //         'email' => 'required|string|email|max:255|unique:users',
-            //         'password' => 'required|string|min:8|confirmed',
-            //         'phone' => 'required|string|max:20',
-            //         'address' => 'required|string|max:255',
-            //         'image' => 'nullable|string|max:255',
-            //         'addressCard' => 'nullable|string|max:255',
-            //     ]);
-            // } elseif (is_array($data)) {
-            //     // If an array was passed, validate using the Validator facade
-            //     $validator = Validator::make($data, [
-            //         'username' => 'required|string|max:255',
-            //         'email' => 'required|string|email|max:255|unique:users',
-            //         'password' => 'required|string|min:8|confirmed',
-            //         'phone' => 'required|string|max:20',
-            //         'address' => 'required|string|max:255',
-            //         'image' => 'nullable|string',
-            //         'addressCard' => 'nullable|string|max:255',
-            //     ]);
-
-            //     if ($validator->fails()) {
-            //         throw new ValidationException($validator);
-            //     }
-
-            //     $validated = $validator->validated();
-            // } else {
-            //     throw new CustomException('Invalid data provided for user creation');
-            // }
-
-            // Hash password and create user
          try {
             // Hash password
             if (isset($data['password'])) {
@@ -100,6 +97,11 @@ class UserService
         }
     }
 
+    /**
+     * Lấy tất cả users
+     * 
+     * @return array Danh sách users
+     */
     public function getAllUsers()
     {
         $result = $this->userRepo->getAllUsers();
@@ -109,11 +111,16 @@ class UserService
             'data' => $result
         ];
     }
+    
+    /**
+     * Khóa tài khoản user (ban)
+     * 
+     * @param int $id ID của user cần ban
+     * @return array Kết quả ban
+     * @throws Exception Khi ban thất bại
+     */
     public function banUser($id)
     {
-        $id->validate([
-            'id' => 'required|integer|exists:users,id',
-        ]);
         $result = $this->userRepo->banUser($id);
         if ($result) {
             return [
@@ -126,6 +133,13 @@ class UserService
         }
     }
 
+    /**
+     * Lấy thông tin user theo ID
+     * 
+     * @param int $id ID của user
+     * @return array Thông tin user
+     * @throws Exception Khi không tìm thấy user
+     */
     public function getUserById($id)
     {
         $result = $this->userRepo->getUserById($id);
@@ -141,7 +155,13 @@ class UserService
     }
 
     /**
-     * Lấy thông tin user kèm theo stats
+     * Lấy thông tin user kèm theo thống kê
+     * 
+     * Bao gồm: số sự kiện đã tham gia, hoàn thành, tổng giờ tình nguyện.
+     * 
+     * @param int $userId ID của user
+     * @return array Thông tin user với stats
+     * @throws Exception Khi không tìm thấy user
      */
     public function getUserWithStats($userId)
     {
@@ -190,11 +210,15 @@ class UserService
         ];
     }
 
+    /**
+     * Mở khóa tài khoản user (unban)
+     * 
+     * @param int $id ID của user cần unban
+     * @return array Kết quả unban
+     * @throws Exception Khi unban thất bại
+     */
     public function unbanUser($id)
     {
-        $id->validate([
-            'id' => 'required|integer|exists:users,id',
-        ]);
         $result = $this->userRepo->unbanUser($id);
         if ($result) {
             return [
@@ -207,6 +231,16 @@ class UserService
         }
     }
 
+    /**
+     * Cập nhật thông tin user
+     * 
+     * Hash password mới nếu có thay đổi password.
+     * 
+     * @param int $id ID của user
+     * @param array $data Dữ liệu cần cập nhật
+     * @return array Kết quả cập nhật
+     * @throws Exception Khi cập nhật thất bại
+     */
     public function updateUser($id, $data)
     {
         if (isset($data['password'])) {
@@ -225,6 +259,13 @@ class UserService
         }
     } 
 
+    /**
+     * Đăng ký tham gia sự kiện
+     * 
+     * @param int $userId ID của user
+     * @param int $eventId ID của sự kiện
+     * @return array|bool Kết quả đăng ký
+     */
     public function joinEvent($userId, $eventId)
     {
         $result =  $this->joinEventRepo->joinEvent([
@@ -243,6 +284,13 @@ class UserService
         }
     }
 
+    /**
+     * Hủy đăng ký tham gia sự kiện
+     * 
+     * @param int $userId ID của user
+     * @param int $eventId ID của sự kiện
+     * @return array|bool Kết quả hủy đăng ký
+     */
     public function leaveEvent($userId, $eventId)
     {
         $result = $this->joinEventRepo->leaveEvent($userId, $eventId);
@@ -260,6 +308,13 @@ class UserService
         }
     }
 
+    /**
+     * Hủy yêu cầu tham gia sự kiện (khi status=pending)
+     * 
+     * @param int $userId ID của user
+     * @param int $eventId ID của sự kiện
+     * @return array|bool Kết quả hủy
+     */
     public function cancelJoinEvent($userId, $eventId)
     {
         $result = $this->joinEventRepo->leaveEvent($userId, $eventId);
@@ -276,7 +331,13 @@ class UserService
     }
 
     /**
-     * Get all user's event registrations (pending, accepted, rejected, etc.)
+     * Lấy tất cả đăng ký sự kiện của user
+     * 
+     * Bao gồm các trạng thái: pending, approved, rejected...
+     * Kèm thông tin chi tiết sự kiện và author.
+     * 
+     * @param int $userId ID của user
+     * @return \Illuminate\Support\Collection Danh sách đăng ký
      */
     public function getMyRegistrations($userId)
     {
@@ -356,7 +417,13 @@ class UserService
     }
 
     /**
-     * Get user's event history
+     * Lấy lịch sử tham gia sự kiện của user
+     * 
+     * Chỉ lấy các sự kiện đã hoàn thành (completion_status='completed')
+     * và đã kết thúc (end_time < now).
+     * 
+     * @param int $userId ID của user
+     * @return \Illuminate\Support\Collection Lịch sử sự kiện
      */
     public function getEventHistory($userId)
     {

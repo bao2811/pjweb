@@ -7,10 +7,25 @@ use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * Controller PushSubscriptionController - Xử lý đăng ký nhận push notification
+ * 
+ * Controller này xử lý các API endpoint cho Web Push Notifications,
+ * bao gồm: subscribe, unsubscribe, danh sách subscriptions.
+ * Sử dụng VAPID keys để xác thực với push service.
+ * 
+ * @package App\Http\Controllers
+ */
 class PushSubscriptionController extends Controller
 {
     /**
-     * Subscribe user để nhận push notifications
+     * Đăng ký nhận push notifications
+     * 
+     * Lưu thông tin subscription (endpoint, keys) của client.
+     * Sử dụng upsert để tránh trùng lặp subscription.
+     * 
+     * @param Request $request Request chứa endpoint, keys.p256dh, keys.auth, device_name
+     * @return JsonResponse Subscription vừa tạo
      */
     public function subscribe(Request $request)
     {
@@ -59,7 +74,12 @@ class PushSubscriptionController extends Controller
     }
 
     /**
-     * Unsubscribe user khỏi push notifications
+     * Hủy đăng ký nhận push notifications
+     * 
+     * Xóa subscription theo endpoint.
+     * 
+     * @param Request $request Request chứa endpoint
+     * @return JsonResponse Kết quả hủy đăng ký
      */
     public function unsubscribe(Request $request)
     {
@@ -103,7 +123,12 @@ class PushSubscriptionController extends Controller
     }
 
     /**
-     * Lấy danh sách devices đã subscribe của user
+     * Lấy danh sách các thiết bị đã đăng ký của user
+     * 
+     * Trả về danh sách các subscription với thông tin endpoint, device_name.
+     * 
+     * @param Request $request Request object
+     * @return JsonResponse Danh sách subscriptions
      */
     public function listSubscriptions(Request $request)
     {
@@ -129,7 +154,12 @@ class PushSubscriptionController extends Controller
     }
 
     /**
-     * Xóa tất cả subscriptions của user (logout all devices)
+     * Xóa tất cả subscriptions của user
+     * 
+     * Hủy đăng ký trên tất cả thiết bị (logout all devices).
+     * 
+     * @param Request $request Request object
+     * @return JsonResponse Số lượng subscriptions đã xóa
      */
     public function unsubscribeAll(Request $request)
     {

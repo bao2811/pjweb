@@ -87,6 +87,11 @@ export default function EventsAttendedPage() {
   >(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // State for showing admin's evaluation/feedback modal
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [selectedFeedbackEvent, setSelectedFeedbackEvent] =
+    useState<UserEvent | null>(null);
+
   // Fetch user's registered events
   useEffect(() => {
     const fetchUserEvents = async () => {
@@ -104,10 +109,21 @@ export default function EventsAttendedPage() {
               .filter((registration: any) => registration.event) // Filter out registrations without event
               .map((registration: any) => {
                 const event = registration.event;
+
+                // Tính toán eventStatus dựa trên thời gian thực (ưu tiên hơn backend status)
+                let calculatedEventStatus = event.status;
+                if (event.status !== "cancelled") {
+                  calculatedEventStatus = getEventStatus(
+                    event.start_time,
+                    event.end_time
+                  );
+                }
+
                 console.log("📦 Processing registration:", {
                   status: registration.status,
                   event_title: event.title,
-                  event_status: event.status,
+                  backend_status: event.status,
+                  calculated_status: calculatedEventStatus,
                 }); // DEBUG
 
                 return {
@@ -142,9 +158,7 @@ export default function EventsAttendedPage() {
                   userStatus: registration.status, // pending, approved, rejected
                   completionStatus: registration.completion_status, // pending, completed, failed
                   completionNote: registration.completion_note,
-                  eventStatus:
-                    event.status ||
-                    getEventStatus(event.start_time, event.end_time),
+                  eventStatus: calculatedEventStatus,
                   appliedAt:
                     registration.created_at || new Date().toISOString(),
                   approvedAt:
@@ -230,10 +244,10 @@ export default function EventsAttendedPage() {
     router.push(`/events/${eventId}/channel`);
   };
 
-  // Handle rate event
-  const handleRateEvent = (eventId: number) => {
-    // TODO: Implement rating modal
-    alert("Chức năng đánh giá sẽ được cập nhật!");
+  // Handle showing admin's evaluation feedback
+  const handleRateEvent = (event: UserEvent) => {
+    setSelectedFeedbackEvent(event);
+    setShowFeedbackModal(true);
   };
 
   // Filter events based on tab and search
@@ -645,83 +659,60 @@ export default function EventsAttendedPage() {
                       )}
                     </div>
 
-                    {/* Action Buttons - Different for each status */}
+                    {/* Action Buttons - Logic rõ ràng theo trạng thái */}
                     <div className="space-y-2 pt-4 border-t border-gray-100">
+                      {/* CASE 1: Chờ duyệt (pending) */}
                       {event.userStatus === "pending" && (
-                        <>
+                        <div className="grid grid-cols-2 gap-2">
                           <button
                             onClick={() => showEventDetails(event)}
-                            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition duration-200 font-medium"
+                            className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition font-medium"
                           >
                             <FaEye />
-                            <span>Xem chi tiết</span>
+                            <span>Chi tiết</span>
                           </button>
                           <button
                             onClick={() => handleCancelRegistration(event.id)}
                             disabled={cancellingEventId === event.id}
-                            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition font-medium disabled:opacity-50"
                           >
                             {cancellingEventId === event.id ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                                <span>Đang hủy...</span>
-                              </>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
                             ) : (
                               <>
-                                <FaTimesCircle />
-                                <span>Hủy đăng ký</span>
+                                <FaTimes />
+                                <span>Hủy</span>
                               </>
                             )}
                           </button>
-                        </>
+                        </div>
                       )}
 
-                      {event.userStatus === "accepted" && (
-                        <>
-                          <button
-                            onClick={() => showEventDetails(event)}
-                            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg rounded-lg transition duration-200 font-medium"
-                          >
-                            <FaEye />
-                            <span>Xem chi tiết sự kiện</span>
-                          </button>
-                          <button
-                            onClick={() => handleAccessChannel(event.id)}
-                            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition duration-200 font-medium"
-                          >
-                            <FaComments />
-                            <span>Truy cập kênh</span>
-                          </button>
-                        </>
-                      )}
-
-                      {(event.userStatus === "approved" ||
-                        event.userStatus === "participating") && (
-                        <>
-                          <button
-                            onClick={() => handleAccessChannel(event.id)}
-                            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gradient-to-r from-green-500 to-blue-500 text-white hover:shadow-lg rounded-lg transition duration-200 font-medium"
-                          >
-                            <FaComments />
-                            <span>Truy cập kênh</span>
-                          </button>
-                          <div className="grid grid-cols-2 gap-2">
+                      {/* CASE 2: Đã được duyệt (approved) + Event chưa diễn ra (upcoming) */}
+                      {event.userStatus === "approved" &&
+                        event.eventStatus === "upcoming" && (
+                          <>
                             <button
-                              onClick={() => showEventDetails(event)}
-                              className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition duration-200 font-medium"
+                              onClick={() => handleAccessChannel(event.id)}
+                              className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gradient-to-r from-green-500 to-blue-500 text-white hover:shadow-lg rounded-lg transition font-medium"
                             >
-                              <FaEye />
-                              <span>Chi tiết</span>
+                              <FaComments />
+                              <span>Truy cập kênh</span>
                             </button>
-                            {/* Chỉ hiện nút hủy nếu sự kiện chưa kết thúc */}
-                            {event.eventStatus !== "completed" &&
-                            event.eventStatus !== "ongoing" ? (
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => showEventDetails(event)}
+                                className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition font-medium"
+                              >
+                                <FaEye />
+                                <span>Chi tiết</span>
+                              </button>
                               <button
                                 onClick={() =>
                                   handleCancelRegistration(event.id)
                                 }
                                 disabled={cancellingEventId === event.id}
-                                className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition duration-200 font-medium disabled:opacity-50"
+                                className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-gray-100 text-gray-500 hover:bg-gray-200 rounded-lg transition font-medium disabled:opacity-50"
                               >
                                 {cancellingEventId === event.id ? (
                                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
@@ -732,32 +723,78 @@ export default function EventsAttendedPage() {
                                   </>
                                 )}
                               </button>
-                            ) : (
-                              <span className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-gray-200 text-gray-400 rounded-lg font-medium cursor-not-allowed">
-                                <FaCheckCircle />
-                                <span>
-                                  {event.eventStatus === "completed"
-                                    ? "Đã kết thúc"
-                                    : "Đang diễn ra"}
-                                </span>
-                              </span>
-                            )}
-                          </div>
-                        </>
-                      )}
+                            </div>
+                          </>
+                        )}
 
+                      {/* CASE 3: Đã được duyệt (approved) + Event đang diễn ra (ongoing) */}
+                      {event.userStatus === "approved" &&
+                        event.eventStatus === "ongoing" && (
+                          <>
+                            <button
+                              onClick={() => handleAccessChannel(event.id)}
+                              className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gradient-to-r from-green-500 to-blue-500 text-white hover:shadow-lg rounded-lg transition font-medium"
+                            >
+                              <FaComments />
+                              <span>Truy cập kênh</span>
+                            </button>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => showEventDetails(event)}
+                                className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition font-medium"
+                              >
+                                <FaEye />
+                                <span>Chi tiết</span>
+                              </button>
+                              <span className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-green-100 text-green-600 rounded-lg font-medium">
+                                <FaCheckCircle />
+                                <span>Đang diễn ra</span>
+                              </span>
+                            </div>
+                          </>
+                        )}
+
+                      {/* CASE 4: Đã được duyệt + Event đã kết thúc + Chưa được đánh giá */}
+                      {event.userStatus === "approved" &&
+                        event.eventStatus === "completed" &&
+                        event.completionStatus === "pending" && (
+                          <>
+                            <button
+                              onClick={() => handleAccessChannel(event.id)}
+                              className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gradient-to-r from-green-500 to-blue-500 text-white hover:shadow-lg rounded-lg transition font-medium"
+                            >
+                              <FaComments />
+                              <span>Truy cập kênh</span>
+                            </button>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => showEventDetails(event)}
+                                className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition font-medium"
+                              >
+                                <FaEye />
+                                <span>Chi tiết</span>
+                              </button>
+                              <span className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-gray-100 text-gray-500 rounded-lg font-medium">
+                                <FaHourglassHalf />
+                                <span>Chờ đánh giá</span>
+                              </span>
+                            </div>
+                          </>
+                        )}
+
+                      {/* CASE 5: Đã hoàn thành (completion_status = completed) */}
                       {event.completionStatus === "completed" && (
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             onClick={() => showEventDetails(event)}
-                            className="flex items-center justify-center space-x-1 px-4 py-2.5 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition duration-200 font-medium"
+                            className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition font-medium"
                           >
                             <FaEye />
                             <span>Xem lại</span>
                           </button>
                           <button
-                            onClick={() => handleRateEvent(event.id)}
-                            className="flex items-center justify-center space-x-1 px-4 py-2.5 text-sm bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-lg transition duration-200 font-medium"
+                            onClick={() => handleRateEvent(event)}
+                            className="flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-lg transition font-medium"
                           >
                             <FaStar />
                             <span>Đánh giá</span>
@@ -765,10 +802,22 @@ export default function EventsAttendedPage() {
                         </div>
                       )}
 
+                      {/* CASE 6: Không hoàn thành (completion_status = failed) */}
+                      {event.completionStatus === "failed" && (
+                        <button
+                          onClick={() => showEventDetails(event)}
+                          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition font-medium"
+                        >
+                          <FaEye />
+                          <span>Xem chi tiết</span>
+                        </button>
+                      )}
+
+                      {/* CASE 7: Bị từ chối */}
                       {event.userStatus === "rejected" && (
                         <button
                           onClick={() => showEventDetails(event)}
-                          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition duration-200 font-medium"
+                          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition font-medium"
                         >
                           <FaEye />
                           <span>Xem chi tiết</span>
@@ -785,7 +834,7 @@ export default function EventsAttendedPage() {
 
       {/* Event Detail Modal */}
       {showDetailModal && selectedEvent && (
-        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="relative">
               <Image
@@ -1066,11 +1115,11 @@ export default function EventsAttendedPage() {
                       Đóng
                     </button>
                     <button
-                      onClick={() => handleRateEvent(selectedEvent.id)}
+                      onClick={() => handleRateEvent(selectedEvent)}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl hover:shadow-lg transition font-medium flex items-center justify-center space-x-2"
                     >
                       <FaStar />
-                      <span>Đánh giá sự kiện</span>
+                      <span>Xem đánh giá</span>
                     </button>
                   </div>
                 )}
@@ -1110,6 +1159,98 @@ export default function EventsAttendedPage() {
                   <div className="animate-spin h-4 w-4 border-b-2 border-white rounded-full inline-block mr-2" />
                 )}
                 Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal - Show admin's evaluation */}
+      {showFeedbackModal && selectedFeedbackEvent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <FaStar className="text-2xl" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Đánh giá từ Manager</h3>
+                    <p className="text-yellow-100 text-sm">
+                      {selectedFeedbackEvent.title}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowFeedbackModal(false)}
+                  className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              {/* Status Badge */}
+              <div className="flex items-center justify-center mb-6">
+                <div
+                  className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full ${
+                    selectedFeedbackEvent.completionStatus === "completed"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {selectedFeedbackEvent.completionStatus === "completed" ? (
+                    <>
+                      <FaCheckCircle className="text-lg" />
+                      <span className="font-semibold">Hoàn thành xuất sắc</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaTimesCircle className="text-lg" />
+                      <span className="font-semibold">Chưa hoàn thành</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Feedback Note */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <p className="text-sm text-gray-500 mb-2 font-medium">
+                  Nhận xét từ Manager:
+                </p>
+                <p className="text-gray-700 leading-relaxed">
+                  {selectedFeedbackEvent.completionNote ||
+                    "Manager chưa để lại nhận xét."}
+                </p>
+              </div>
+
+              {/* Event Info */}
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex items-center space-x-2">
+                  <FaCalendarAlt className="text-blue-500" />
+                  <span>
+                    Hoàn thành:{" "}
+                    {selectedFeedbackEvent.completedAt
+                      ? new Date(
+                          selectedFeedbackEvent.completedAt
+                        ).toLocaleDateString("vi-VN")
+                      : "Không rõ"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-6">
+              <button
+                onClick={() => setShowFeedbackModal(false)}
+                className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
+              >
+                Đóng
               </button>
             </div>
           </div>

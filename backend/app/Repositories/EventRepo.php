@@ -14,6 +14,12 @@ use App\Models\User;
 
 class EventRepo
 {
+    /**
+     * Lấy event theo ID
+     *
+     * @param int $id ID của event
+     * @return Event|null
+     */
     public function getEventById($id) : ?Event
     {
         return Event::find($id);
@@ -65,6 +71,13 @@ class EventRepo
         return $events;
     }
 
+    /**
+     * Xóa event theo ID
+     *
+     * @param int $id ID của event
+     * @return bool true nếu xóa thành công
+     * @throws Exception Nếu event không tồn tại
+     */
     public function deleteEventById($id) : bool
     {
         $event = $this->getEventById($id);
@@ -74,6 +87,14 @@ class EventRepo
         return $event->delete();
     }
 
+    /**
+     * Lấy danh sách events do một author tạo
+     *
+     * Trả về các fields cần thiết cho admin/overview.
+     *
+     * @param int $authorId ID của author
+     * @return \Illuminate\Support\Collection
+     */
     public function getEventsByAuthor($authorId)
     {
         return Event::where('author_id', $authorId)
@@ -92,6 +113,15 @@ class EventRepo
             });
     }
 
+    /**
+     * Tạo event mới và attach comanagers (nếu có)
+     *
+     * Ngoài việc tạo event, hàm sẽ gửi notification đến admin để yêu cầu duyệt.
+     *
+     * @param array $data Dữ liệu event
+     * @param array $comanager Mảng ID comanager
+     * @return Event Event vừa tạo
+     */
     public function createEvent($data, $comanager = []) : Event
     {
         $event = Event::create($data);
@@ -127,6 +157,14 @@ class EventRepo
         return $event;
     }
 
+    /**
+     * Cập nhật event theo ID
+     *
+     * @param int $id ID của event
+     * @param array $data Dữ liệu cập nhật
+     * @return Event Event đã được cập nhật
+     * @throws Exception Nếu event không tồn tại
+     */
     public function updateEventById($id, $data) : Event
     {
         $event = $this->getEventById($id);
@@ -137,6 +175,17 @@ class EventRepo
         return $event;
     }
 
+    /**
+     * Duyệt (accept) event
+     *
+     * Cập nhật trạng thái event thành 'accepted', tạo thông báo cho author
+     * và gửi push + broadcast.
+     *
+     * @param int $id ID của event
+     * @param int $senderId ID người gửi (admin)
+     * @return Event Event đã được duyệt
+     * @throws Exception Nếu event không tồn tại
+     */
     public function acceptEvent($id, $senderId) : Event
     {
         $event = $this->getEventById($id);
@@ -164,6 +213,17 @@ class EventRepo
         return $event;
     }
 
+    /**
+     * Từ chối (reject) event
+     *
+     * Cập nhật trạng thái event thành 'rejected', tạo thông báo cho author
+     * và gửi push + broadcast.
+     *
+     * @param int $id ID của event
+     * @param int $senderId ID người gửi (admin)
+     * @return Event Event đã bị từ chối
+     * @throws Exception Nếu event không tồn tại
+     */
     public function rejectEvent($id, $senderId) : Event
     {
         $event = $this->getEventById($id);
@@ -194,6 +254,14 @@ class EventRepo
     /**
      * Lấy danh sách events của một manager cụ thể (author_id)
      * FIX #6: Thêm withCount để đếm số người tham gia (sử dụng status 'approved' thay vì 'participating')
+     */
+    /**
+     * Lấy danh sách events theo manager (author_id)
+     *
+     * Trả về thông tin chi tiết kèm count người tham gia đã được approved.
+     *
+     * @param int $managerId ID của manager
+     * @return \Illuminate\Support\Collection
      */
     public function getEventsByManagerId($managerId)
     {
@@ -238,6 +306,12 @@ class EventRepo
             });
     }
 
+    /**
+     * Tìm kiếm events theo keyword
+     *
+     * @param string $keyword Từ khóa tìm kiếm
+     * @return \Illuminate\Support\Collection
+     */
     public function searchEventsByKeyword($keyword) {
         return Event::where(function($query) use ($keyword) {
             $query->where('title', 'like', '%' . $keyword . '%')
@@ -248,6 +322,11 @@ class EventRepo
 
     /**
      * Đếm số lượng sự kiện đang diễn ra (status = ongoing hoặc upcoming)
+     */
+    /**
+     * Đếm số lượng sự kiện đang diễn ra hoặc sắp diễn ra
+     *
+     * @return int Số lượng sự kiện
      */
     public function countOngoingEvents()
     {

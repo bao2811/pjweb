@@ -10,11 +10,26 @@ use App\Models\Noti;
 use Illuminate\Http\Request;
 use App\Services\NotiService;
 
+/**
+ * Controller NotiController - Xử lý các thao tác thông báo
+ * 
+ * Controller này xử lý các API endpoint cho chức năng notification,
+ * bao gồm: gửi thông báo, đánh dấu đã đọc, xóa thông báo, web push.
+ * Hỗ trợ gửi notification đến user cụ thể, tất cả users, hoặc participants của event.
+ * 
+ * @package App\Http\Controllers
+ */
 class NotiController extends Controller
 {
 
-
+    /** @var NotiService Service xử lý logic notification */
     protected $notiService;
+    
+    /**
+     * Khởi tạo controller với NotiService
+     * 
+     * @param NotiService $notiService Service xử lý logic notification
+     */
     public function __construct(NotiService $notiService)
     {
         $this->notiService = $notiService;
@@ -93,6 +108,12 @@ class NotiController extends Controller
         }
     }
 
+    /**
+     * Lấy danh sách thông báo của user hiện tại
+     * 
+     * @param Request $request Request object
+     * @return JsonResponse Danh sách thông báo của user
+     */
     public function getUserNotifications(Request $request)
     {
         try {
@@ -107,6 +128,16 @@ class NotiController extends Controller
         }
     }
 
+    /**
+     * Đánh dấu một thông báo là đã đọc
+     * 
+     * Kiểm tra quyền - user chỉ có thể đánh dấu thông báo của mình.
+     * Broadcast sự kiện NotificationRead qua WebSocket.
+     * 
+     * @param Request $request Request object
+     * @param int $id ID của thông báo
+     * @return JsonResponse Thông báo sau khi cập nhật
+     */
     public function markAsRead(Request $request, $id)
     {
         try {
@@ -135,6 +166,12 @@ class NotiController extends Controller
         }
     }
 
+    /**
+     * Đánh dấu tất cả thông báo của user là đã đọc
+     * 
+     * @param Request $request Request object
+     * @return JsonResponse Kết quả cập nhật
+     */
     public function markAllAsRead(Request $request)
     {
         try {
@@ -146,6 +183,15 @@ class NotiController extends Controller
         }
     }
 
+    /**
+     * Xóa một thông báo
+     * 
+     * Kiểm tra quyền - user chỉ có thể xóa thông báo của mình.
+     * 
+     * @param Request $request Request object
+     * @param int $id ID của thông báo cần xóa
+     * @return JsonResponse Kết quả xóa
+     */
     public function deleteNotification(Request $request, $id)
     {
         try {

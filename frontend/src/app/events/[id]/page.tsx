@@ -82,8 +82,26 @@ export default function EventDetailPage({
       const response = await authFetch(`/api/events/getEventDetails/${id}`);
       const data = await response.json();
       if (data && data.event) {
-        setEvent(data.event);
-        console.log("Fetched event details:", data.event);
+        // Tính toán status dựa trên thời gian nếu backend chưa cập nhật
+        const eventData = data.event;
+        const now = new Date();
+        const startTime = new Date(eventData.start_time);
+        const endTime = new Date(eventData.end_time);
+
+        // Override status nếu cần dựa trên thời gian thực tế
+        let calculatedStatus = eventData.status;
+        if (eventData.status !== "cancelled") {
+          if (now < startTime) {
+            calculatedStatus = "upcoming";
+          } else if (now >= startTime && now <= endTime) {
+            calculatedStatus = "ongoing";
+          } else if (now > endTime) {
+            calculatedStatus = "completed";
+          }
+        }
+        eventData.status = calculatedStatus;
+
+        setEvent(eventData);
         setIsLiked(
           (data.event && (data.event.is_liked ?? data.is_liked)) || false
         );
@@ -519,116 +537,149 @@ export default function EventDetailPage({
           {/* Right Column - Action Cards */}
           <div className="space-y-6">
             {/* Registration Card - Featured */}
-            <div className="bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl shadow-xl p-8 text-white top-4">
-              <div className="text-center mb-6">
-                <FaHandsHelping className="text-6xl mx-auto mb-4 opacity-90" />
-                <h3 className="text-2xl font-bold mb-2">
-                  {registrationStatus === "approved"
-                    ? "Đã được duyệt"
-                    : registrationStatus === "pending"
-                    ? "Chờ duyệt"
-                    : registrationStatus === "rejected"
-                    ? "Bị từ chối"
-                    : "Tham gia ngay"}
-                </h3>
-                <p className="text-green-100">
-                  {registrationStatus === "approved"
-                    ? "Bạn đã được chấp nhận tham gia sự kiện này"
-                    : registrationStatus === "pending"
-                    ? "Yêu cầu của bạn đang chờ manager duyệt"
-                    : registrationStatus === "rejected"
-                    ? "Yêu cầu của bạn đã bị từ chối"
-                    : "Đăng ký để trở thành tình nguyện viên"}
-                </p>
+            {/* CASE: Sự kiện đã kết thúc hoặc bị hủy */}
+            {(event.status === "completed" || event.status === "cancelled") &&
+            registrationStatus === "none" ? (
+              <div className="bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl shadow-xl p-8 text-white">
+                <div className="text-center">
+                  <FaCheckCircle className="text-6xl mx-auto mb-4 opacity-90" />
+                  <h3 className="text-2xl font-bold mb-2">
+                    {event.status === "completed"
+                      ? "Sự kiện đã kết thúc"
+                      : "Sự kiện đã bị hủy"}
+                  </h3>
+                  <p className="text-gray-200 mb-4">
+                    {event.status === "completed"
+                      ? "Sự kiện này đã hoàn thành. Cảm ơn bạn đã quan tâm!"
+                      : "Sự kiện này đã bị hủy bởi ban tổ chức."}
+                  </p>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4">
+                    <p className="text-sm">Hãy khám phá các sự kiện khác!</p>
+                  </div>
+                </div>
               </div>
-
-              {registrationStatus === "none" ? (
-                <button
-                  onClick={handleRegister}
-                  disabled={
-                    isRegistering ||
-                    event.status === "completed" ||
-                    event.status === "cancelled"
-                  }
-                  className="w-full bg-white text-green-700 font-bold py-4 px-6 rounded-xl hover:bg-green-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  {isRegistering ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-700"></div>
-                      <span>Đang xử lý...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FaHandsHelping className="text-xl" />
-                      <span>Đăng ký tham gia</span>
-                    </>
-                  )}
-                </button>
-              ) : registrationStatus === "pending" ? (
-                <div className="space-y-3">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
-                    <FaClock className="text-3xl mx-auto mb-2" />
-                    <p className="font-semibold">Đang chờ duyệt</p>
-                  </div>
-                  <button
-                    onClick={handleCancelRequest}
-                    disabled={isRegistering}
-                    className="w-full bg-red-500/90 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
-                  >
-                    {isRegistering ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        <span>Đang xử lý...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaTimes className="text-xl" />
-                        <span>Hủy yêu cầu tham gia</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              ) : registrationStatus === "approved" ? (
-                <div className="space-y-3">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
-                    <FaCheckCircle className="text-3xl mx-auto mb-2" />
-                    <p className="font-semibold">Đã được chấp nhận!</p>
-                  </div>
-                  <button
-                    onClick={handleJoinChat}
-                    className="w-full bg-white text-blue-700 font-bold py-3 px-6 rounded-xl hover:bg-blue-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
-                  >
-                    <FaComments className="text-xl" />
-                    <span>Vào kênh chat</span>
-                  </button>
-                  <button
-                    onClick={handleCancelRequest}
-                    disabled={isRegistering}
-                    className="w-full bg-red-500/90 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-xl transition-all flex items-center justify-center space-x-2 text-sm disabled:opacity-50"
-                  >
-                    {isRegistering ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Đang xử lý...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaTimes />
-                        <span>Rời khỏi sự kiện</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
-                  <FaExclamationCircle className="text-3xl mx-auto mb-2" />
-                  <p className="font-semibold">Yêu cầu bị từ chối</p>
-                  <p className="text-sm text-green-100 mt-2">
-                    Vui lòng liên hệ manager để biết thêm chi tiết
+            ) : (
+              <div className="bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl shadow-xl p-8 text-white">
+                <div className="text-center mb-6">
+                  <FaHandsHelping className="text-6xl mx-auto mb-4 opacity-90" />
+                  <h3 className="text-2xl font-bold mb-2">
+                    {registrationStatus === "approved"
+                      ? "Đã được duyệt"
+                      : registrationStatus === "pending"
+                      ? "Chờ duyệt"
+                      : registrationStatus === "rejected"
+                      ? "Bị từ chối"
+                      : "Tham gia ngay"}
+                  </h3>
+                  <p className="text-green-100">
+                    {registrationStatus === "approved"
+                      ? "Bạn đã được chấp nhận tham gia sự kiện này"
+                      : registrationStatus === "pending"
+                      ? "Yêu cầu của bạn đang chờ manager duyệt"
+                      : registrationStatus === "rejected"
+                      ? "Yêu cầu của bạn đã bị từ chối"
+                      : "Đăng ký để trở thành tình nguyện viên"}
                   </p>
                 </div>
-              )}
-            </div>
+
+                {registrationStatus === "none" ? (
+                  <button
+                    onClick={handleRegister}
+                    disabled={isRegistering}
+                    className="w-full bg-white text-green-700 font-bold py-4 px-6 rounded-xl hover:bg-green-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {isRegistering ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-700"></div>
+                        <span>Đang xử lý...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaHandsHelping className="text-xl" />
+                        <span>Đăng ký tham gia</span>
+                      </>
+                    )}
+                  </button>
+                ) : registrationStatus === "pending" ? (
+                  <div className="space-y-3">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                      <FaClock className="text-3xl mx-auto mb-2" />
+                      <p className="font-semibold">Đang chờ duyệt</p>
+                    </div>
+                    <button
+                      onClick={handleCancelRequest}
+                      disabled={isRegistering}
+                      className="w-full bg-red-500/90 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
+                    >
+                      {isRegistering ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Đang xử lý...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaTimes className="text-xl" />
+                          <span>Hủy yêu cầu tham gia</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : registrationStatus === "approved" ? (
+                  <div className="space-y-3">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                      <FaCheckCircle className="text-3xl mx-auto mb-2" />
+                      <p className="font-semibold">Đã được chấp nhận!</p>
+                    </div>
+                    <button
+                      onClick={handleJoinChat}
+                      className="w-full bg-white text-blue-700 font-bold py-3 px-6 rounded-xl hover:bg-blue-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+                    >
+                      <FaComments className="text-xl" />
+                      <span>Vào kênh chat</span>
+                    </button>
+                    {/* Chỉ cho phép hủy khi event chưa diễn ra (upcoming) */}
+                    {event.status === "upcoming" && (
+                      <button
+                        onClick={handleCancelRequest}
+                        disabled={isRegistering}
+                        className="w-full bg-red-500/90 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-xl transition-all flex items-center justify-center space-x-2 text-sm disabled:opacity-50"
+                      >
+                        {isRegistering ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Đang xử lý...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaTimes />
+                            <span>Rời khỏi sự kiện</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                    {/* Hiển thị trạng thái khi event đang diễn ra hoặc đã kết thúc */}
+                    {(event.status === "ongoing" ||
+                      event.status === "completed") && (
+                      <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3 text-center text-sm">
+                        <p>
+                          {event.status === "ongoing"
+                            ? "🟢 Sự kiện đang diễn ra"
+                            : "✅ Sự kiện đã kết thúc"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <FaExclamationCircle className="text-3xl mx-auto mb-2" />
+                    <p className="font-semibold">Yêu cầu bị từ chối</p>
+                    <p className="text-sm text-green-100 mt-2">
+                      Vui lòng liên hệ manager để biết thêm chi tiết
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Event Info Card */}
             <div className="bg-white rounded-2xl shadow-lg p-6 border border-green-100">

@@ -6,14 +6,24 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\URL;
 
-
+/**
+ * Notification CustomVerifyEmail - Email xác thực tài khoản
+ * 
+ * Notification này gửi email xác thực đến user sau khi đăng ký.
+ * Hỗ trợ gửi qua mail, database và broadcast.
+ * 
+ * @package App\Notifications
+ */
 class CustomVerifyEmail extends Notification implements ShouldQueue
 {
     use Queueable;
 
     /**
-     * Create a new notification instance.
+     * Khởi tạo notification
      */
     public function __construct()
     {
@@ -21,9 +31,10 @@ class CustomVerifyEmail extends Notification implements ShouldQueue
     }
 
     /**
-     * Get the notification's delivery channels.
+     * Xác định các kênh gửi notification
      *
-     * @return array<int, string>
+     * @param object $notifiable User nhận notification
+     * @return array<int, string> Danh sách channels (mail, database, broadcast)
      */
     public function via(object $notifiable): array
     {
@@ -31,7 +42,10 @@ class CustomVerifyEmail extends Notification implements ShouldQueue
     }
 
     /**
-     * Get the mail representation of the notification.
+     * Tạo nội dung email
+     * 
+     * @param object $notifiable User nhận email
+     * @return MailMessage
      */
     public function toMail(object $notifiable): MailMessage
     {
@@ -41,6 +55,12 @@ class CustomVerifyEmail extends Notification implements ShouldQueue
             ->line('Thank you for using our application!');
     }
 
+    /**
+     * Tạo URL xác thực có chữ ký và thời hạn
+     * 
+     * @param object $notifiable User cần xác thực
+     * @return string URL xác thực
+     */
     protected function verificationUrl($notifiable)
     {
         return URL::temporarySignedRoute(
@@ -54,8 +74,9 @@ class CustomVerifyEmail extends Notification implements ShouldQueue
     }
 
     /**
-     * Get the array representation of the notification.
+     * Chuyển notification thành array (cho database/broadcast)
      *
+     * @param object $notifiable User nhận notification
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array

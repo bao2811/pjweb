@@ -8,8 +8,25 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * Controller MessageController - Xử lý các thao tác tin nhắn trong channel
+ * 
+ * Controller này xử lý các API endpoint cho chức năng chat,
+ * bao gồm: lấy tin nhắn theo channel, gửi tin nhắn, xóa tin nhắn.
+ * 
+ * @package App\Http\Controllers
+ */
 class MessageController extends Controller
 {
+    /**
+     * Lấy tất cả tin nhắn trong một channel
+     * 
+     * Trả về danh sách tin nhắn sắp xếp theo thời gian gửi tăng dần.
+     * Kèm thông tin sender (id, username, image).
+     * 
+     * @param int $channelId ID của channel
+     * @return JsonResponse Danh sách tin nhắn
+     */
     public function getMessagesByChannel($channelId): JsonResponse
     {
         try {
@@ -25,6 +42,15 @@ class MessageController extends Controller
         }
     }
 
+    /**
+     * Gửi tin nhắn mới trong channel
+     * 
+     * Tạo tin nhắn mới với nội dung và sender_id.
+     * Tự động lấy sender_id từ user đang đăng nhập.
+     * 
+     * @param Request $request Request chứa channel_id, content, sender_id
+     * @return JsonResponse Tin nhắn vừa tạo
+     */
     public function sendMessage(Request $request): JsonResponse
     {
         try {
@@ -64,6 +90,15 @@ class MessageController extends Controller
         }
     }
 
+    /**
+     * Xóa tin nhắn
+     * 
+     * Chỉ cho phép sender xóa tin nhắn của mình.
+     * 
+     * @param Request $request Request object
+     * @param int $id ID của tin nhắn cần xóa
+     * @return JsonResponse Kết quả xóa
+     */
     public function deleteMessage(Request $request, $id): JsonResponse
     {
         try {

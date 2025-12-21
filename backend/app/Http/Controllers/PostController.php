@@ -9,17 +9,35 @@ use App\Services\PostService;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\LOG;
 
-
-
+/**
+ * Controller PostController - Xử lý các thao tác liên quan đến bài viết
+ * 
+ * Controller này xử lý các API endpoint cho bài viết,
+ * bao gồm: CRUD bài viết, like/unlike, comment, lấy bài viết theo channel.
+ * 
+ * @package App\Http\Controllers
+ */
 class PostController extends Controller
 {
     protected $postService;
 
+    /**
+     * Khởi tạo controller với PostService
+     * 
+     * @param PostService $postService Service xử lý logic nghiệp vụ bài viết
+     */
     public function __construct(PostService $postService)
     {
         $this->postService = $postService;
     }
 
+    /**
+     * Lấy thông tin bài viết theo ID (và cập nhật lượt like)
+     * 
+     * @param Request $request Request object
+     * @param int $id ID của bài viết
+     * @return JsonResponse Thông tin bài viết
+     */
     public function getPostById(Request $request, $id): JsonResponse
     {
         try {
@@ -36,6 +54,15 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Lấy tất cả bài viết với phân trang
+     * 
+     * Sử dụng cursor-based pagination với last_id.
+     * Trả về danh sách bài viết kèm thông tin isLiked cho user hiện tại.
+     * 
+     * @param Request $request Request chứa last_id, limit, userId
+     * @return JsonResponse Danh sách bài viết
+     */
     public function getAllPosts(Request $request): JsonResponse
     {
         try {
@@ -60,6 +87,13 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Lấy chi tiết bài viết theo ID
+     * 
+     * @param Request $request Request object
+     * @param int $id ID của bài viết
+     * @return JsonResponse Chi tiết bài viết
+     */
     public function getPostDetails(Request $request, $id): JsonResponse
     {
         try {
@@ -76,14 +110,29 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Tạo bài viết mới
+     * 
+     * Validate và tạo bài viết mới với tiêu đề, nội dung, hình ảnh.
+     * Yêu cầu user phải đăng nhập để tạo bài.
+     * 
+     * @param Request $request Request chứa title, content, image, channel_id
+     * @return JsonResponse Bài viết vừa tạo
+     */
     public function createPost(Request $request): JsonResponse
     {
         try {
             $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'content' => 'required|string',
-                'image' => 'nullable|string',
-                'channel_id' => 'nullable|integer',
+                'title' => 'nullable|string|max:200',
+                'content' => 'required|string|min:5|max:5000',
+                'image' => 'nullable|string|url|max:500',
+                'channel_id' => 'nullable|integer|exists:channels,id',
+            ], [
+                'title.max' => 'Tiêu đề không được quá 200 ký tự',
+                'content.required' => 'Vui lòng nhập nội dung bài viết',
+                'content.min' => 'Nội dung phải có ít nhất 5 ký tự',
+                'content.max' => 'Nội dung không được quá 5000 ký tự',
+                'image.url' => 'URL hình ảnh không hợp lệ',
             ]);
 
             $postData = $request->only(['title', 'content', 'image', 'channel_id']);
@@ -113,6 +162,16 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Xóa bài viết theo ID
+     * 
+     * Kiểm tra quyền sở hữu trước khi xóa.
+     * Chỉ author của bài viết mới có quyền xóa.
+     * 
+     * @param Request $request Request object
+     * @param int $id ID của bài viết cần xóa
+     * @return JsonResponse Kết quả xóa
+     */
     public function deletePostById(Request $request, $id): JsonResponse
     {
         try {
@@ -141,6 +200,16 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Cập nhật bài viết theo ID
+     * 
+     * Cho phép cập nhật tiêu đề, nội dung và hình ảnh của bài viết.
+     * TODO: Cần thêm kiểm tra quyền sở hữu trước khi cập nhật.
+     * 
+     * @param Request $request Request chứa title, content, image
+     * @param int $id ID của bài viết cần cập nhật
+     * @return JsonResponse Bài viết sau khi cập nhật
+     */
     public function updatePostById(Request $request, $id): JsonResponse
     {
 
@@ -170,6 +239,14 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Tìm kiếm bài viết
+     * 
+     * Tìm kiếm bài viết theo từ khóa trong tiêu đề và nội dung.
+     * 
+     * @param Request $request Request chứa query string
+     * @return JsonResponse Danh sách bài viết tìm được
+     */
     public function searchPosts(Request $request): JsonResponse
     {
         $query = $request->input('query', '');
@@ -185,6 +262,15 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Cập nhật lượt like cho bài viết
+     * 
+     * Tăng/giảm số lượt like của bài viết.
+     * 
+     * @param Request $request Request chứa status (1=like, 0=unlike)
+     * @param int $postId ID của bài viết
+     * @return JsonResponse Kết quả cập nhật
+     */
     public function updateLikeOfPost(Request $request, $postId): JsonResponse
     {
         $status = $request->input('status'); // 1 for like, 0 for unlike
@@ -199,11 +285,32 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Thêm bình luận cho bài viết
+     * 
+     * Validate và thêm bình luận mới cho bài viết.
+     * Giới hạn độ dài bình luận từ 2-1000 ký tự.
+     * 
+     * @param Request $request Request chứa content, postId
+     * @return JsonResponse Bình luận vừa tạo
+     */
     public function addCommentOfPost(Request $request): JsonResponse
     {
+        // Validate input
+        $validated = $request->validate([
+            'content' => 'required|string|min:2|max:1000',
+            'postId' => 'required|integer|exists:posts,id',
+        ], [
+            'content.required' => 'Vui lòng nhập nội dung bình luận',
+            'content.min' => 'Bình luận phải có ít nhất 2 ký tự',
+            'content.max' => 'Bình luận không được quá 1000 ký tự',
+            'postId.required' => 'ID bài viết không hợp lệ',
+            'postId.exists' => 'Bài viết không tồn tại',
+        ]);
+
         $userId = $request->get('userId');
-        $comment = $request->input('content');
-        $postId = $request->input('postId');
+        $comment = $validated['content'];
+        $postId = $validated['postId'];
 
         try {
             $comment = $this->postService->addCommentOfPost($postId, $userId, $comment);
@@ -219,6 +326,13 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Lấy tất cả bài viết của một user
+     * 
+     * @param Request $request Request object
+     * @param int $userId ID của user
+     * @return JsonResponse Danh sách bài viết của user
+     */
     public function getPostsByUserId(Request $request, $userId): JsonResponse
     {
         try {
@@ -232,6 +346,13 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Lấy tất cả bình luận của một bài viết
+     * 
+     * @param Request $request Request object
+     * @param int $postId ID của bài viết
+     * @return JsonResponse Danh sách bình luận
+     */
     public function getCommentsOfPost(Request $request, $postId): JsonResponse
     {
         try {
@@ -245,7 +366,15 @@ class PostController extends Controller
         }
     }
 
-    // Lấy tất cả posts của 1 channel
+    /**
+     * Lấy tất cả bài viết của một channel
+     * 
+     * Trả về danh sách bài viết trong channel theo channelId.
+     * 
+     * @param Request $request Request object
+     * @param int $channelId ID của channel
+     * @return JsonResponse Danh sách bài viết trong channel
+     */
     public function getPostsByChannel(Request $request, $channelId): JsonResponse
     {
         try {
@@ -261,8 +390,16 @@ class PostController extends Controller
     }
 
     /**
-     * Tạo post mới trong channel
+     * Tạo bài viết mới trong channel
+     * 
+     * Kiểm tra quyền trước khi đăng bài:
+     * - Channel phải tồn tại và thuộc về một event đã được duyệt
+     * - User phải là author, comanager, hoặc đã được approved tham gia event
+     * 
      * FIX #10: Thêm kiểm tra quyền - chỉ user đã được approved tham gia sự kiện mới được post
+     * 
+     * @param Request $request Request chứa channel_id, content, image, author_id
+     * @return JsonResponse Bài viết vừa tạo
      */
     public function addPostToChannel(Request $request): JsonResponse
     {
@@ -337,6 +474,15 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Lấy danh sách bài viết trending
+     * 
+     * Trả về các bài viết có nhiều lượt tương tác nhất.
+     * Mặc định trả về 5 bài viết.
+     * 
+     * @param Request $request Request chứa limit (mặc định 5)
+     * @return JsonResponse Danh sách bài viết trending
+     */
     public function getTrendingPosts(Request $request): JsonResponse
     {
         try {

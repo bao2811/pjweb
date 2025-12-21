@@ -9,6 +9,14 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\CustomVerifyEmail;
 
+/**
+ * Model User - Quản lý thông tin người dùng
+ * 
+ * Model này đại diện cho bảng users trong database, chứa thông tin
+ * tài khoản người dùng bao gồm: admin, manager, và user thường.
+ * 
+ * @package App\Models
+ */
 class User extends Authenticatable
 // implements MustVerifyEmail
 {
@@ -29,7 +37,7 @@ class User extends Authenticatable
         'role',
         'image',
         'status',
-        'addressCard',  
+        'address_card',  
         'created_at'
     ];
 
@@ -43,13 +51,22 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    /**
+     * Lấy danh sách bài viết của người dùng
+     * 
+     * Quan hệ một-nhiều: Một user có nhiều bài post
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
     public function posts()
     {
         return $this->hasMany(Post::class, 'author_id'); // nếu cột khóa ngoại là author_id
     }
 
     /**
-     * Notifications sent by this user
+     * Lấy danh sách thông báo đã gửi bởi người dùng này
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function sentNotifications()
     {
@@ -57,7 +74,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Notifications received by this user
+     * Lấy danh sách thông báo người dùng này nhận được
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function receivedNotifications()
     {
@@ -65,13 +84,24 @@ class User extends Authenticatable
     }
 
     /**
-     * Push subscriptions for this user
+     * Lấy danh sách đăng ký push notification của người dùng
+     * 
+     * Một user có thể đăng ký nhận push trên nhiều thiết bị
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function pushSubscriptions()
     {
         return $this->hasMany(PushSubscription::class);
     }
 
+    /**
+     * Lấy danh sách kênh chat mà người dùng tham gia
+     * 
+     * Quan hệ nhiều-nhiều thông qua bảng trung gian channel_user
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
     public function channels()
     {
         return $this->belongsToMany(Channel::class, 'channel_user', 'user_id', 'channel_id');
@@ -80,9 +110,9 @@ class User extends Authenticatable
 
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Định nghĩa các kiểu dữ liệu cho các trường
+     * 
+     * @return array<string, string> Mảng mapping tên trường với kiểu dữ liệu
      */
     protected function casts(): array
     {
@@ -92,6 +122,13 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Gửi email xác thực tài khoản
+     * 
+     * Sử dụng CustomVerifyEmail notification thay vì mặc định
+     * 
+     * @return void
+     */
     public function sendEmailVerificationNotification()
     {
         $this->notify(new CustomVerifyEmail);
@@ -102,17 +139,34 @@ class User extends Authenticatable
     //     $this->notify(new VerifyEmailNotification());
     // }
 
+    /**
+     * Lấy danh sách đăng ký tham gia sự kiện của user
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
     public function joinEvents()
     {
         return $this->hasMany(JoinEvent::class);
     }
 
+    /**
+     * Lấy danh sách sự kiện mà user đã tham gia
+     * 
+     * Quan hệ nhiều-nhiều thông qua bảng join_events
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
     public function joinedEvents()
     {
         return $this->belongsToMany(Event::class, 'join_events', 'user_id', 'event_id');
     }
 
-    // 🔹 Kiểm tra xem user có trong event chưa
+    /**
+     * Kiểm tra xem user đã tham gia sự kiện hay chưa
+     * 
+     * @param int $eventId ID của sự kiện cần kiểm tra
+     * @return bool True nếu đã tham gia, False nếu chưa
+     */
     public function isMemberOfEvent($eventId)
     {
         return $this->joinEvents()->where('event_id', $eventId)->exists();

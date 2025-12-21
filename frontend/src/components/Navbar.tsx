@@ -13,6 +13,9 @@ import {
   FaCalendarAlt,
   FaTrophy,
   FaHome,
+  FaUsers,
+  FaUserShield,
+  FaClipboard,
 } from "react-icons/fa";
 import { useAuth } from "@/hooks/useAuth";
 import { authFetch } from "@/utils/auth";
@@ -652,7 +655,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <nav className="bg-blue-100 border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo & Brand */}
@@ -661,9 +664,14 @@ export default function Navbar() {
               href={`${basePath}/dashboard`}
               className="flex items-center space-x-3 group"
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform duration-200 shadow-md">
-                <span className="text-white text-2xl">🌱</span>
-              </div>
+              <Image
+                src="data:image/jpeg;base64,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"
+                alt="Logo"
+                className="h-12 border-2 border-white rounded-full"
+                width={48}
+                height={48}
+                unoptimized
+              />
               <div>
                 <div className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
                   VolunteerHub
@@ -676,7 +684,7 @@ export default function Navbar() {
           </div>
 
           {/* Main Navigation - Centered */}
-          <div className="hidden lg:flex items-center justify-center gap-2 sm:gap-4 bg-gray-200 rounded-full px-3 sm:px-6 py-2 absolute left-1/2 transform -translate-x-1/2">
+          <div className="hidden lg:flex items-center justify-center gap-2 sm:gap-4 bg-blue-100 rounded-full px-3 sm:px-6 py-2 absolute left-1/2 transform -translate-x-1/2">
             <Link
               href={`${basePath}/dashboard`}
               className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
@@ -755,7 +763,7 @@ export default function Navbar() {
                   // }`}
                   className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors duration-200 font-medium"
                 >
-                  Người dùng
+                  Quản lý người dùng
                 </Link>
               </>
             )}
@@ -1048,39 +1056,59 @@ export default function Navbar() {
 
                         {/* Manager specific links */}
                         {currentUser?.role === "manager" && (
-                          <Link
-                            href="/manager/my-events"
-                            className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                          >
-                            <FaCalendarAlt className="text-gray-500" />
-                            <span className="text-gray-700 font-medium">
-                              Sự kiện tôi quản lý
-                            </span>
-                          </Link>
+                          <>
+                            <Link
+                              href="/manager/my-events"
+                              className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <FaCalendarAlt className="text-gray-500" />
+                              <span className="text-gray-700 font-medium">
+                                Sự kiện tôi quản lý
+                              </span>
+                            </Link>
+                            <Link
+                              href="/manager/reports"
+                              className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <FaClipboard className="text-gray-500" />
+                              <span className="text-gray-700 font-medium">
+                                Báo cáo sự kiện
+                              </span>
+                            </Link>
+                          </>
                         )}
-
-                        {/* Admin specific links */}
                         {currentUser?.role === "admin" && (
-                          <Link
-                            href="/admin/system-settings"
-                            className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                          >
-                            <FaCog className="text-gray-500" />
-                            <span className="text-gray-700 font-medium">
-                              Cài đặt hệ thống
-                            </span>
-                          </Link>
+                          <>
+                            <Link
+                              href="/admin/events"
+                              className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <FaCalendarAlt className="text-gray-500" />
+                              <span className="text-gray-700 font-medium">
+                                Quản lý sự kiện
+                              </span>
+                            </Link>
+                            <Link
+                              href="/admin/manager"
+                              className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <FaUserShield className="text-gray-500" />
+                              <span className="text-gray-700 font-medium">
+                                Quản lý điều phối viên
+                              </span>
+                            </Link>
+                            <Link
+                              href="/admin/users"
+                              className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <FaUsers className="text-gray-500" />
+                              <span className="text-gray-700 font-medium">
+                                Quản lý người dùng
+                              </span>
+                            </Link>
+                          </>
                         )}
 
-                        <Link
-                          href={`${basePath}/settings`}
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                        >
-                          <FaCog className="text-gray-500" />
-                          <span className="text-gray-700 font-medium">
-                            Cài đặt
-                          </span>
-                        </Link>
                         <hr className="my-2" />
                         <button
                           onClick={handleLogout}

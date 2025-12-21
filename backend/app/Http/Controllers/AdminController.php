@@ -7,15 +7,33 @@ use App\Services\AdminService;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\LOG;
 
-
+/**
+ * Controller AdminController - Xử lý các thao tác quản trị hệ thống
+ * 
+ * Controller này xử lý các API endpoint cho quản trị viên,
+ * bao gồm: quản lý users, events, managers, ban/unban, approve/reject events.
+ * 
+ * @package App\Http\Controllers
+ */
 class AdminController {
 
+    /** @var AdminService Service xử lý logic quản trị */
     protected $adminService;
 
+    /**
+     * Khởi tạo controller với AdminService
+     * 
+     * @param AdminService $adminService Service xử lý logic quản trị
+     */
     public function __construct(AdminService $adminService){
         $this->adminService = $adminService;
     }
 
+    /**
+     * Lấy danh sách tất cả người dùng
+     * 
+     * @return JsonResponse Danh sách users
+     */
     public function getAllUsers() {
         try{
             $listUser = $this->adminService->getAllUsers();
@@ -28,6 +46,12 @@ class AdminController {
         }
     }
 
+    /**
+     * Lấy danh sách tất cả sự kiện
+     * 
+     * @param Request $request Request object
+     * @return JsonResponse Danh sách events
+     */
     public function getAllEvents(Request $request) {
         try{
             // Lấy userId từ authenticated user
@@ -42,6 +66,11 @@ class AdminController {
         }
     }
 
+    /**
+     * Lấy danh sách tất cả managers
+     * 
+     * @return JsonResponse Danh sách managers
+     */
     public function getAllManagers() {
         try{
             $listManager = $this->adminService->getAllManagers();
@@ -54,6 +83,12 @@ class AdminController {
         }
     }
 
+    /**
+     * Lấy danh sách sự kiện theo author
+     * 
+     * @param int $authorId ID của author
+     * @return JsonResponse Danh sách sự kiện của author
+     */
     public function getEventsByAuthor($authorId) {
         try {
             $events = $this->adminService->getEventsByAuthor($authorId);
@@ -68,6 +103,12 @@ class AdminController {
         }
     }
 
+    /**
+     * Khóa tài khoản người dùng (ban)
+     * 
+     * @param int $id ID của user cần ban
+     * @return JsonResponse Kết quả ban
+     */
     public function banUser($id) {
         try {
         $res = $this->adminService->banUser($id);
@@ -83,6 +124,12 @@ class AdminController {
         } 
     }
     
+    /**
+     * Mở khóa tài khoản người dùng (unban)
+     * 
+     * @param int $id ID của user cần unban
+     * @return JsonResponse Kết quả unban
+     */
     public function unbanUser($id) {
         try {
         $res = $this->adminService->unbanUser($id);
@@ -98,6 +145,12 @@ class AdminController {
         } 
     }
 
+    /**
+     * Xóa sự kiện
+     * 
+     * @param int $id ID của sự kiện cần xóa
+     * @return JsonResponse Kết quả xóa
+     */
     public function deleteEvent($id) {
         try {
         $res = $this->adminService->deleteEvent($id);
@@ -113,6 +166,14 @@ class AdminController {
         } 
     }
 
+    /**
+     * Duyệt sự kiện (chấp nhận)
+     * 
+     * Gửi thông báo cho author khi sự kiện được duyệt.
+     * 
+     * @param int $id ID của sự kiện cần duyệt
+     * @return JsonResponse Kết quả duyệt
+     */
     public function acceptEvent($id) {
         try {
             $senderId = request()->user()->id;
@@ -129,6 +190,14 @@ class AdminController {
         } 
     }
 
+    /**
+     * Từ chối sự kiện
+     * 
+     * Gửi thông báo cho author khi sự kiện bị từ chối.
+     * 
+     * @param int $id ID của sự kiện cần từ chối
+     * @return JsonResponse Kết quả từ chối
+     */
     public function rejectEvent($id) {
         try {
             $senderId = request()->user()->id;
@@ -145,6 +214,14 @@ class AdminController {
         } 
     }
 
+    /**
+     * Tạo tài khoản manager mới
+     * 
+     * Tạo user với role='manager' để quản lý sự kiện.
+     * 
+     * @param Request $request Request chứa username, password, email, phone, address, image, address_card
+     * @return JsonResponse User manager vừa tạo
+     */
     public function createManagerEvent(Request $request) {
         try {
             $data = $request->validate([
@@ -175,6 +252,12 @@ class AdminController {
         }
     }
 
+    /**
+     * Xóa người dùng
+     * 
+     * @param int $id ID của user cần xóa
+     * @return JsonResponse Kết quả xóa
+     */
     public function deleteUser($id) {
         try {
             $res = $this->adminService->deleteUser($id);
@@ -189,6 +272,12 @@ class AdminController {
         }
     }
 
+    /**
+     * Khóa nhiều người dùng cùng lúc (bulk lock)
+     * 
+     * @param Request $request Request chứa mảng user_ids
+     * @return JsonResponse Số lượng users đã bị khóa
+     */
     public function bulkLockUsers(Request $request) {
         try {
             $data = $request->validate([
@@ -214,6 +303,12 @@ class AdminController {
         }
     }
 
+    /**
+     * Mở khóa nhiều người dùng cùng lúc (bulk unlock)
+     * 
+     * @param Request $request Request chứa mảng user_ids
+     * @return JsonResponse Số lượng users đã được mở khóa
+     */
     public function bulkUnlockUsers(Request $request) {
         try {
             $data = $request->validate([
@@ -239,6 +334,15 @@ class AdminController {
         }
     }
 
+/**
+     * Cập nhật thông tin manager
+     * 
+     * Cho phép cập nhật username, email, phone, address, image, address_card.
+     * 
+     * @param Request $request Request chứa thông tin cần cập nhật
+     * @param int $id ID của manager cần cập nhật
+     * @return JsonResponse Manager sau khi cập nhật
+     */
 public function updateManager(Request $request, $id) {
         try {
             $data = $request->validate([

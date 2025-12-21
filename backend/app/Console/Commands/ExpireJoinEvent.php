@@ -6,22 +6,40 @@ use Illuminate\Console\Command;
 use App\Models\JoinEvent;
 use Carbon\Carbon;
 
+/**
+ * Command ExpireJoinEvent - Hết hạn đăng ký tham gia sự kiện
+ * 
+ * Command này chạy định kỳ để tìm và đánh dấu các đăng ký
+ * tham gia sự kiện đang ở trạng thái 'pending' nhưng sự kiện
+ * đã bắt đầu thành 'expired'.
+ * 
+ * Sử dụng: php artisan joins:expire
+ * 
+ * @package App\Console\Commands
+ */
 class ExpireJoinEvent extends Command
 {
     /**
-     * The name and signature of the console command.
+     * Tên và signature của lệnh artisan
      *
-     * Đây là lệnh bạn sẽ gọi trong Scheduler.
+     * @var string
      */
     protected $signature = 'joins:expire';
 
     /**
-     * The console command description.
+     * Mô tả lệnh
+     * 
+     * @var string
      */
     protected $description = 'Expire pending registrations in JoinEvent when event has started';
 
     /**
-     * Execute the console command. 
+     * Thực thi logic của command
+     * 
+     * Tìm các JoinEvent có status='pending' mà event đã bắt đầu (start_time < now),
+     * sau đó cập nhật status thành 'expired'.
+     * 
+     * @return void
      */
     public function handle()
     {

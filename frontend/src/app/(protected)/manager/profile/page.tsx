@@ -1,6 +1,7 @@
 "use client";
 import { authFetch } from "@/utils/auth";
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
   FaUser,
   FaEnvelope,
@@ -37,7 +38,7 @@ interface ManagerProfile {
   pendingApprovals: number;
   approvedEvents: number;
   averageRating: number;
-  bio?: string | null;
+  address_card: string | null;
 }
 
 interface EventStat {
@@ -73,7 +74,7 @@ export default function ManagerProfilePage() {
     pendingApprovals: 0,
     approvedEvents: 0,
     averageRating: 0,
-    bio: null,
+    address_card: null,
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -83,12 +84,16 @@ export default function ManagerProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // Safe avatar src for next/image — keep as string and handle data URLs
+  const defaultAvatar = "https://i.pravatar.cc/150?img=12";
+  const avatarSrc = (previewAvatar || profile.image || defaultAvatar) as string;
+
   // Fetch manager profile
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setIsLoading(true);
-        const response = await authFetch("/api/me");
+        const response = await authFetch("/user/getuser");
         if (response.ok) {
           const data = await response.json();
           const managerData = data.user || data;
@@ -108,7 +113,7 @@ export default function ManagerProfilePage() {
             pendingApprovals: 0,
             approvedEvents: 0,
             averageRating: 4.5,
-            bio: managerData.bio || "",
+            address_card: managerData.address_card || "",
           });
 
           setFormData({
@@ -126,8 +131,9 @@ export default function ManagerProfilePage() {
             pendingApprovals: 0,
             approvedEvents: 0,
             averageRating: 4.5,
-            bio: managerData.bio || "",
+            address_card: managerData.address_card || "",
           });
+          console.log("Fetched profile data:", managerData);
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -215,6 +221,7 @@ export default function ManagerProfilePage() {
             phone: formData.phone,
             address: formData.address,
             image: formData.image,
+            address_card: formData.address_card,
           }),
         }
       );
@@ -263,14 +270,23 @@ export default function ManagerProfilePage() {
               {/* Avatar */}
               <div className="relative group mb-4 md:mb-0">
                 <div className="w-40 h-40 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white">
-                  {/* <Image
-                    src={previewAvatar || profile.image || "https://i.pravatar.cc/150?img=12"}
-                    alt="Manager Avatar"
-                    width={160}
-                    height={160}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                  /> */}
+                  {/* Use native <img> for data URLs (preview) because next/image may reject data URIs; otherwise use Next.js Image for optimization */}
+                  {avatarSrc && avatarSrc.startsWith("data:") ? (
+                    <img
+                      src={avatarSrc}
+                      alt="Manager Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={avatarSrc}
+                      alt="Manager Avatar"
+                      width={160}
+                      height={160}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  )}
                 </div>
                 {isEditing && (
                   <button
@@ -392,14 +408,6 @@ export default function ManagerProfilePage() {
                   </p>
                   <p className="text-sm text-gray-600">Chờ phê duyệt</p>
                 </div>
-
-                <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-4 rounded-xl text-center">
-                  <FaStar className="text-3xl text-pink-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-pink-700">
-                    {profile.averageRating.toFixed(1)}⭐
-                  </p>
-                  <p className="text-sm text-gray-600">Đánh giá trung bình</p>
-                </div>
               </div>
             </div>
 
@@ -422,13 +430,6 @@ export default function ManagerProfilePage() {
                 >
                   <FaClipboardList />
                   Quản lý sự kiện
-                </button>
-                <button
-                  onClick={() => router.push("/manager/members")}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl transition font-medium"
-                >
-                  <FaUsers />
-                  Quản lý thành viên
                 </button>
                 <button
                   onClick={() => router.push("/manager/dashboard")}
@@ -461,7 +462,7 @@ export default function ManagerProfilePage() {
                       onChange={(e) =>
                         setFormData({ ...formData, username: e.target.value })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="text-black w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   ) : (
                     <div className="flex items-center gap-2 text-gray-800">
@@ -482,7 +483,7 @@ export default function ManagerProfilePage() {
                       onChange={(e) =>
                         setFormData({ ...formData, phone: e.target.value })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="text-black w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   ) : (
                     <div className="flex items-center gap-2 text-gray-800">
@@ -503,7 +504,7 @@ export default function ManagerProfilePage() {
                       onChange={(e) =>
                         setFormData({ ...formData, address: e.target.value })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="text-black w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   ) : (
                     <div className="flex items-center gap-2 text-gray-800">
@@ -515,21 +516,24 @@ export default function ManagerProfilePage() {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-600 mb-2">
-                    Giới thiệu
+                    CCCD
                   </label>
                   {isEditing ? (
                     <textarea
-                      value={formData.bio || ""}
+                      value={formData.address_card || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, bio: e.target.value })
+                        setFormData({
+                          ...formData,
+                          address_card: e.target.value,
+                        })
                       }
                       rows={4}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="Viết vài dòng về bản thân..."
+                      className="text-black w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="CCCD"
                     />
                   ) : (
                     <p className="text-gray-800">
-                      {profile.bio || "Chưa có thông tin giới thiệu"}
+                      {profile.address_card || "Chưa có thông tin giới thiệu"}
                     </p>
                   )}
                 </div>

@@ -5,12 +5,32 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Support\Facades\Redis;
 
+/**
+ * Middleware RateLimitLikeUnlike - Giới hạn tần suất like/unlike
+ * 
+ * Sử dụng Redis Sorted Set để implement sliding window rate limiting.
+ * Mặc định cho phép tối đa 10 thao tác trong 60 giây.
+ * 
+ * @package App\Http\Middleware
+ */
 class RateLimitLikeUnlike
 {
-    // $limit: số lượt tối đa, $seconds: khoảng thời gian
+    /** @var int Số lượt tối đa trong khoảng thời gian */
     protected $limit = 10;
+    
+    /** @var int Khoảng thời gian tính bằng giây */
     protected $seconds = 60;
 
+    /**
+     * Xử lý request đến
+     * 
+     * Kiểm tra số lượng thao tác like/unlike của user trong khoảng thời gian.
+     * Nếu vượt quá giới hạn, trả về lỗi 429 Too Many Requests.
+     * 
+     * @param \Illuminate\Http\Request $request Request đến
+     * @param Closure $next Middleware tiếp theo
+     * @return mixed Response
+     */
     public function handle($request, Closure $next)
     {
         $userId = $request->user()->id; // lấy user hiện tại

@@ -10,31 +10,49 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Bus\Queueable;
 
+/**
+ * Model Noti - Quản lý thông báo trong hệ thống
+ * 
+ * Model này đại diện cho bảng notis trong database, lưu trữ
+ * tất cả các thông báo gửi đến người dùng. Hỗ trợ cả in-app
+ * notification và Web Push Notification.
+ * 
+ * @package App\Models
+ */
 class Noti extends Model implements ShouldQueue  {
 
     use Notifiable; 
 
+    /**
+     * Tên bảng trong database
+     */
     protected $table = 'notis';
 
-
-
+    /**
+     * Các trường được phép gán hàng loạt
+     */
     protected $fillable = [
         'title',
         'message',
         'sender_id',
-        'receiver_id', // Thêm receiver_id để biết gửi cho ai
+        'receiver_id', // ID người nhận thông báo
         'is_read',
         'type', // Loại thông báo: event_accepted, event_rejected, etc.
         'data', // JSON data thêm (event_id, url, etc.)
     ];
 
+    /**
+     * Định nghĩa kiểu dữ liệu cho các trường
+     */
     protected $casts = [
         'data' => 'array',
         'is_read' => 'boolean',
     ];
 
     /**
-     * Người gửi thông báo
+     * Lấy thông tin người gửi thông báo
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function sender(): BelongsTo
     {
@@ -42,15 +60,25 @@ class Noti extends Model implements ShouldQueue  {
     }
 
     /**
-     * Người nhận thông báo
+     * Lấy thông tin người nhận thông báo
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function receiver(): BelongsTo                                                                                                   
     {
         return $this->belongsTo(User::class, 'receiver_id');
     }
 
-    /**                                                                                                                                                                                                                                                                                                                                                                                                 
+    /**
      * Tạo thông báo và tự động gửi push notification + broadcast
+     * 
+     * Phương thức này sẽ:
+     * 1. Tạo record notification trong database
+     * 2. Gửi push notification cho receiver
+     * 3. Broadcast qua WebSocket
+     * 
+     * @param array $data Dữ liệu thông báo
+     * @return self Instance của notification đã tạo
      */
     public static function createAndPush(array $data): self
     {
@@ -72,10 +100,14 @@ class Noti extends Model implements ShouldQueue  {
     /**
      * Tạo thông báo và gửi push notification qua queue cho nhiều users
      * 
+     * Phương thức này dispatch job để gửi notification bất đồng bộ,
+     * phù hợp với việc gửi thông báo cho nhiều người dùng.
+     * 
      * @param array $data Dữ liệu notification
      * @param array|null $userIds Danh sách user IDs để gửi (null = gửi cho tất cả users đăng ký web push)
+     * @return bool True nếu dispatch thành công
      */
-    public static function dispatchCreateAndPush(array $data, array $userIds = null)
+    public static function dispatchCreateAndPush(array $data, ?array $userIds = null)
     {
         try {
             dispatch(function() use ($data, $userIds) {
@@ -104,10 +136,10 @@ class Noti extends Model implements ShouldQueue  {
                 $title = $data['title'];
                 $message = $data['message'];
 
-                // Gửi push notification cho từng subscription
+                // Gửi push notification cho từng subscription - wrap thành collection
                 foreach ($subscriptions as $sub) {
                     try {
-                        WebPushApi::sendNotification($sub, $title, $message, $url);
+                        WebPushApi::sendNotification(collect([$sub]), $title, $message, $url);
                     } catch (\Exception $e) {
                         Log::error("Failed to send push to subscription {$sub->id}: " . $e->getMessage());
                     }
@@ -143,6 +175,11 @@ class Noti extends Model implements ShouldQueue  {
 
     /**
      * Gửi push notification cho user nhận
+     * 
+     * Phương thức này gửi push notification đến tất cả các thiết bị
+     * mà user đã đăng ký nhận thông báo.
+     * 
+     * @return bool True nếu gửi thành công ít nhất 1 notification
      */
     public function sendPush(): bool
     {
@@ -158,10 +195,8 @@ class Noti extends Model implements ShouldQueue  {
             // Chuẩn bị URL dựa vào loại thông báo
             $url = $this->data['url'] ?? '/notifications';
 
-            // Gửi push notification
-            foreach ($subscriptions as $sub) {
-                WebPushApi::sendNotification($sub, $this->title, $this->message, $url);
-            }
+            // Gửi push notification - truyền collection thay vì từng subscription
+            WebPushApi::sendNotification($subscriptions, $this->title, $this->message, $url);
 
             Log::info("Push notification sent to user {$this->receiver_id}");
             return true;
