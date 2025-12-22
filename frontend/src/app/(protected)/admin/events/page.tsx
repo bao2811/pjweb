@@ -599,9 +599,6 @@ export default function AdminEventsPage() {
                 <FaCalendarAlt className="mr-2 text-blue-600" />
                 Quản lý sự kiện
               </h1>
-              <p className="text-blue-700 mt-1 text-sm sm:text-base">
-                Phê duyệt và quản lý các sự kiện trong hệ thống
-              </p>
             </div>
             <div className="flex items-center space-x-2">
               <button

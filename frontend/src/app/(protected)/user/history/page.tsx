@@ -139,41 +139,80 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header with Achievement Badge */}
-        <div className="mb-8 bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div>
-              <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 mb-3">
-                🏆 Lịch Sử Tham Gia
-              </h1>
-              <p className="text-gray-600 text-lg">
-                Hành trình tình nguyện của bạn - Mỗi bước chân đều là dấu ấn ý
-                nghĩa
-              </p>
+        {/* Compact Header with a distinctive badge */}
+        <div className="mb-6 bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 flex items-center gap-3">
+                  <span className="inline-block bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow">
+                    🏆
+                  </span>
+                  <span> Lịch Sử Tham Gia</span>
+                </h1>
+                <p className="text-sm text-gray-500 mt-1 max-w-xl">
+                  Hành trình tình nguyện của bạn — mỗi hành động đều tạo ra giá
+                  trị.
+                </p>
+              </div>
             </div>
 
-            {/* Achievement Badge */}
-            <div className="flex items-center gap-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-6 border-2 border-yellow-200">
+            {/* Minimal Achievement Chip */}
+            <div className="flex items-center gap-3">
               <div
-                className={`w-20 h-20 bg-gradient-to-br ${achievement.color} rounded-2xl flex items-center justify-center shadow-lg`}
+                className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg ${achievement.color}`}
               >
-                <achievement.icon className="text-4xl text-white" />
+                {achievement.title === "Tân binh" ? (
+                  // Inline SVG star for Tân binh to avoid external assets
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    className="w-8 h-8 text-white"
+                    fill="currentColor"
+                    aria-hidden
+                  >
+                    <path d="M12 .587l3.668 7.431L24 9.748l-6 5.848 1.416 8.264L12 18.896l-7.416 4.964L6 15.596 0 9.748l8.332-1.73z" />
+                  </svg>
+                ) : (
+                  <achievement.icon className="text-white text-2xl" />
+                )}
               </div>
-              <div>
-                <p className="text-sm text-gray-600 font-medium">
-                  Cấp độ của bạn
-                </p>
-                <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-orange-600">
-                  {achievement.title}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {totalHours < 20
-                    ? `Còn ${20 - totalHours}h nữa để lên hạng`
-                    : totalHours < 50
-                    ? `Còn ${50 - totalHours}h nữa để lên hạng`
-                    : totalHours < 100
-                    ? `Còn ${100 - totalHours}h nữa để lên hạng`
-                    : "Bạn đã đạt cấp độ cao nhất!"}
+              <div className="min-w-[180px]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">Cấp độ</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {achievement.title}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Tổng giờ</p>
+                    <p className="text-sm font-semibold text-green-600">
+                      {totalHours}h
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tiny progress bar toward next level */}
+                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-2 bg-gradient-to-r from-yellow-400 to-orange-500"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.round((totalHours % 20) * 5)
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  {totalHours < 100
+                    ? totalHours < 20
+                      ? `Còn ${20 - totalHours}h`
+                      : totalHours < 50
+                      ? `Còn ${50 - totalHours}h`
+                      : `Còn ${100 - totalHours}h`
+                    : "Đã tối đa"}
                 </p>
               </div>
             </div>
@@ -182,72 +221,72 @@ export default function HistoryPage() {
 
         {/* Stats Overview - Enhanced */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-green-500 hover:shadow-xl transition-all transform hover:-translate-y-1">
+          <div className="bg-white rounded-2xl shadow-lg p-4 border-l-4 border-green-500 hover:shadow-xl transition-all transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium mb-1">
                   Sự kiện hoàn thành
                 </p>
-                <p className="text-4xl font-bold text-green-600">
+                <p className="text-3xl font-bold text-green-600">
                   {totalEvents}
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
                   +{totalEvents} sự kiện
                 </p>
               </div>
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <FaCheckCircle className="text-3xl text-white" />
+              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <FaCheckCircle className="text-2xl text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-blue-500 hover:shadow-xl transition-all transform hover:-translate-y-1">
+          <div className="bg-white rounded-2xl shadow-lg p-4 border-l-4 border-blue-500 hover:shadow-xl transition-all transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium mb-1">
                   Giờ tình nguyện
                 </p>
-                <p className="text-4xl font-bold text-blue-600">
+                <p className="text-3xl font-bold text-blue-600">
                   {totalHours}h
                 </p>
                 <p className="text-xs text-gray-500 mt-2">Thời gian đóng góp</p>
               </div>
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <FaClock className="text-3xl text-white" />
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <FaClock className="text-2xl text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-purple-500 hover:shadow-xl transition-all transform hover:-translate-y-1">
+          <div className="bg-white rounded-2xl shadow-lg p-4 border-l-4 border-purple-500 hover:shadow-xl transition-all transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium mb-1">
                   Điểm tích lũy
                 </p>
-                <p className="text-4xl font-bold text-purple-600">
+                <p className="text-3xl font-bold text-purple-600">
                   {Math.round(totalHours * 10)}
                 </p>
                 <p className="text-xs text-gray-500 mt-2">Mỗi giờ = 10 điểm</p>
               </div>
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <FaTrophy className="text-3xl text-white" />
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <FaTrophy className="text-2xl text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-pink-500 hover:shadow-xl transition-all transform hover:-translate-y-1">
+          <div className="bg-white rounded-2xl shadow-lg p-4 border-l-4 border-pink-500 hover:shadow-xl transition-all transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium mb-1">
                   Tác động xã hội
                 </p>
-                <p className="text-4xl font-bold text-pink-600">
+                <p className="text-3xl font-bold text-pink-600">
                   {history.reduce((sum, e) => sum + e.participants, 0)}
                 </p>
                 <p className="text-xs text-gray-500 mt-2">Người được hỗ trợ</p>
               </div>
-              <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <FaHeart className="text-3xl text-white" />
+              <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <FaHeart className="text-2xl text-white" />
               </div>
             </div>
           </div>
@@ -518,7 +557,7 @@ export default function HistoryPage() {
                 >
                   <div className="md:flex">
                     {/* Event Image */}
-                    <div className="md:w-2/5 relative h-80 md:h-auto">
+                    <div className="md:w-1/3 relative h-64 md:h-auto">
                       <Image
                         src={
                           event.image || "https://via.placeholder.com/600x400"
@@ -528,14 +567,14 @@ export default function HistoryPage() {
                         className="object-cover"
                       />
                       {/* Status Badge */}
-                      <div className="absolute top-6 right-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-full font-bold flex items-center gap-2 shadow-lg">
-                        <FaCheckCircle className="text-xl" />
+                      <div className="absolute top-4 right-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full font-bold flex items-center gap-2 shadow-lg text-sm">
+                        <FaCheckCircle className="text-base" />
                         Đã hoàn thành
                       </div>
 
                       {/* Achievement Badge if hours > 8 */}
                       {event.hours >= 8 && (
-                        <div className="absolute bottom-6 left-6 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full font-bold flex items-center gap-2 shadow-lg">
+                        <div className="absolute bottom-4 left-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full font-bold flex items-center gap-2 shadow-lg text-sm">
                           <FaTrophy />
                           Xuất sắc
                         </div>
@@ -543,30 +582,30 @@ export default function HistoryPage() {
                     </div>
 
                     {/* Event Details */}
-                    <div className="md:w-3/5 p-8">
+                    <div className="md:w-2/3 p-6">
                       <div className="flex items-start justify-between mb-4">
-                        <h3 className="text-3xl font-bold text-gray-800 leading-tight">
+                        <h3 className="text-2xl font-bold text-gray-800 leading-tight">
                           {event.title}
                         </h3>
-                        <span className="ml-4 px-4 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-semibold whitespace-nowrap">
+                        <span className="ml-4 px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-semibold whitespace-nowrap">
                           +{Math.round(event.hours * 10)} điểm
                         </span>
                       </div>
 
-                      <p className="text-gray-600 mb-6 line-clamp-3 text-lg leading-relaxed">
+                      <p className="text-gray-600 mb-4 line-clamp-3 text-base leading-relaxed">
                         {event.description}
                       </p>
 
-                      <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="flex items-center gap-3 text-gray-700 bg-blue-50 p-3 rounded-xl">
-                          <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                      <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="flex items-center gap-3 text-gray-700 bg-blue-50 p-2.5 rounded-xl">
+                          <div className="w-9 h-9 bg-blue-500 rounded-lg flex items-center justify-center">
                             <FaCalendarAlt className="text-white" />
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">
                               Hoàn thành
                             </p>
-                            <p className="font-semibold">
+                            <p className="font-semibold text-sm">
                               {new Date(event.completedAt).toLocaleDateString(
                                 "vi-VN",
                                 {
@@ -579,41 +618,43 @@ export default function HistoryPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 text-gray-700 bg-red-50 p-3 rounded-xl">
-                          <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
+                        <div className="flex items-center gap-3 text-gray-700 bg-red-50 p-2.5 rounded-xl">
+                          <div className="w-9 h-9 bg-red-500 rounded-lg flex items-center justify-center">
                             <FaMapMarkerAlt className="text-white" />
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">
                               Địa điểm
                             </p>
-                            <p className="font-semibold line-clamp-1">
+                            <p className="font-semibold line-clamp-1 text-sm">
                               {event.location}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 text-gray-700 bg-purple-50 p-3 rounded-xl">
-                          <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                        <div className="flex items-center gap-3 text-gray-700 bg-purple-50 p-2.5 rounded-xl">
+                          <div className="w-9 h-9 bg-purple-500 rounded-lg flex items-center justify-center">
                             <FaClock className="text-white" />
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">
                               Thời lượng
                             </p>
-                            <p className="font-semibold">{event.hours} giờ</p>
+                            <p className="font-semibold text-sm">
+                              {event.hours} giờ
+                            </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 text-gray-700 bg-green-50 p-3 rounded-xl">
-                          <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                        <div className="flex items-center gap-3 text-gray-700 bg-green-50 p-2.5 rounded-xl">
+                          <div className="w-9 h-9 bg-green-500 rounded-lg flex items-center justify-center">
                             <FaUsers className="text-white" />
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">
                               Người tham gia
                             </p>
-                            <p className="font-semibold">
+                            <p className="font-semibold text-sm">
                               {event.participants} người
                             </p>
                           </div>
@@ -621,22 +662,22 @@ export default function HistoryPage() {
                       </div>
 
                       {/* Organizer */}
-                      <div className="flex items-center gap-4 pt-6 border-t-2 border-gray-100">
+                      <div className="flex items-center gap-4 pt-4 border-t-2 border-gray-100">
                         <Image
                           src={
                             event.organizer.avatar ||
                             "https://i.pravatar.cc/150"
                           }
                           alt={event.organizer.name}
-                          width={50}
-                          height={50}
+                          width={44}
+                          height={44}
                           className="rounded-full border-2 border-green-400"
                         />
                         <div>
                           <p className="text-sm text-gray-500 font-medium">
                             Người tổ chức
                           </p>
-                          <p className="font-bold text-gray-800 text-lg">
+                          <p className="font-bold text-gray-800 text-base">
                             {event.organizer.name}
                           </p>
                         </div>

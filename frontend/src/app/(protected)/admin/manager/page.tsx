@@ -122,6 +122,7 @@ export default function ManagerManagement() {
   });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [actionLoadingIds, setActionLoadingIds] = useState<number[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [headerCompact, setHeaderCompact] = useState(false);
 
@@ -314,6 +315,58 @@ export default function ManagerManagement() {
   const handleDelete = (id: number) => {
     setSelectedManager(managers.find((m) => m.id === id) || null);
     setShowDeleteConfirm(true);
+  };
+
+  // Ban / Unban handlers
+  const isActionLoading = (id: number) => actionLoadingIds.includes(id);
+
+  const handleBanToggle = async (manager: Manager) => {
+    const id = manager.id;
+    setActionLoadingIds((s) => [...s, id]);
+    try {
+      const endpoint =
+        manager.status === "locked"
+          ? `/admin/unbanUser/${id}`
+          : `/admin/banUser/${id}`;
+      const method = "POST";
+
+      const response = await authFetch(endpoint, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const txt = await response.text().catch(() => "");
+        throw new Error(txt || "API error");
+      }
+
+      // Update local state
+      setManagers((prev) =>
+        prev.map((m) =>
+          m.id === id
+            ? {
+                ...m,
+                status: manager.status === "locked" ? "active" : "locked",
+              }
+            : m
+        )
+      );
+
+      showToast(
+        "success",
+        manager.status === "locked"
+          ? `Đã mở khóa ${manager.username}`
+          : `Đã khóa ${manager.username}`
+      );
+    } catch (error) {
+      console.error("Ban/Unban error:", error);
+      showToast("error", "Không thể thay đổi trạng thái người dùng");
+    } finally {
+      setActionLoadingIds((s) => s.filter((sid) => sid !== id));
+    }
   };
 
   const handleBulkDelete = () => {
@@ -544,13 +597,6 @@ export default function ManagerManagement() {
                 <FaUserShield className="mr-3 text-blue-600" />
                 Quản lý Manager
               </h1>
-              <p
-                className={`text-blue-700 mt-2 ${
-                  headerCompact ? "text-xs" : "text-sm sm:text-base"
-                }`}
-              >
-                Quản lý tài khoản manager
-              </p>
             </div>
             <div className="flex items-center space-x-3">
               <button
@@ -574,12 +620,12 @@ export default function ManagerManagement() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 sm:gap-5 mb-8">
           <div className="bg-white rounded-xl p-5 border-l-4 border-blue-500 shadow-md hover:shadow-lg transition duration-200">
             <p className="text-sm sm:text-base text-gray-600 mb-1">Tổng số</p>
-            <p className="text-2xl sm:text-3xl font-bold text-blue-900">
+            <span className="text-2xl sm:text-3xl font-bold text-blue-900">
               {stats.total}
-            </p>
+            </span>
           </div>
           <div className="bg-white rounded-xl p-5 border-l-4 border-green-500 shadow-md hover:shadow-lg transition duration-200">
             <p className="text-sm sm:text-base text-gray-600 mb-1">Hoạt động</p>
@@ -591,18 +637,6 @@ export default function ManagerManagement() {
             <p className="text-sm sm:text-base text-gray-600 mb-1">Đã khóa</p>
             <p className="text-2xl sm:text-3xl font-bold text-red-600">
               {stats.locked}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl p-5 border-l-4 border-yellow-500 shadow-md hover:shadow-lg transition duration-200">
-            <p className="text-sm sm:text-base text-gray-600 mb-1">Chờ duyệt</p>
-            <p className="text-2xl sm:text-3xl font-bold text-yellow-600">
-              {stats.pending}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl p-5 border-l-4 border-purple-500 shadow-md hover:shadow-lg transition duration-200">
-            <p className="text-sm sm:text-base text-gray-600 mb-1">Sự kiện</p>
-            <p className="text-2xl sm:text-3xl font-bold text-purple-700">
-              {stats.totalEvents}
             </p>
           </div>
         </div>
@@ -889,6 +923,46 @@ export default function ManagerManagement() {
                           title="Xóa"
                         >
                           <FaTrash className="text-lg" />
+                        </button>
+                        {/* Ban / Unban button */}
+                        <button
+                          onClick={() => handleBanToggle(manager)}
+                          disabled={isActionLoading(manager.id)}
+                          className={`p-2.5 rounded-lg transition duration-200 hover:scale-105 ${
+                            manager.status === "locked"
+                              ? "bg-green-100 hover:bg-green-200 text-green-700"
+                              : "bg-yellow-100 hover:bg-yellow-200 text-yellow-800"
+                          }`}
+                          title={
+                            manager.status === "locked" ? "Mở khóa" : "Khóa"
+                          }
+                        >
+                          {isActionLoading(manager.id) ? (
+                            <svg
+                              className="animate-spin h-5 w-5 text-gray-600"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                              ></path>
+                            </svg>
+                          ) : manager.status === "locked" ? (
+                            <FaCheckCircle className="text-lg" />
+                          ) : (
+                            <FaBan className="text-lg" />
+                          )}
                         </button>
                       </div>
                     </td>

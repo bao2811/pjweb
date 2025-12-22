@@ -3,14 +3,23 @@ export default async function registerWebPushAPI() {
     try {
       const registration = await navigator.serviceWorker.register("/sw.js");
       console.log("Service Worker registered with scope:", registration.scope);
-      // Now you can use the Push API
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          "BGfcgEChdEI-iDX_RwDlob6AVdLxnGIxsd6iERT9PxFm-P8RGwQFDbQnt7-z0mN0wZfVF6m3w5JYuihH_2pG5qQ" // Replace with your VAPID public key
-        ),
-      });
-      console.log("Push Subscription:", JSON.stringify(subscription));
+      // Now you can use the Push API (guarded)
+      if (!registration || !registration.pushManager) {
+        console.warn("PushManager not available on registration", registration);
+        return;
+      }
+
+      try {
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(
+            "BGfcgEChdEI-iDX_RwDlob6AVdLxnGIxsd6iERT9PxFm-P8RGwQFDbQnt7-z0mN0wZfVF6m3w5JYuihH_2pG5qQ" // Replace with your VAPID public key
+          ),
+        });
+        console.log("Push Subscription:", JSON.stringify(subscription));
+      } catch (err) {
+        console.error("Push subscribe failed:", err);
+      }
     } catch (error) {
       console.error(
         "Service Worker registration or Push Subscription failed:",

@@ -125,9 +125,8 @@ interface GroupProps {
 }
 
 export default function Group({ eventId, role = "user" }: GroupProps) {
-  const token = localStorage.getItem("token");
   const router = useRouter();
-  const { user } = useAuth(); // ✅ Lấy user từ AuthContext
+  const { user, token } = useAuth(); // ✅ Lấy user từ AuthContext
   const [isLoading, setIsLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState<boolean | null>(null); // null = checking, true = allowed, false = denied
   const [accessError, setAccessError] = useState<string>("");
@@ -791,8 +790,8 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
     });
 
     // Optimistic update
-    setPosts(
-      posts.map((post) => {
+    setPosts((prevPosts) =>
+      prevPosts.map((post) => {
         if (post.id === postId) {
           if (parentCommentId) {
             // Add as reply to parent comment
@@ -817,6 +816,18 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
         return post;
       })
     );
+
+    // Ensure comments panel (or reply thread) is visible so the user sees their comment immediately
+    setShowComments((prev) => {
+      const next = { ...prev };
+      // If it's a reply, open the specific parent comment thread
+      if (parentCommentId) {
+        next[`${postId}-${parentCommentId}`] = true;
+      }
+      // Also open the main comments panel for the post
+      next[postId] = true;
+      return next;
+    });
 
     // Clear input
     setNewComment({ ...newComment, [commentKey]: "" });
@@ -846,10 +857,10 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
           content: data.comment.content,
           timestamp: new Date(data.comment.created_at).toLocaleString("vi-VN"),
           author: {
-            id: data.comment.author.id,
-            name: data.comment.author.name,
-            avatar: data.comment.author.avatar,
-            role: data.comment.author.role,
+            id: currentUserData ? currentUserData.id : 0,
+            name: currentUserData ? currentUserData.name : "User",
+            avatar: currentUserData ? currentUserData.avatar : "",
+            role: currentUserData ? currentUserData.role : "user",
           },
           likes: 0,
           isLiked: false,
@@ -858,8 +869,8 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
         };
 
         // Replace temp comment with server comment
-        setPosts(
-          posts.map((post) => {
+        setPosts((prevPosts) =>
+          prevPosts.map((post) => {
             if (post.id === postId) {
               if (parentCommentId) {
                 const updatedComments = post.comments.map((c) => {
@@ -889,8 +900,8 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
       console.error("❌ Error adding comment:", error);
 
       // Rollback on error
-      setPosts(
-        posts.map((post) => {
+      setPosts((prevPosts) =>
+        prevPosts.map((post) => {
           if (post.id === postId) {
             if (parentCommentId) {
               const updatedComments = post.comments.map((c) => {
@@ -1554,10 +1565,11 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                           <div className="flex gap-3 items-start">
                             <button
                               onClick={() => {
+                                const role = comment.author?.role || "user";
                                 const profilePath =
-                                  comment.author.role === "manager"
+                                  role === "manager"
                                     ? `/manager/profile`
-                                    : comment.author.role === "admin"
+                                    : role === "admin"
                                     ? `/admin/profile`
                                     : `/user/profile`;
                                 router.push(profilePath);
@@ -1565,8 +1577,8 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                               className="flex-shrink-0 hover:opacity-80 transition"
                             >
                               <Image
-                                src={comment.author.avatar}
-                                alt={comment.author.name}
+                                src={getSafeAvatarUrl(comment.author?.avatar)}
+                                alt={comment.author?.name || "User"}
                                 width={40}
                                 height={40}
                                 className="rounded-full ring-2 ring-white shadow-sm"
@@ -1579,19 +1591,21 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={() => {
+                                        const role =
+                                          comment.author?.role || "user";
                                         const profilePath =
-                                          comment.author.role === "manager"
+                                          role === "manager"
                                             ? `/manager/profile`
-                                            : comment.author.role === "admin"
+                                            : role === "admin"
                                             ? `/admin/profile`
                                             : `/user/profile`;
                                         router.push(profilePath);
                                       }}
                                       className="font-semibold text-gray-900 text-sm hover:text-blue-600 transition"
                                     >
-                                      {comment.author.name}
+                                      {comment.author?.name || "User"}
                                     </button>
-                                    {comment.author.role === "manager" && (
+                                    {comment.author?.role === "manager" && (
                                       <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
                                         BTC
                                       </span>
@@ -1678,7 +1692,9 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                                             e.target.value,
                                         })
                                       }
-                                      placeholder={`Trả lời ${comment.author.name}...`}
+                                      placeholder={`Trả lời ${
+                                        comment.author?.name || "User"
+                                      }...`}
                                       className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-full 
                                                  focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:bg-white
                                                  text-sm text-gray-800 placeholder-gray-400 transition-all"
@@ -1718,10 +1734,12 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                                       >
                                         <button
                                           onClick={() => {
+                                            const role =
+                                              reply.author?.role || "user";
                                             const profilePath =
-                                              reply.author.role === "manager"
+                                              role === "manager"
                                                 ? `/manager/profile`
-                                                : reply.author.role === "admin"
+                                                : role === "admin"
                                                 ? `/admin/profile`
                                                 : `/user/profile`;
                                             router.push(profilePath);
@@ -1729,8 +1747,10 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                                           className="flex-shrink-0 hover:opacity-80 transition"
                                         >
                                           <Image
-                                            src={reply.author.avatar}
-                                            alt={reply.author.name}
+                                            src={getSafeAvatarUrl(
+                                              reply.author?.avatar
+                                            )}
+                                            alt={reply.author?.name || "User"}
                                             width={32}
                                             height={32}
                                             className="rounded-full ring-2 ring-white shadow-sm"
@@ -1743,21 +1763,22 @@ export default function Group({ eventId, role = "user" }: GroupProps) {
                                               <div className="flex items-center gap-2">
                                                 <button
                                                   onClick={() => {
+                                                    const role =
+                                                      reply.author?.role ||
+                                                      "user";
                                                     const profilePath =
-                                                      reply.author.role ===
-                                                      "manager"
+                                                      role === "manager"
                                                         ? `/manager/profile`
-                                                        : reply.author.role ===
-                                                          "admin"
+                                                        : role === "admin"
                                                         ? `/admin/profile`
                                                         : `/user/profile`;
                                                     router.push(profilePath);
                                                   }}
                                                   className="font-semibold text-gray-900 text-xs hover:text-blue-600 transition"
                                                 >
-                                                  {reply.author.name}
+                                                  {reply.author?.name || "User"}
                                                 </button>
-                                                {reply.author.role ===
+                                                {reply.author?.role ===
                                                   "manager" && (
                                                   <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
                                                     BTC

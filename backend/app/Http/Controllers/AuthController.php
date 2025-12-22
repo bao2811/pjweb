@@ -75,7 +75,7 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
                 try {
-                    $token = JWTUtil::generateToken($user, 5);
+                    $token = JWTUtil::generateToken($user, 25);
                     $refresh_token = JWTUtil::generateToken($user, 43200); // 30 days
                 } catch (\Exception $e) {
                     // Log full exception for debugging and return a JSON error so the frontend can surface it
@@ -197,7 +197,14 @@ class AuthController extends Controller
             'username' => 'required|string|min:3|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|max:255',
-            'phone' => 'required|string|regex:/^(0[3|5|7|8|9])+([0-9]{8})$/|max:20',
+            // Use array rules to avoid splitting on '|' inside the regex pattern
+            'phone' => [
+                'required',
+                'string',
+                // fixed pattern: use grouping for carrier codes and no '|' inside character class
+                'regex:/^(0(3|5|7|8|9))[0-9]{8}$/',
+                'max:20',
+            ],
             'address' => 'required|string|min:5|max:255',
             'image' => 'nullable|string|max:500|url',
             'address_card' => 'required|string|digits:12',

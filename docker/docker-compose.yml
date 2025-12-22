@@ -1,7 +1,9 @@
 services:
   # Laravel backend (serves HTTP on port 8000 inside the compose network)
   backend:
-    build: ../backend
+    build:
+      context: ../backend
+      dockerfile: dockerfile
     container_name: laravel_app
     ports:
       - "8000:8000" # Expose backend API to host machine
@@ -29,7 +31,9 @@ services:
 
   # Next.js frontend (development/preview server)
   frontend:
-    build: ../frontend
+    build:
+      context: ../frontend
+      dockerfile: dockerfile
     container_name: nextjs_app
     ports:
       - "3000:3000"
@@ -78,7 +82,9 @@ services:
 
   # Laravel Reverb WebSocket Server
   reverb:
-    build: ../backend
+    build:
+      context: ../backend
+      dockerfile: dockerfile
     container_name: laravel_reverb
     ports:
       - "8080:8080" # Expose Reverb WebSocket port
@@ -107,7 +113,9 @@ services:
 
   # Laravel Queue Worker
   queue:
-    build: ../backend
+    build:
+      context: ../backend
+      dockerfile: dockerfile
     container_name: laravel_queue
     volumes:
       - ../backend:/var/www/html:cached

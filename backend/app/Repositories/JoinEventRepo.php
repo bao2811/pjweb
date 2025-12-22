@@ -113,44 +113,59 @@ class JoinEventRepo
      */
     public function leaveEvent($userId, $eventId)
     {
-        // FIX #1: Sử dụng Eloquent thay vì DB::update
-        // FIX #5: Cho phép hủy cả khi status='approved', miễn sự kiện chưa bắt đầu
+        // Find the join record (regardless of whether event exists)
         $joinEvent = JoinEvent::where('user_id', $userId)
             ->where('event_id', $eventId)
-            ->whereIn('status', ['pending', 'approved']) // FIX #5: Cho phép hủy cả approved
-            ->whereHas('event', function($query) {
-                $query->where('start_time', '>', now()); // Chỉ cho hủy nếu chưa diễn ra
-            })
+            ->whereIn('status', ['pending', 'approved'])
             ->first();
-            
-        if ($joinEvent) {
-            $event = Event::find($eventId);
-            if($joinEvent->status === 'approved') {
-                // Giảm current_participants nếu user đã được chấp nhận
-                $event->decrement('current_participants');
-            }
 
-            // Gửi thông báo xác nhận hủy đăng ký
-            if ($event) {
-                $notification = Noti::createAndPush([
-                    'title' => 'Đã hủy đăng ký sự kiện ✓',
-                    'message' => "Bạn đã hủy đăng ký tham gia sự kiện '{$event->title}'.",
-                    'sender_id' => $userId,
-                    'receiver_id' => $userId,
-                    'type' => 'event_leave',
-                    'data' => [
-                        'event_id' => $eventId,
-                        'url' => "/events"
-                    ]
-                ]);
-                
-                broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
-            }
-            
-            return $joinEvent->delete();
+        if (!$joinEvent) {
+            return false;
         }
-        
-        return false;
+
+        // Load event if exists — be defensive
+        $event = Event::find($eventId);
+
+        // If event exists, ensure it hasn't started yet
+        if ($event) {
+            if (now()->gte($event->start_time)) {
+                // Event already started, cannot leave
+                return false;
+            }
+        }
+
+        // If the join was approved and event exists, decrement participant count
+        if ($joinEvent->status === 'approved' && $event) {
+            try {
+                $event->decrement('current_participants');
+            } catch (\Exception $e) {
+                // Log and continue; we don't want to block leaving if decrement fails
+                logger()->error('Failed to decrement participants for event '.$eventId.': '.$e->getMessage());
+            }
+        }
+
+        // Send confirmation notification (use fallback message if event missing)
+        $title = 'Đã hủy đăng ký sự kiện ✓';
+        $message = $event
+            ? "Bạn đã hủy đăng ký tham gia sự kiện '{$event->title}'."
+            : "Bạn đã hủy đăng ký tham gia một sự kiện đã bị xóa hoặc không tồn tại nữa.";
+
+        $notification = Noti::createAndPush([
+            'title' => $title,
+            'message' => $message,
+            'sender_id' => $userId,
+            'receiver_id' => $userId,
+            'type' => 'event_leave',
+            'data' => [
+                'event_id' => $eventId,
+                'url' => $event ? "/events/{$eventId}" : "/events",
+            ]
+        ]);
+
+        broadcast(new \App\Events\NotificationSent($notification, $userId))->toOthers();
+
+        // Finally delete the join record
+        return $joinEvent->delete();
     }
     
 

@@ -80,13 +80,30 @@ export const usePushNotifications = (config: PushNotificationConfig) => {
       const registration = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
 
-      // Subscribe to push notifications
+      // Subscribe to push notifications (guarded)
+      if (!registration || !registration.pushManager) {
+        throw new Error(
+          "PushManager not available on ServiceWorker registration"
+        );
+      }
+
       const convertedVapidKey = urlBase64ToUint8Array(config.vapidPublicKey);
 
-      const pushSubscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: convertedVapidKey as BufferSource,
-      });
+      let pushSubscription: PushSubscription | null = null;
+      try {
+        // @ts-ignore
+        pushSubscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey as BufferSource,
+        });
+      } catch (err: any) {
+        console.error("Failed to subscribe to pushManager:", err);
+        throw err;
+      }
+
+      if (!pushSubscription) {
+        throw new Error("Failed to obtain push subscription");
+      }
 
       setSubscription(pushSubscription);
 

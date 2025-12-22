@@ -386,9 +386,6 @@ export default function EventsAttendedPage() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
               Sự kiện của tôi
             </h1>
-            <p className="text-gray-600 text-lg">
-              Quản lý và theo dõi các sự kiện bạn đã đăng ký
-            </p>
           </div>
 
           {/* Quick Stats */}

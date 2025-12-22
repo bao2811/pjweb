@@ -224,14 +224,17 @@ class AdminController {
      */
     public function createManagerEvent(Request $request) {
         try {
+            // NOTE: make validation tolerant for common client payloads
+            // - image/address_card may be sent as filenames or base64 strings, allow string
+            // - enforce unique email to surface a clear validation error instead of DB exception
             $data = $request->validate([
-                'username' => 'required|string|max:16|min:3|unique:users',
+                'username' => 'required|string|min:3|max:16|unique:users,username',
                 'password' => 'required|string|min:8',
-                'email' => 'required|email|max:255',
+                'email' => 'required|email|max:255|unique:users,email',
                 'phone' => 'nullable|string|max:20',
                 'address' => 'nullable|string|max:255',
-                'image' => 'nullable|url|max:255',
-                'address_card' => 'nullable|url|max:255',
+                'image' => 'nullable|string|max:1000',
+                'address_card' => 'nullable|max:1000',
             ]);
             $data['role'] = 'manager';
             $user = $this->adminService->createUser($data);

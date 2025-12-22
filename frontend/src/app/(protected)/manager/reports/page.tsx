@@ -117,9 +117,6 @@ export default function ManagerReportsPage() {
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
             Báo cáo tổng quan
           </h1>
-          <p className="text-gray-600">
-            Thống kê hoạt động tình nguyện của bạn
-          </p>
         </div>
 
         {/* Overview Stats */}
@@ -187,17 +184,6 @@ export default function ManagerReportsPage() {
 
         {/* Events Table */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-              <FaChartLine className="text-purple-600 mr-3" />
-              Danh sách sự kiện
-            </h2>
-            <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-              <FaFileDownload />
-              <span>Export CSV</span>
-            </button>
-          </div>
-
           {events.length === 0 ? (
             <p className="text-center text-gray-500 py-8">
               Chưa có sự kiện nào

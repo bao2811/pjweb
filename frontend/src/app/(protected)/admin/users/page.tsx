@@ -769,10 +769,6 @@ export default function UserManagementPage() {
                 <FaUsers className="mr-2 text-blue-600" />
                 Quản lý người dùng
               </h1>
-              <p className="text-blue-700 mt-1 text-sm sm:text-base">
-                {stats.total} users (role User) • {stats.active} hoạt động •{" "}
-                {stats.locked} bị ban • {stats.pending} chờ duyệt
-              </p>
             </div>
             <div className="flex items-center space-x-2">
               <button

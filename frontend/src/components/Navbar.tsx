@@ -171,16 +171,18 @@ export default function Navbar() {
 
       console.log("[Web Push] Browser permission:", Notification.permission);
 
-      // Check service worker subscription
+      // Check service worker subscription (guarded)
       let subscription = null;
       if ("serviceWorker" in navigator) {
         const registration = await navigator.serviceWorker.getRegistration();
         if (registration) {
-          subscription = await registration.pushManager.getSubscription();
+          subscription = await safeGetSubscription(registration);
           console.log(
             "[Web Push] Local subscription found:",
             subscription ? "Yes" : "No"
           );
+        } else {
+          console.log("[Web Push] No service worker registration found");
         }
       }
 
@@ -247,6 +249,30 @@ export default function Navbar() {
     }
   };
 
+  // Safe helper to obtain push subscription from a registration
+  const safeGetSubscription = async (
+    registration: ServiceWorkerRegistration | null | undefined
+  ) => {
+    if (!registration) return null;
+    // Some environments may not expose pushManager
+    // (defensive check) — also guard against exceptions
+    try {
+      // @ts-ignore - some environments have pushManager
+      if (!registration.pushManager) {
+        console.warn(
+          "[Web Push] registration has no pushManager",
+          registration
+        );
+        return null;
+      }
+      // @ts-ignore
+      return await registration.pushManager.getSubscription();
+    } catch (err) {
+      console.error("[Web Push] safeGetSubscription failed:", err);
+      return null;
+    }
+  };
+
   const showNotification = (
     type: "success" | "error" | "warning" | "info",
     title: string,
@@ -304,7 +330,7 @@ export default function Navbar() {
       }
       await navigator.serviceWorker.ready;
 
-      let subscription = await registration.pushManager.getSubscription();
+      let subscription = await safeGetSubscription(registration);
 
       if (subscription) {
         const isValid = await verifySubscriptionWithBackend(
@@ -417,11 +443,15 @@ export default function Navbar() {
       if ("serviceWorker" in navigator) {
         const registration = await navigator.serviceWorker.getRegistration();
         if (registration) {
-          const subscription = await registration.pushManager.getSubscription();
+          const subscription = await safeGetSubscription(registration);
           if (subscription) {
-            const unsubscribed = await subscription.unsubscribe();
-            if (unsubscribed) {
-              console.log("[Web Push] Unsubscribed from push manager");
+            try {
+              const unsubscribed = await subscription.unsubscribe();
+              if (unsubscribed) {
+                console.log("[Web Push] Unsubscribed from push manager");
+              }
+            } catch (err) {
+              console.error("[Web Push] unsubscribe failed:", err);
             }
           }
         }
